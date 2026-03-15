@@ -9,6 +9,9 @@ import type {
   VideoListParams,
 } from './types';
 
+// On Render the NEXT_PUBLIC_API_URL env var is set via render.yaml (fromService).
+// Render provides the external URL, e.g. https://bonimbait-api.onrender.com
+// For a custom domain, update the env var to https://api.bonimbait.com (or similar).
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 // ---------------------------------------------------------------------------

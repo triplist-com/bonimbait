@@ -1,5 +1,5 @@
 .PHONY: setup dev-db dev-web dev-api dev migrate seed lint test clean \
-       deploy-api deploy-web migrate-prod smoke-test pipeline-prod
+       deploy deploy-api deploy-web migrate-prod smoke-test pipeline-prod
 
 # Install all dependencies (Node.js + Python)
 setup:
@@ -54,15 +54,33 @@ clean:
 	find . -type d -name .pytest_cache -exec rm -rf {} + 2>/dev/null || true
 	@echo "Cleaned up containers and build artifacts"
 
-# ---- Production Targets ----
+# ---- Production Targets (Render) ----
 
-# Deploy API to Fly.io
+# Deploy via Render Blueprint (render.yaml)
+# Render auto-deploys on push to the connected branch. To trigger manually:
+deploy:
+	@echo "Render deploys automatically when you push to GitHub."
+	@echo ""
+	@echo "First-time setup:"
+	@echo "  1. Push this repo to GitHub"
+	@echo "  2. Go to https://dashboard.render.com → New → Blueprint"
+	@echo "  3. Connect repo — Render detects render.yaml"
+	@echo "  4. Set secrets: ANTHROPIC_API_KEY, OPENAI_API_KEY"
+	@echo "  5. Click Apply"
+	@echo ""
+	@echo "After DB is created, run:  CREATE EXTENSION IF NOT EXISTS vector;"
+
+# Force a manual deploy of the API service on Render
 deploy-api:
-	cd apps/api && flyctl deploy --remote-only
+	@echo "Trigger a manual deploy from the Render dashboard,"
+	@echo "or push a commit to the connected branch."
+	@echo "Dashboard: https://dashboard.render.com"
 
-# Deploy frontend (trigger Vercel production build)
+# Force a manual deploy of the web service on Render
 deploy-web:
-	cd apps/web && vercel --prod
+	@echo "Trigger a manual deploy from the Render dashboard,"
+	@echo "or push a commit to the connected branch."
+	@echo "Dashboard: https://dashboard.render.com"
 
 # Run Alembic migrations against production database
 migrate-prod:
@@ -71,7 +89,7 @@ migrate-prod:
 # Run production smoke tests
 smoke-test:
 	python scripts/deploy/smoke_test.py \
-		--api-url $${API_URL:-https://bonimbait-api.fly.dev} \
+		--api-url $${API_URL:-https://bonimbait-api.onrender.com} \
 		--web-url $${WEB_URL:-https://bonimbait.com}
 
 # Run data pipeline against production database

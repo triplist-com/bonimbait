@@ -4,11 +4,11 @@
 
 The Bonimbait stack consists of three main components:
 
-| Component | Technology | Hosting |
-|-----------|-----------|---------|
-| Frontend  | Next.js 14 | Vercel |
-| API       | Python FastAPI | Fly.io or Railway |
-| Database  | PostgreSQL + pgvector | Supabase |
+| Component | Technology | Hosting (Primary) | Hosting (Legacy) |
+|-----------|-----------|-------------------|------------------|
+| Frontend  | Next.js 14 | Render | Vercel |
+| API       | Python FastAPI | Render (Docker) | Fly.io / Railway |
+| Database  | PostgreSQL + pgvector | Render PostgreSQL | Supabase |
 
 ---
 
@@ -323,5 +323,146 @@ flyctl logs --app bonimbait-api
 ### Smoke Test Failures
 
 ```bash
-python scripts/deploy/smoke_test.py --api-url https://bonimbait-api.fly.dev --web-url https://bonimbait.com
+python scripts/deploy/smoke_test.py --api-url https://bonimbait-api.onrender.com --web-url https://bonimbait.com
 ```
+
+---
+
+## 10. Deploying on Render (Primary)
+
+Render is the primary deployment target. All services are defined in `render.yaml` (Render Blueprint) at the project root.
+
+### Quick Deploy with Blueprint
+
+1. Push the repository to GitHub.
+2. Go to **Render Dashboard** → **New** → **Blueprint**.
+3. Connect your GitHub repo — Render auto-detects `render.yaml`.
+4. Set secret environment variables in the dashboard:
+   - `ANTHROPIC_API_KEY`
+   - `OPENAI_API_KEY`
+5. Click **Apply** to provision all services.
+
+Render will create:
+- **bonimbait-web** — Next.js frontend (Node web service)
+- **bonimbait-api** — FastAPI backend (Docker web service)
+- **bonimbait-db** — PostgreSQL 16 database (Starter plan)
+
+### Manual Deploy (Step by Step)
+
+If you prefer to set up services individually:
+
+#### 1. Create PostgreSQL Database
+
+- Go to **Render Dashboard** → **New** → **PostgreSQL**.
+- Name: `bonimbait-db`
+- Region: Frankfurt
+- Plan: Starter (required for pgvector support)
+- PostgreSQL version: 16
+- Copy the **Internal Connection String** and **External Connection String**.
+
+#### 2. Enable pgvector
+
+Connect to the database and run:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+You can connect via:
+- Render Shell (from the database dashboard)
+- `psql` with the external connection string
+- Any PostgreSQL client (e.g. pgAdmin, DBeaver)
+
+#### 3. Create Web Service for API
+
+- **New** → **Web Service**
+- Connect GitHub repo
+- Name: `bonimbait-api`
+- Region: Frankfurt
+- Runtime: Docker
+- Root directory: `apps/api`
+- Set environment variables:
+  - `DATABASE_URL` → paste the Internal Connection String from the database
+  - `ANTHROPIC_API_KEY` → your key
+  - `OPENAI_API_KEY` → your key
+  - `CORS_ORIGINS` → `https://bonimbait.com,https://www.bonimbait.com`
+  - `ENV` → `production`
+- Health check path: `/health`
+
+#### 4. Create Web Service for Frontend
+
+- **New** → **Web Service**
+- Connect GitHub repo
+- Name: `bonimbait-web`
+- Region: Frankfurt
+- Runtime: Node
+- Root directory: `apps/web`
+- Build command: `npm install && npm run build`
+- Start command: `npx next start -p $PORT`
+- Set environment variables:
+  - `NEXT_PUBLIC_API_URL` → `https://bonimbait-api.onrender.com`
+  - `NEXT_PUBLIC_SITE_URL` → `https://bonimbait.com`
+  - `NODE_ENV` → `production`
+
+#### 5. Add Custom Domain
+
+In the **bonimbait-web** service settings → **Custom Domains** → add `bonimbait.com` and `www.bonimbait.com`.
+
+### Database Setup
+
+After the database is provisioned:
+
+```bash
+# 1. Enable pgvector
+psql "$EXTERNAL_DATABASE_URL" -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
+# 2. Run Alembic migrations
+export DATABASE_URL="<internal-connection-string>"
+cd apps/api && alembic upgrade head
+
+# Or use the migration script:
+python scripts/deploy/migrate_production.py
+
+# 3. Run the data pipeline to populate content
+python scripts/run_pipeline.py
+```
+
+### Custom Domain (GoDaddy to Render)
+
+1. In **Render**: go to the bonimbait-web service → **Custom Domains** → add `bonimbait.com`.
+2. Render provides the DNS target values.
+3. In **GoDaddy** DNS management:
+
+| Type  | Name | Value                          | TTL  |
+|-------|------|--------------------------------|------|
+| CNAME | www  | (provided by Render)           | 3600 |
+| A     | @    | (provided by Render)           | 600  |
+
+   - For the root domain (`@`), Render may provide an A record IP or a CNAME flattening target.
+   - For `www`, use the CNAME value Render provides.
+
+4. Render handles **SSL certificates automatically** (Let's Encrypt).
+5. DNS propagation may take up to 48 hours (usually under 1 hour).
+
+### pgvector on Render
+
+- Render PostgreSQL supports pgvector on **Starter plan and above**.
+- After the database is created, connect and run:
+  ```sql
+  CREATE EXTENSION IF NOT EXISTS vector;
+  ```
+- To verify: `SELECT * FROM pg_extension WHERE extname = 'vector';`
+- **Alternative**: use Supabase as an external database (pgvector included on all plans, including free tier). In that case, remove the `databases` block from `render.yaml` and set `DATABASE_URL` manually as a secret env var.
+
+### Render Monitoring
+
+- **Dashboard**: each service has logs, metrics, and deploy history.
+- **Health checks**: the API service has `/health` configured — Render will restart if it fails.
+- **Auto-deploy**: Render redeploys automatically on push to the connected branch.
+- **Manual deploy**: trigger from the dashboard or via the Render API.
+
+### Render-Specific Notes
+
+- Render provides a `PORT` environment variable at runtime. The Dockerfile and Next.js start command are configured to respect it.
+- Render's free plan services spin down after inactivity. Use the **Starter plan** or above for always-on services.
+- Service-to-service communication uses the external URL (`https://bonimbait-api.onrender.com`). Render does not currently offer private networking between web services on all plans.
