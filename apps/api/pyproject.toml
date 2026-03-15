@@ -1,0 +1,9 @@
+[project]
+name = "bonimbait-api"
+version = "0.1.0"
+description = "Bonimbait API - Hebrew construction knowledge platform"
+requires-python = ">=3.11"
+readme = "README.md"
+
+[tool.ruff]
+extend = "ruff.toml"

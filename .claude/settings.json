@@ -1,0 +1,11 @@
+{
+  "skills": {
+    "orchestrator": ".claude/skills/orchestrator.md",
+    "architect": ".claude/skills/architect.md",
+    "frontend": ".claude/skills/frontend.md",
+    "backend": ".claude/skills/backend.md",
+    "data-pipeline": ".claude/skills/data-pipeline.md",
+    "qa": ".claude/skills/qa.md",
+    "ux-designer": ".claude/skills/ux-designer.md"
+  }
+}

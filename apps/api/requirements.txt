@@ -1,0 +1,12 @@
+fastapi[standard]
+uvicorn[standard]
+sqlalchemy[asyncio]>=2.0
+asyncpg
+alembic
+pydantic>=2.0
+pydantic-settings
+pgvector
+httpx
+python-dotenv
+anthropic>=0.40
+openai>=1.0
