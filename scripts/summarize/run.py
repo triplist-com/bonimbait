@@ -33,7 +33,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 from tqdm import tqdm
 
-from scripts.summarize.prompts import (
+# Add scripts directory to path for imports
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from summarize.prompts import (
     CATEGORIES,
     DIFFICULTY_LEVELS,
     JSON_REPAIR_SYSTEM_PROMPT,
@@ -43,7 +45,7 @@ from scripts.summarize.prompts import (
     VIDEO_SUMMARY_USER_PROMPT,
     get_prompts,
 )
-from scripts.config import get_summarize_pricing
+from config import get_summarize_pricing
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -237,9 +239,11 @@ async def _summarize_one(
     async with semaphore:
         for attempt in range(1, MAX_RETRIES + 1):
             try:
+                # Rate limit: wait between requests to stay within token limits
+                await asyncio.sleep(8)
                 response = await client.messages.create(
                     model=model,
-                    max_tokens=2048,
+                    max_tokens=1024,
                     system=prompts["system"],
                     messages=[{"role": "user", "content": user_msg}],
                 )

@@ -82,7 +82,7 @@ def _download_subs_for_video(youtube_id: str) -> tuple[str, dict | None]:
             "quiet": True,
             "no_warnings": True,
             "skip_download": True,
-            "subtitleslangs": ["he"],
+            "subtitleslangs": ["he", "iw", "iw-orig"],
             "subtitlesformat": "json3",  # JSON with timestamps
             **sub_type,
         }
@@ -102,16 +102,18 @@ def _download_subs_for_video(youtube_id: str) -> tuple[str, dict | None]:
 
                     # Check if requested subs are available
                     available_subs = info.get("subtitles", {}) if label == "manual_he" else info.get("automatic_captions", {})
-                    if "he" not in available_subs:
+                    if not any(lang in available_subs for lang in ("he", "iw", "iw-orig")):
                         continue
 
                     # Download subs
                     ydl.download([url])
 
                 # Find the subtitle file yt-dlp wrote
-                sub_files = list(Path(tmpdir).glob(f"{youtube_id}*.he.*"))
+                # yt-dlp may use he, iw, or iw-orig as the language code
+                sub_files = []
+                for lang_code in ("he", "iw", "iw-orig"):
+                    sub_files.extend(Path(tmpdir).glob(f"{youtube_id}*.{lang_code}.*"))
                 if not sub_files:
-                    # yt-dlp may use different naming
                     sub_files = list(Path(tmpdir).glob(f"*{youtube_id}*"))
 
                 for sf in sub_files:
