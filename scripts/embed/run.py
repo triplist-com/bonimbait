@@ -299,8 +299,14 @@ def embed_batch(
     resume: bool = True,
     dry_run: bool = False,
     max_concurrent: int = MAX_CONCURRENT,
-) -> int:
-    """Generate embeddings for all videos. Returns count of successful videos."""
+    cost_tracker=None,
+) -> tuple[int, float]:
+    """
+    Generate embeddings for all videos. Returns (count_of_successes, total_cost_usd).
+
+    If *cost_tracker* is provided (a CostTracker instance), costs are recorded
+    and budget is checked before starting.
+    """
     _ensure_dirs()
 
     youtube_ids = _discover_youtube_ids(resume=resume)
@@ -314,7 +320,7 @@ def embed_batch(
 
     if not youtube_ids:
         logger.info("All videos already embedded (%d total)", total_available)
-        return 0
+        return 0, 0.0
 
     # Cost estimate
     total_tokens = 0
@@ -336,9 +342,13 @@ def embed_batch(
         estimated_cost,
     )
 
+    # Budget check
+    if cost_tracker is not None:
+        cost_tracker.check_budget(estimated_cost, category="embed")
+
     if dry_run:
         logger.info("Dry run — exiting without processing")
-        return 0
+        return 0, 0.0
 
     # Run async batch
     start = time.monotonic()
@@ -347,11 +357,15 @@ def embed_batch(
     )
     elapsed = time.monotonic() - start
 
+    # Record cost
+    if cost_tracker is not None:
+        cost_tracker.add_cost("embed", total_cost, detail=f"{success} videos, {actual_tokens // 1000}K tokens")
+
     logger.info(
         "Embedding complete in %.1fs. Success: %d | Failed: %d | Tokens: %dK | Cost: $%.4f",
         elapsed, success, failed, actual_tokens // 1000, total_cost,
     )
-    return success
+    return success, total_cost
 
 
 def main() -> None:

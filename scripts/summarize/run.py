@@ -41,7 +41,9 @@ from scripts.summarize.prompts import (
     VALID_CATEGORY_SLUGS,
     VIDEO_SUMMARY_SYSTEM_PROMPT,
     VIDEO_SUMMARY_USER_PROMPT,
+    get_prompts,
 )
+from scripts.config import get_summarize_pricing
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -54,17 +56,14 @@ SUMMARY_DIR = DATA_DIR / "processed" / "summaries"
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-MODEL = "claude-sonnet-4-6"
+DEFAULT_MODEL = "claude-haiku-4-5-20251001"  # Haiku by default (20x cheaper)
 MAX_RETRIES = 3
 RETRY_BACKOFF_BASE = 2.0  # seconds
-MAX_CONCURRENT = 5
-DEFAULT_BATCH_SIZE = 20
+MAX_CONCURRENT = 10  # Haiku handles higher concurrency
+DEFAULT_BATCH_SIZE = 0  # 0 = all
 
 # Token estimation: ~1 token per 3.5 Hebrew characters (conservative)
 CHARS_PER_TOKEN = 3.5
-# Claude pricing (Sonnet): input $3/MTok, output $15/MTok
-INPUT_COST_PER_MTOK = 3.0
-OUTPUT_COST_PER_MTOK = 15.0
 EST_OUTPUT_TOKENS = 500  # average per summary
 
 # Max input tokens for Claude — leave room for system prompt + output
@@ -93,8 +92,13 @@ def _estimate_tokens(text: str) -> int:
     return max(1, int(len(text) / CHARS_PER_TOKEN))
 
 
-def _estimate_cost_usd(transcript_files: list[Path]) -> tuple[float, int]:
+def _estimate_cost_usd(
+    transcript_files: list[Path],
+    model: str = DEFAULT_MODEL,
+) -> tuple[float, int]:
     """Return (estimated_cost_usd, total_input_tokens)."""
+    input_cost_per_mtok, output_cost_per_mtok = get_summarize_pricing(model)
+
     total_input_tokens = 0
     for tf in transcript_files:
         try:
@@ -107,8 +111,8 @@ def _estimate_cost_usd(transcript_files: list[Path]) -> tuple[float, int]:
     total_input_tokens += len(transcript_files) * 500
     total_output_tokens = len(transcript_files) * EST_OUTPUT_TOKENS
     cost = (
-        (total_input_tokens / 1_000_000) * INPUT_COST_PER_MTOK
-        + (total_output_tokens / 1_000_000) * OUTPUT_COST_PER_MTOK
+        (total_input_tokens / 1_000_000) * input_cost_per_mtok
+        + (total_output_tokens / 1_000_000) * output_cost_per_mtok
     )
     return cost, total_input_tokens
 
@@ -197,9 +201,15 @@ async def _summarize_one(
     semaphore: asyncio.Semaphore,
     pbar: tqdm,
     running_cost: list[float],
+    model: str = DEFAULT_MODEL,
+    prompts: dict | None = None,
 ) -> tuple[str, dict | None]:
     """Summarize a single transcript. Returns (youtube_id, summary_dict_or_None)."""
     youtube_id = transcript_path.stem
+    input_cost_per_mtok, output_cost_per_mtok = get_summarize_pricing(model)
+
+    if prompts is None:
+        prompts = get_prompts(model)
 
     try:
         data = json.loads(transcript_path.read_text(encoding="utf-8"))
@@ -222,15 +232,15 @@ async def _summarize_one(
         )
         full_text = full_text[:MAX_TRANSCRIPT_CHARS] + "\n\n[הטקסט קוצר בשל אורכו]"
 
-    user_msg = VIDEO_SUMMARY_USER_PROMPT.format(transcript_text=full_text)
+    user_msg = prompts["user"].format(transcript_text=full_text)
 
     async with semaphore:
         for attempt in range(1, MAX_RETRIES + 1):
             try:
                 response = await client.messages.create(
-                    model=MODEL,
+                    model=model,
                     max_tokens=2048,
-                    system=VIDEO_SUMMARY_SYSTEM_PROMPT,
+                    system=prompts["system"],
                     messages=[{"role": "user", "content": user_msg}],
                 )
 
@@ -238,8 +248,8 @@ async def _summarize_one(
                 input_tokens = getattr(response.usage, "input_tokens", 0)
                 output_tokens = getattr(response.usage, "output_tokens", 0)
                 call_cost = (
-                    (input_tokens / 1_000_000) * INPUT_COST_PER_MTOK
-                    + (output_tokens / 1_000_000) * OUTPUT_COST_PER_MTOK
+                    (input_tokens / 1_000_000) * input_cost_per_mtok
+                    + (output_tokens / 1_000_000) * output_cost_per_mtok
                 )
                 running_cost[0] += call_cost
 
@@ -250,14 +260,14 @@ async def _summarize_one(
                     # Try JSON repair
                     logger.warning("JSON parse failed for %s, attempting repair (attempt %d)", youtube_id, attempt)
                     repair_response = await client.messages.create(
-                        model=MODEL,
+                        model=model,
                         max_tokens=2048,
-                        system=JSON_REPAIR_SYSTEM_PROMPT,
-                        messages=[{"role": "user", "content": JSON_REPAIR_USER_PROMPT.format(broken_json=response_text)}],
+                        system=prompts["json_repair_system"],
+                        messages=[{"role": "user", "content": prompts["json_repair_user"].format(broken_json=response_text)}],
                     )
                     repair_cost = (
-                        (getattr(repair_response.usage, "input_tokens", 0) / 1_000_000) * INPUT_COST_PER_MTOK
-                        + (getattr(repair_response.usage, "output_tokens", 0) / 1_000_000) * OUTPUT_COST_PER_MTOK
+                        (getattr(repair_response.usage, "input_tokens", 0) / 1_000_000) * input_cost_per_mtok
+                        + (getattr(repair_response.usage, "output_tokens", 0) / 1_000_000) * output_cost_per_mtok
                     )
                     running_cost[0] += repair_cost
                     result = _extract_json(repair_response.content[0].text)
@@ -281,7 +291,7 @@ async def _summarize_one(
 
                 # Attach metadata
                 result["youtube_id"] = youtube_id
-                result["model"] = MODEL
+                result["model"] = model
                 result["input_tokens"] = input_tokens
                 result["output_tokens"] = output_tokens
 
@@ -308,6 +318,7 @@ async def _run_batch(
     transcript_files: list[Path],
     *,
     max_concurrent: int = MAX_CONCURRENT,
+    model: str = DEFAULT_MODEL,
 ) -> tuple[int, int, float]:
     """Process a batch of transcripts. Returns (success, failed, total_cost)."""
     import anthropic
@@ -320,11 +331,15 @@ async def _run_batch(
     client = anthropic.AsyncAnthropic(api_key=api_key)
     semaphore = asyncio.Semaphore(max_concurrent)
     running_cost = [0.0]  # mutable container for cost tracking
+    prompts = get_prompts(model)
 
-    pbar = tqdm(total=len(transcript_files), desc="Summarizing", unit="video")
+    pbar = tqdm(total=len(transcript_files), desc=f"Summarizing ({model})", unit="video")
 
     tasks = [
-        _summarize_one(client, tf, semaphore, pbar, running_cost)
+        _summarize_one(
+            client, tf, semaphore, pbar, running_cost,
+            model=model, prompts=prompts,
+        )
         for tf in transcript_files
     ]
 
@@ -355,15 +370,22 @@ def summarize_batch(
     resume: bool = True,
     dry_run: bool = False,
     max_concurrent: int = MAX_CONCURRENT,
-) -> int:
-    """Summarize transcripts. Returns count of successful summaries."""
+    model: str = DEFAULT_MODEL,
+    cost_tracker=None,
+) -> tuple[int, float]:
+    """
+    Summarize transcripts. Returns (count_of_successes, total_cost_usd).
+
+    If *cost_tracker* is provided (a CostTracker instance), costs are recorded
+    and budget is checked before starting.
+    """
     _ensure_dirs()
 
     # Discover transcript files
     transcript_files = sorted(TRANSCRIPT_DIR.glob("*.json"))
     if not transcript_files:
         logger.info("No transcripts found in %s", TRANSCRIPT_DIR)
-        return 0
+        return 0, 0.0
 
     total_available = len(transcript_files)
 
@@ -377,35 +399,43 @@ def summarize_batch(
 
     if not transcript_files:
         logger.info("All transcripts already summarized (%d total)", total_available)
-        return 0
+        return 0, 0.0
 
     # Cost estimate
-    estimated_cost, total_input_tokens = _estimate_cost_usd(transcript_files)
+    estimated_cost, total_input_tokens = _estimate_cost_usd(transcript_files, model=model)
     logger.info(
-        "Will summarize %d / %d videos (~%dK input tokens). Estimated cost: $%.2f",
+        "Will summarize %d / %d videos with %s (~%dK input tokens). Estimated cost: $%.2f",
         len(transcript_files),
         total_available,
+        model,
         total_input_tokens // 1000,
         estimated_cost,
     )
 
+    # Budget check
+    if cost_tracker is not None:
+        cost_tracker.check_budget(estimated_cost, category="summarize")
+
     if dry_run:
         logger.info("Dry run — exiting without processing")
-        # Print per-category estimate if we have existing summaries
-        return 0
+        return 0, 0.0
 
     # Run async batch
     start = time.monotonic()
     success, failed, total_cost = asyncio.run(
-        _run_batch(transcript_files, max_concurrent=max_concurrent)
+        _run_batch(transcript_files, max_concurrent=max_concurrent, model=model)
     )
     elapsed = time.monotonic() - start
 
+    # Record cost
+    if cost_tracker is not None:
+        cost_tracker.add_cost("summarize", total_cost, detail=f"{success} videos with {model}")
+
     logger.info(
-        "Summarization complete in %.1fs. Success: %d | Failed: %d | Cost: $%.2f",
-        elapsed, success, failed, total_cost,
+        "Summarization complete in %.1fs. Success: %d | Failed: %d | Cost: $%.2f (model: %s)",
+        elapsed, success, failed, total_cost, model,
     )
-    return success
+    return success, total_cost
 
 
 def main() -> None:
@@ -426,6 +456,10 @@ def main() -> None:
         "--max-concurrent", type=int, default=MAX_CONCURRENT,
         help=f"Max concurrent API calls (default: {MAX_CONCURRENT})",
     )
+    parser.add_argument(
+        "--model", type=str, default=DEFAULT_MODEL,
+        help=f"Claude model to use (default: {DEFAULT_MODEL})",
+    )
     parser.add_argument("--no-resume", action="store_true", help="Re-summarize all videos")
     parser.add_argument("--dry-run", action="store_true", help="Show cost estimate only")
     args = parser.parse_args()
@@ -435,6 +469,7 @@ def main() -> None:
         resume=not args.no_resume,
         dry_run=args.dry_run,
         max_concurrent=args.max_concurrent,
+        model=args.model,
     )
 
 

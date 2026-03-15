@@ -145,3 +145,68 @@ The following JSON is malformed. Fix it and return only valid JSON:
 
 {broken_json}\
 """
+
+# ---------------------------------------------------------------------------
+# HAIKU-optimized prompts (concise — Haiku works better with shorter prompts)
+# ---------------------------------------------------------------------------
+
+_COMPACT_CATEGORY_BLOCK = ", ".join(f'"{c["slug"]}"' for c in CATEGORIES)
+
+HAIKU_VIDEO_SUMMARY_SYSTEM_PROMPT = f"""\
+Extract structured info from a Hebrew construction video transcript. Return ONLY valid JSON.
+
+Categories: {_COMPACT_CATEGORY_BLOCK}
+
+JSON schema:
+{{
+  "title_summary": "Hebrew 1-2 sentence summary",
+  "key_points": ["3-8 Hebrew takeaways"],
+  "costs": [{{"item":"Hebrew","price":"e.g. 50,000 ש\\"ח","unit":"e.g. למ\\"ר","context":"Hebrew","approximate":bool}}],
+  "rules": ["Hebrew construction rules, empty if none"],
+  "tips": ["Hebrew practical tips, empty if none"],
+  "materials": ["Hebrew materials mentioned, empty if none"],
+  "warnings": ["Hebrew warnings, empty if none"],
+  "category_slug": "best slug",
+  "secondary_categories": ["0-2 other slugs"],
+  "difficulty_level": "beginner|intermediate|advanced",
+  "estimated_relevance_year": int_or_null
+}}
+
+Rules: Hebrew output. 3-8 key_points. Costs only if prices mentioned. No markdown fences.\
+"""
+
+HAIKU_VIDEO_SUMMARY_USER_PROMPT = """\
+Analyze this Hebrew construction transcript:
+
+{transcript_text}\
+"""
+
+HAIKU_JSON_REPAIR_SYSTEM_PROMPT = """\
+Fix the malformed JSON below. Return ONLY valid JSON, nothing else.\
+"""
+
+
+# ---------------------------------------------------------------------------
+# get_prompts() — select prompts based on model
+# ---------------------------------------------------------------------------
+def get_prompts(model: str) -> dict[str, str]:
+    """
+    Return the appropriate prompt set for the given model name.
+
+    Returns dict with keys:
+        system, user, json_repair_system, json_repair_user
+    """
+    if "haiku" in model.lower():
+        return {
+            "system": HAIKU_VIDEO_SUMMARY_SYSTEM_PROMPT,
+            "user": HAIKU_VIDEO_SUMMARY_USER_PROMPT,
+            "json_repair_system": HAIKU_JSON_REPAIR_SYSTEM_PROMPT,
+            "json_repair_user": JSON_REPAIR_USER_PROMPT,
+        }
+    else:
+        return {
+            "system": VIDEO_SUMMARY_SYSTEM_PROMPT,
+            "user": VIDEO_SUMMARY_USER_PROMPT,
+            "json_repair_system": JSON_REPAIR_SYSTEM_PROMPT,
+            "json_repair_user": JSON_REPAIR_USER_PROMPT,
+        }

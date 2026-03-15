@@ -71,8 +71,20 @@ def _extract_video_info(entry: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
-def fetch_channel(channel_url: str, *, skip_existing: bool = True) -> list[dict]:
-    """Fetch video list from *channel_url* and persist metadata."""
+def fetch_channel(
+    channel_url: str,
+    *,
+    skip_existing: bool = True,
+    limit: int = 0,
+    sort: str = "newest",
+) -> list[dict]:
+    """
+    Fetch video list from *channel_url* and persist metadata.
+
+    Args:
+        limit: Max number of videos to fetch (0 = all).
+        sort: Sort order — "newest" (default) or "oldest".
+    """
     import yt_dlp  # imported here so the module can be imported without yt-dlp installed
 
     _ensure_dirs()
@@ -98,6 +110,11 @@ def fetch_channel(channel_url: str, *, skip_existing: bool = True) -> list[dict]
         "skip_download": True,
     }
 
+    # Use playlist_end to limit how many entries yt-dlp fetches
+    if limit > 0:
+        ydl_opts["playlistend"] = limit
+        logger.info("Limiting to %d most recent videos", limit)
+
     logger.info("Extracting video list from %s …", channel_url)
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(channel_url, download=False)
@@ -118,6 +135,11 @@ def fetch_channel(channel_url: str, *, skip_existing: bool = True) -> list[dict]
             flat_entries.append(e)
 
     logger.info("Channel returned %d entries", len(flat_entries))
+
+    # Apply limit after flattening (safety net if playlistend didn't fully limit)
+    if limit > 0 and len(flat_entries) > limit:
+        flat_entries = flat_entries[:limit]
+        logger.info("Trimmed to %d entries after flattening", limit)
 
     new_count = 0
     skipped = 0
@@ -163,8 +185,14 @@ def fetch_channel(channel_url: str, *, skip_existing: bool = True) -> list[dict]
         all_videos[vid] = video_meta
         new_count += 1
 
-    # Write combined file
-    combined = sorted(all_videos.values(), key=lambda v: v.get("upload_date", ""), reverse=True)
+    # Write combined file — always sorted newest first
+    reverse = sort != "oldest"
+    combined = sorted(all_videos.values(), key=lambda v: v.get("upload_date", ""), reverse=reverse)
+
+    # Apply limit to the final combined list (keep only the N most recent)
+    if limit > 0 and len(combined) > limit:
+        combined = combined[:limit]
+
     COMBINED_FILE.write_text(json.dumps(combined, ensure_ascii=False, indent=2), encoding="utf-8")
 
     logger.info(
@@ -189,6 +217,14 @@ def main() -> None:
     parser.add_argument(
         "--no-skip", action="store_true", help="Re-fetch all videos ignoring checkpoint"
     )
+    parser.add_argument(
+        "--limit", type=int, default=0,
+        help="Max number of videos to fetch (0 = all, default: 0)",
+    )
+    parser.add_argument(
+        "--sort", choices=["newest", "oldest"], default="newest",
+        help="Sort order (default: newest)",
+    )
     args = parser.parse_args()
 
     if not args.channel_url:
@@ -202,7 +238,12 @@ def main() -> None:
             )
             sys.exit(1)
 
-    fetch_channel(args.channel_url, skip_existing=not args.no_skip)
+    fetch_channel(
+        args.channel_url,
+        skip_existing=not args.no_skip,
+        limit=args.limit,
+        sort=args.sort,
+    )
 
 
 if __name__ == "__main__":

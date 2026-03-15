@@ -164,12 +164,27 @@ def download_subs(*, resume: bool = True) -> dict[str, str]:
     counts = {"manual_he": 0, "auto_he": 0, "none": 0}
     for v in status.values():
         counts[v] = counts.get(v, 0) + 1
+
+    total = sum(counts.values())
+    has_subs = counts["manual_he"] + counts["auto_he"]
+    pct = (has_subs / total * 100) if total > 0 else 0
+
     logger.info(
-        "Subtitle download complete. Manual: %d | Auto: %d | None: %d",
+        "Subtitle download complete. Manual: %d | Auto: %d | None: %d | "
+        "Coverage: %d/%d (%.0f%%)",
         counts["manual_he"],
         counts["auto_he"],
         counts["none"],
+        has_subs,
+        total,
+        pct,
     )
+    if counts["none"] > 0:
+        logger.info(
+            "Videos without subs will need Whisper transcription "
+            "(est. cost: ~$%.2f assuming 30 min avg)",
+            counts["none"] * 30 * 0.006,
+        )
     return status
 
 

@@ -115,8 +115,19 @@ def _transcribe_single(client, audio_path: Path) -> dict | None:
     return None
 
 
-def transcribe_batch(*, batch_size: int = 10, resume: bool = True, dry_run: bool = False) -> int:
-    """Transcribe audio files. Returns count of successful transcriptions."""
+def transcribe_batch(
+    *,
+    batch_size: int = 10,
+    resume: bool = True,
+    dry_run: bool = False,
+    cost_tracker=None,
+) -> tuple[int, float]:
+    """
+    Transcribe audio files. Returns (count_of_successes, total_cost_usd).
+
+    If *cost_tracker* is provided (a CostTracker instance), costs are recorded
+    and the budget is checked before starting.
+    """
     from openai import OpenAI
 
     _ensure_dirs()
@@ -132,7 +143,7 @@ def transcribe_batch(*, batch_size: int = 10, resume: bool = True, dry_run: bool
     audio_files = sorted(AUDIO_DIR.glob("*.mp3"))
     if not audio_files:
         logger.info("No audio files found in %s", AUDIO_DIR)
-        return 0
+        return 0, 0.0
 
     # Filter already-transcribed
     if resume:
@@ -144,7 +155,7 @@ def transcribe_batch(*, batch_size: int = 10, resume: bool = True, dry_run: bool
 
     if not audio_files:
         logger.info("All audio files already transcribed")
-        return 0
+        return 0, 0.0
 
     # Cost estimate
     estimated_cost = _estimate_cost(audio_files)
@@ -156,20 +167,38 @@ def transcribe_batch(*, batch_size: int = 10, resume: bool = True, dry_run: bool
         estimated_cost,
     )
 
+    # Budget check
+    if cost_tracker is not None:
+        cost_tracker.check_budget(estimated_cost, category="whisper")
+
     if dry_run:
         logger.info("Dry run — exiting without transcribing")
-        return 0
+        return 0, 0.0
 
     success = 0
+    running_cost = 0.0
     for audio_path in tqdm(audio_files, desc="Transcribing", unit="file"):
+        # Per-file cost
+        file_minutes = _get_audio_duration_seconds(audio_path) / 60
+        file_cost = file_minutes * WHISPER_COST_PER_MINUTE
+
         result = _transcribe_single(client, audio_path)
         if result is not None:
             out_path = TRANSCRIPT_DIR / f"{audio_path.stem}.json"
             out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
             success += 1
+            running_cost += file_cost
+            if cost_tracker is not None:
+                cost_tracker.add_cost(
+                    "whisper", file_cost,
+                    detail=f"{audio_path.stem} ({file_minutes:.1f} min)",
+                )
 
-    logger.info("Transcription complete. Success: %d / %d", success, len(audio_files))
-    return success
+    logger.info(
+        "Transcription complete. Success: %d / %d | Cost: $%.2f",
+        success, len(audio_files), running_cost,
+    )
+    return success, running_cost
 
 
 def main() -> None:
