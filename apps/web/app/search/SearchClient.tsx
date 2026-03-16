@@ -124,7 +124,13 @@ function SearchContent() {
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
                     {results.map((r) => (
-                      <VideoCard key={r.video.id} video={r.video} snippet={r.snippet} />
+                      <VideoCard
+                        key={r.video.id}
+                        video={r.video}
+                        snippet={r.snippet}
+                        matchingSegmentTime={r.matching_segment_time}
+                        segmentThumbnailUrl={r.segment_thumbnail_url}
+                      />
                     ))}
                   </div>
                   <Pagination

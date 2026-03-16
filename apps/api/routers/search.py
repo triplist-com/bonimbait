@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from config import get_settings
 from database import get_db
 from models.category import Category
 from schemas.search import (
@@ -84,6 +85,14 @@ async def search_videos(
         row = video_map.get(r.video_id)
         if row is None:
             continue
+
+        # Build segment thumbnail URL when a matching timestamp is available
+        segment_thumb_url = None
+        if r.segment_time is not None:
+            segment_thumb_url = (
+                f"/api/thumbnails/{row[1]}/{int(r.segment_time)}"
+            )
+
         items.append(
             SearchResultItem(
                 video_id=row[0],
@@ -99,6 +108,7 @@ async def search_videos(
                 score=r.score,
                 snippet=r.snippet,
                 matching_segment_time=r.segment_time,
+                segment_thumbnail_url=segment_thumb_url,
             )
         )
 

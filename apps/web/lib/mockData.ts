@@ -14,7 +14,7 @@ export const categories: Category[] = [
 export const sampleVideos: Video[] = [
   {
     id: '1',
-    youtube_id: 'dQw4w9WgXcQ',
+    youtube_id: 'placeholder_1',
     title: 'איך בוחרים קבלן שלד? 10 טיפים שחייבים לדעת לפני שחותמים חוזה',
     duration_seconds: 754,
     category_id: '6',
@@ -22,10 +22,11 @@ export const sampleVideos: Video[] = [
     category_slug: 'contractors',
     channel_name: 'הבונה החכם',
     published_at: '2024-03-15',
+    thumbnail_url: '/images/placeholder-video.svg',
   },
   {
     id: '2',
-    youtube_id: 'dQw4w9WgXcQ',
+    youtube_id: 'placeholder_2',
     title: 'כמה עולה לבנות בית פרטי בישראל ב-2024? פירוט מלא של כל העלויות',
     duration_seconds: 1125,
     category_id: '2',
@@ -33,10 +34,11 @@ export const sampleVideos: Video[] = [
     category_slug: 'costs',
     channel_name: 'בניה בפרקטיקה',
     published_at: '2024-02-20',
+    thumbnail_url: '/images/placeholder-video.svg',
   },
   {
     id: '3',
-    youtube_id: 'dQw4w9WgXcQ',
+    youtube_id: 'placeholder_3',
     title: 'תכנון חשמל לבית פרטי - מדריך מקיף למתחילים',
     duration_seconds: 1330,
     category_id: '4',
@@ -44,10 +46,11 @@ export const sampleVideos: Video[] = [
     category_slug: 'electrical',
     channel_name: 'חשמל ועוד',
     published_at: '2024-01-10',
+    thumbnail_url: '/images/placeholder-video.svg',
   },
   {
     id: '4',
-    youtube_id: 'dQw4w9WgXcQ',
+    youtube_id: 'placeholder_4',
     title: 'שלבי הבנייה מהיסוד: מהחפירה ועד המפתח - סדר העבודות המלא',
     duration_seconds: 2120,
     category_id: '3',
@@ -55,10 +58,11 @@ export const sampleVideos: Video[] = [
     category_slug: 'construction',
     channel_name: 'הבונה החכם',
     published_at: '2024-04-01',
+    thumbnail_url: '/images/placeholder-video.svg',
   },
   {
     id: '5',
-    youtube_id: 'dQw4w9WgXcQ',
+    youtube_id: 'placeholder_5',
     title: 'היתר בנייה: כל מה שצריך לדעת על התהליך, המסמכים והזמנים',
     duration_seconds: 955,
     category_id: '1',
@@ -66,10 +70,11 @@ export const sampleVideos: Video[] = [
     category_slug: 'planning',
     channel_name: 'אדריכלות למתחילים',
     published_at: '2024-03-20',
+    thumbnail_url: '/images/placeholder-video.svg',
   },
   {
     id: '6',
-    youtube_id: 'dQw4w9WgXcQ',
+    youtube_id: 'placeholder_6',
     title: 'בחירת ריצוף וחיפוי - טעויות נפוצות שכולם עושים וכיצד להימנע מהן',
     duration_seconds: 870,
     category_id: '5',
@@ -77,6 +82,7 @@ export const sampleVideos: Video[] = [
     category_slug: 'finishing',
     channel_name: 'עיצוב הבית',
     published_at: '2024-02-05',
+    thumbnail_url: '/images/placeholder-video.svg',
   },
 ];
 

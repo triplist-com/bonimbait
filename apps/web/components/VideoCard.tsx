@@ -1,27 +1,43 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Video } from '@/lib/types';
-import { formatDuration, thumbnailUrl } from '@/lib/types';
+import { formatDuration, formatTimestamp, thumbnailUrl } from '@/lib/types';
 
 interface VideoCardProps {
   video: Video;
   snippet?: string;
+  /** When present, the card links to the video at this timestamp and shows a timestamp badge */
+  matchingSegmentTime?: number;
+  /** Pre-generated thumbnail URL for the matching segment timestamp (served by the API) */
+  segmentThumbnailUrl?: string;
 }
 
-export default function VideoCard({ video, snippet }: VideoCardProps) {
-  const thumb = video.thumbnail_url || thumbnailUrl(video.youtube_id);
+export default function VideoCard({ video, snippet, matchingSegmentTime, segmentThumbnailUrl }: VideoCardProps) {
+  // Priority: segment thumbnail from API > video thumbnail > YouTube fallback
+  const thumb = segmentThumbnailUrl || video.thumbnail_url || thumbnailUrl(video.youtube_id);
+
+  // Link to internal video page; append timestamp anchor when available
+  const href =
+    matchingSegmentTime != null
+      ? `/video/${video.id}?t=${Math.floor(matchingSegmentTime)}`
+      : `/video/${video.id}`;
+
+  // Badge shows segment timestamp when available, otherwise video duration
+  const badgeText =
+    matchingSegmentTime != null
+      ? formatTimestamp(matchingSegmentTime)
+      : formatDuration(video.duration_seconds);
 
   return (
-    <Link href={`/video/${video.id}`} className="group block">
+    <Link href={href} className="group block">
       <div className="bg-white rounded-xl overflow-hidden shadow-card border border-gray-100 hover:shadow-card-hover transition-all duration-200 hover:-translate-y-1">
         {/* Thumbnail */}
         <div className="relative aspect-video bg-gray-100 overflow-hidden">
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={thumb}
             alt={`תמונה ממוזערת של הסרטון: ${video.title}`}
-            fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
           />
           {/* Play overlay */}
@@ -37,9 +53,9 @@ export default function VideoCard({ video, snippet }: VideoCardProps) {
               </svg>
             </div>
           </div>
-          {/* Duration badge */}
+          {/* Timestamp / Duration badge */}
           <div className="absolute bottom-2 left-2 bg-black/80 text-white text-xs font-medium px-2 py-0.5 rounded">
-            {formatDuration(video.duration_seconds)}
+            {badgeText}
           </div>
         </div>
 

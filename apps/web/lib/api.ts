@@ -77,7 +77,53 @@ export async function searchVideos(
   if (category) sp.set('category', category);
   if (page) sp.set('page', String(page));
   if (limit) sp.set('limit', String(limit));
-  return apiFetch<SearchResponse>(`/api/search?${sp.toString()}`);
+
+  // The API returns flat SearchResultItem objects; transform to nested SearchResult
+  const raw = await apiFetch<{
+    results: Array<{
+      video_id: string;
+      youtube_id: string;
+      title: string;
+      description?: string;
+      summary?: string;
+      thumbnail_url?: string;
+      duration_seconds: number;
+      published_at?: string;
+      category_id?: string;
+      category_name?: string;
+      score: number;
+      snippet?: string;
+      matching_segment_time?: number;
+      segment_thumbnail_url?: string;
+    }>;
+    total: number;
+    query: string;
+  }>(`/api/search?${sp.toString()}`);
+
+  return {
+    results: raw.results.map((r) => ({
+      video: {
+        id: r.video_id,
+        youtube_id: r.youtube_id,
+        title: r.title,
+        channel_name: r.category_name || '',
+        duration_seconds: r.duration_seconds,
+        published_at: r.published_at || '',
+        category_id: r.category_id || '',
+        category_name: r.category_name || '',
+        category_slug: '',
+        thumbnail_url: r.thumbnail_url,
+      },
+      score: r.score,
+      snippet: r.snippet || '',
+      matching_segment_time: r.matching_segment_time,
+      segment_thumbnail_url: r.segment_thumbnail_url
+        ? `${API_URL}${r.segment_thumbnail_url}`
+        : undefined,
+    })),
+    total: raw.total,
+    query: raw.query,
+  };
 }
 
 export async function getSuggestions(query: string): Promise<string[]> {

@@ -63,6 +63,7 @@ export interface SearchResult {
   score: number;
   snippet: string;
   matching_segment_time?: number;
+  segment_thumbnail_url?: string;
 }
 
 export interface SearchResponse {
@@ -121,5 +122,27 @@ export function formatTimestamp(seconds: number): string {
 }
 
 export function thumbnailUrl(youtubeId: string): string {
-  return `https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg`;
+  return `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`;
+}
+
+/**
+ * Build a YouTube thumbnail URL for a specific timestamp.
+ * YouTube doesn't serve arbitrary-timestamp frames, so we pick the closest
+ * auto-generated thumbnail (1.jpg ≈ 25%, 2.jpg ≈ 50%, 3.jpg ≈ 75%).
+ * For exact frames, use the pipeline script to pre-generate thumbnails.
+ */
+export function timestampThumbnailUrl(
+  youtubeId: string,
+  timestampSeconds: number,
+  durationSeconds: number,
+): string {
+  if (durationSeconds <= 0) return thumbnailUrl(youtubeId);
+  const ratio = timestampSeconds / durationSeconds;
+  // Pick the closest auto-generated thumbnail
+  let idx: number;
+  if (ratio < 0.125) idx = 0;
+  else if (ratio < 0.375) idx = 1;
+  else if (ratio < 0.625) idx = 2;
+  else idx = 3;
+  return `https://img.youtube.com/vi/${youtubeId}/${idx}.jpg`;
 }

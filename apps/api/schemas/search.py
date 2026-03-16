@@ -33,6 +33,9 @@ class SearchResultItem(BaseModel):
     matching_segment_time: float | None = Field(
         None, description="Start time of matching segment in seconds"
     )
+    segment_thumbnail_url: str | None = Field(
+        None, description="Thumbnail URL for the matching segment timestamp"
+    )
 
 
 class SearchResponse(BaseModel):
