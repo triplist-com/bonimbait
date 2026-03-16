@@ -9,17 +9,19 @@ import type {
   VideoListParams,
 } from './types';
 
-// On Render the NEXT_PUBLIC_API_URL env var is set via render.yaml (fromService).
-// Render provides the external URL, e.g. https://bonimbait-api.onrender.com
-// For a custom domain, update the env var to https://api.bonimbait.com (or similar).
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
 // ---------------------------------------------------------------------------
-// Generic fetcher
+// Generic fetcher — uses same-origin Next.js API routes
 // ---------------------------------------------------------------------------
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  // For server-side rendering we need an absolute URL.
+  // NEXT_PUBLIC_SITE_URL is set on Vercel; fallback to localhost for dev.
+  const base =
+    typeof window !== 'undefined'
+      ? ''
+      : process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
+  const res = await fetch(`${base}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
@@ -40,7 +42,7 @@ export async function getVideos(params: VideoListParams = {}): Promise<Paginated
   const sp = new URLSearchParams();
   if (params.page) sp.set('page', String(params.page));
   if (params.limit) sp.set('limit', String(params.limit));
-  if (params.category_id) sp.set('category_id', params.category_id);
+  if (params.category_id) sp.set('category', params.category_id);
   if (params.sort) sp.set('sort', params.sort);
   const qs = sp.toString();
   return apiFetch<PaginatedVideos>(`/api/videos${qs ? `?${qs}` : ''}`);
@@ -51,7 +53,17 @@ export async function getVideoDetail(id: string): Promise<VideoDetail> {
 }
 
 export async function getRelatedVideos(id: string): Promise<Video[]> {
-  return apiFetch<Video[]>(`/api/videos/${id}/related`);
+  // For now, return same-category videos excluding the current one
+  try {
+    const video = await getVideoDetail(id);
+    if (video.category_slug) {
+      const data = await getVideos({ category_id: video.category_slug, limit: 4 });
+      return data.videos.filter((v) => v.youtube_id !== id).slice(0, 3);
+    }
+  } catch {
+    // ignore
+  }
+  return [];
 }
 
 // ---------------------------------------------------------------------------
@@ -78,23 +90,19 @@ export async function searchVideos(
   if (page) sp.set('page', String(page));
   if (limit) sp.set('limit', String(limit));
 
-  // The API returns flat SearchResultItem objects; transform to nested SearchResult
   const raw = await apiFetch<{
     results: Array<{
       video_id: string;
       youtube_id: string;
       title: string;
-      description?: string;
       summary?: string;
       thumbnail_url?: string;
       duration_seconds: number;
       published_at?: string;
-      category_id?: string;
+      category_slug?: string;
       category_name?: string;
       score: number;
       snippet?: string;
-      matching_segment_time?: number;
-      segment_thumbnail_url?: string;
     }>;
     total: number;
     query: string;
@@ -106,105 +114,57 @@ export async function searchVideos(
         id: r.video_id,
         youtube_id: r.youtube_id,
         title: r.title,
-        channel_name: r.category_name || '',
+        channel_name: 'בונים בית',
         duration_seconds: r.duration_seconds,
         published_at: r.published_at || '',
-        category_id: r.category_id || '',
+        category_id: r.category_slug || '',
         category_name: r.category_name || '',
-        category_slug: '',
+        category_slug: r.category_slug || '',
         thumbnail_url: r.thumbnail_url,
       },
       score: r.score,
       snippet: r.snippet || '',
-      matching_segment_time: r.matching_segment_time,
-      segment_thumbnail_url: r.segment_thumbnail_url
-        ? `${API_URL}${r.segment_thumbnail_url}`
-        : undefined,
     })),
     total: raw.total,
     query: raw.query,
   };
 }
 
-export async function getSuggestions(query: string): Promise<string[]> {
-  const data = await apiFetch<{ suggestions: string[] }>(
-    `/api/search/suggest?q=${encodeURIComponent(query)}`,
-  );
-  return data.suggestions;
+export async function getSuggestions(_query: string): Promise<string[]> {
+  // Not implemented yet — return empty
+  return [];
 }
 
 // ---------------------------------------------------------------------------
-// AI Answer
+// AI Answer — stubbed for now (Python API not deployed)
 // ---------------------------------------------------------------------------
 
-export async function getAnswer(query: string): Promise<AnswerResponse> {
-  return apiFetch<AnswerResponse>('/api/answer', {
-    method: 'POST',
-    body: JSON.stringify({ query, stream: false }),
-  });
+export async function getAnswer(_query: string): Promise<AnswerResponse> {
+  return {
+    answer: 'תכונת AI תהיה זמינה בקרוב. בינתיים, ניתן לצפות בסרטונים הרלוונטיים למטה.',
+    sources: [],
+    confidence: 'low',
+  };
 }
 
 /**
- * Stream an AI answer via SSE.  Returns an AbortController so the caller can
- * cancel the request.
+ * Stream an AI answer via SSE — stubbed for now.
  */
 export function streamAnswer(
   query: string,
   onChunk: (text: string) => void,
   onDone: (sources: AnswerSource[], confidence: 'high' | 'medium' | 'low') => void,
-  onError?: (err: Error) => void,
+  _onError?: (err: Error) => void,
 ): AbortController {
   const controller = new AbortController();
 
-  (async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/answer/stream`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
-        signal: controller.signal,
-      });
-
-      if (!res.ok || !res.body) {
-        throw new Error(`Stream error ${res.status}`);
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const payload = line.slice(6).trim();
-            if (payload === '[DONE]') continue;
-            try {
-              const parsed = JSON.parse(payload);
-              if (parsed.type === 'chunk' && parsed.text) {
-                onChunk(parsed.text);
-              } else if (parsed.type === 'done') {
-                onDone(parsed.sources ?? [], parsed.confidence ?? 'medium');
-              }
-            } catch {
-              // plain text chunk
-              onChunk(payload);
-            }
-          }
-        }
-      }
-    } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
-        onError?.(err as Error);
-      }
+  // Immediately return the placeholder message
+  setTimeout(() => {
+    if (!controller.signal.aborted) {
+      onChunk('תכונת AI תהיה זמינה בקרוב. בינתיים, ניתן לצפות בסרטונים הרלוונטיים למטה.');
+      onDone([], 'low');
     }
-  })();
+  }, 300);
 
   return controller;
 }

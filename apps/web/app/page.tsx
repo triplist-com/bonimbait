@@ -4,7 +4,6 @@ import CategoryBar from '@/components/CategoryBar';
 import VideoGrid from '@/components/VideoGrid';
 import StructuredData from '@/components/StructuredData';
 import { getVideos, getCategories } from '@/lib/api';
-import { categories as fallbackCategories, sampleVideos } from '@/lib/mockData';
 import type { Video, Category } from '@/lib/types';
 
 export const metadata: Metadata = {
@@ -17,8 +16,8 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  let videos: Video[] = sampleVideos;
-  let categories: Category[] = fallbackCategories;
+  let videos: Video[] = [];
+  let categories: Category[] = [];
 
   try {
     const [videosData, categoriesData] = await Promise.allSettled([
@@ -63,18 +62,18 @@ export default async function Home() {
       <section className="py-6" aria-label="סטטיסטיקות האתר">
         <div className="flex items-center justify-center gap-6 sm:gap-10 text-sm text-gray-500 font-medium">
           <div className="flex items-center gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-gray-900">900+</span>
+            <span className="text-2xl sm:text-3xl font-bold text-gray-900">200</span>
             <span>סרטונים</span>
           </div>
           <div className="w-px h-8 bg-gray-200" aria-hidden="true" />
           <div className="flex items-center gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-gray-900">10</span>
+            <span className="text-2xl sm:text-3xl font-bold text-gray-900">{categories.length || 8}</span>
             <span>קטגוריות</span>
           </div>
           <div className="w-px h-8 bg-gray-200" aria-hidden="true" />
           <div className="flex items-center gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-gray-900">100+</span>
-            <span>טיפים</span>
+            <span className="text-2xl sm:text-3xl font-bold text-gray-900">125</span>
+            <span>סיכומי AI</span>
           </div>
         </div>
       </section>

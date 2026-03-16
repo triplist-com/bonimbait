@@ -10,13 +10,13 @@ import Pagination from '@/components/Pagination';
 import StructuredData from '@/components/StructuredData';
 import { getCategories, getVideos } from '@/lib/api';
 import type { Video, Category } from '@/lib/types';
-import { categories as fallbackCategories, sampleVideos } from '@/lib/mockData';
+// Removed mock data imports — using real API data
 
 export default function CategoryPageClient() {
   const params = useParams();
   const slug = params.slug as string;
 
-  const [categories, setCategories] = useState<Category[]>(fallbackCategories);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,7 +38,7 @@ export default function CategoryPageClient() {
       }
     } catch {
       // Use fallback
-      setVideos(sampleVideos.filter((v) => v.category_slug === slug));
+      setVideos([]);
     } finally {
       setIsLoading(false);
     }

@@ -17,8 +17,10 @@ __pycache__/
 .env.local
 .env.production
 
-# Data (large files)
-data/
+# Data (large raw/processed pipeline data)
+/data/
+# Keep the web app's static data bundle
+!apps/web/data/
 
 # IDE
 .vscode/
