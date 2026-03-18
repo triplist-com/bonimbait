@@ -1,47 +1,12 @@
-# Render Blueprint — Bonimbait
+# Render Blueprint — Bonimbait API
 # https://render.com/docs/blueprint-spec
 #
 # Deploy: Push to GitHub → Render Dashboard → New → Blueprint → Connect repo
-# Render auto-detects this file and provisions all services.
 #
-# DATABASE OPTIONS:
-#   Option A (default below): Render Managed PostgreSQL
-#     - pgvector is supported on Starter plan and above
-#     - After creation, run: CREATE EXTENSION IF NOT EXISTS vector;
-#
-#   Option B: External database (e.g. Supabase)
-#     - Remove the `databases` block below
-#     - Replace the DATABASE_URL fromDatabase reference with a plain env var:
-#         - key: DATABASE_URL
-#           sync: false   # set manually in Render dashboard
-#     - Supabase provides pgvector out of the box on all plans
+# Frontend stays on Vercel. Database stays on Supabase.
+# This Blueprint deploys only the FastAPI backend.
 
 services:
-  # ─── Next.js Frontend ───────────────────────────────────────────────
-  - type: web
-    name: bonimbait-web
-    runtime: node
-    region: frankfurt
-    plan: starter
-    rootDir: apps/web
-    buildCommand: npm install && npm run build
-    startCommand: npx next start -p $PORT
-    envVars:
-      - key: NEXT_PUBLIC_API_URL
-        fromService:
-          name: bonimbait-api
-          type: web
-          property: host
-        # Render injects the full https://bonimbait-api.onrender.com URL.
-        # If you add a custom domain to the API, update this to match.
-      - key: NEXT_PUBLIC_SITE_URL
-        value: https://bonimbait.com
-      - key: NODE_ENV
-        value: production
-    domains:
-      - bonimbait.com
-      - www.bonimbait.com
-
   # ─── FastAPI Backend (Docker) ───────────────────────────────────────
   - type: web
     name: bonimbait-api
@@ -52,26 +17,13 @@ services:
     dockerfilePath: ./Dockerfile
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: bonimbait-db
-          property: connectionString
+        sync: false  # set manually — Supabase connection string
       - key: ANTHROPIC_API_KEY
         sync: false  # set manually in Render dashboard
       - key: OPENAI_API_KEY
         sync: false  # set manually in Render dashboard
       - key: CORS_ORIGINS
-        value: https://bonimbait.com,https://www.bonimbait.com
+        value: https://bonimbait.com,https://www.bonimbait.com,http://localhost:3000
       - key: ENV
         value: production
     healthCheckPath: /health
-
-# ─── PostgreSQL Database ──────────────────────────────────────────────
-# Render managed Postgres with pgvector support (Starter plan+).
-# After provisioning, connect and run:
-#   CREATE EXTENSION IF NOT EXISTS vector;
-databases:
-  - name: bonimbait-db
-    region: frankfurt
-    plan: starter
-    postgresMajorVersion: 16
-    ipAllowList: []  # Allow Render internal traffic
