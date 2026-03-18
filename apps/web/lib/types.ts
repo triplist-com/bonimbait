@@ -16,6 +16,9 @@ export interface Video {
   category_slug: string;
   thumbnail_url?: string;
   view_count?: number;
+  summary?: string;
+  costs_count?: number;
+  tips_count?: number;
 }
 
 export interface VideoSegment {

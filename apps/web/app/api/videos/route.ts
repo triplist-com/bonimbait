@@ -23,6 +23,9 @@ export async function GET(request: NextRequest) {
     category_slug: v.category_slug,
     thumbnail_url: v.thumbnail_url,
     view_count: v.view_count,
+    summary: v.summary || undefined,
+    costs_count: v.costs?.length || 0,
+    tips_count: v.tips?.length || 0,
   }));
 
   return NextResponse.json({

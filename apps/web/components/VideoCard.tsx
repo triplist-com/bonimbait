@@ -67,8 +67,23 @@ export default function VideoCard({ video, snippet, matchingSegmentTime, segment
           {snippet && (
             <p className="text-xs text-gray-500 line-clamp-2 mb-2">{snippet}</p>
           )}
+          {!snippet && video.summary && (
+            <p className="text-xs text-gray-400 line-clamp-2 mb-2">{video.summary}</p>
+          )}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500">{video.channel_name}</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-500">{video.channel_name}</span>
+              {(video.costs_count ?? 0) > 0 && (
+                <span className="text-2xs bg-secondary-50 text-secondary-700 font-medium px-1.5 py-0.5 rounded-full">
+                  ₪ עלויות
+                </span>
+              )}
+              {(video.tips_count ?? 0) > 0 && (
+                <span className="text-2xs bg-green-50 text-green-700 font-medium px-1.5 py-0.5 rounded-full">
+                  {video.tips_count} טיפים
+                </span>
+              )}
+            </div>
             <span className="inline-block text-xs bg-primary-50 text-primary-700 font-medium px-2.5 py-1 rounded-full">
               {video.category_name}
             </span>
