@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import SearchBar from '@/components/SearchBar';
 import CategoryBar from '@/components/CategoryBar';
 import VideoGrid from '@/components/VideoGrid';
@@ -16,15 +17,24 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  let videos: Video[] = [];
+  let recentVideos: Video[] = [];
+  let popularVideos: Video[] = [];
   let categories: Category[] = [];
+  let totalVideos = 0;
 
   try {
-    const [videosData, categoriesData] = await Promise.allSettled([
+    const [recentData, popularData, categoriesData] = await Promise.allSettled([
       getVideos({ limit: 6, sort: 'newest' }),
+      getVideos({ limit: 6, sort: 'popular' }),
       getCategories(),
     ]);
-    if (videosData.status === 'fulfilled') videos = videosData.value.videos;
+    if (recentData.status === 'fulfilled') {
+      recentVideos = recentData.value.videos;
+      totalVideos = recentData.value.total;
+    }
+    if (popularData.status === 'fulfilled') {
+      popularVideos = popularData.value.videos;
+    }
     if (categoriesData.status === 'fulfilled') categories = categoriesData.value;
   } catch {
     // Use fallback data
@@ -62,7 +72,7 @@ export default async function Home() {
       <section className="py-6" aria-label="סטטיסטיקות האתר">
         <div className="flex items-center justify-center gap-6 sm:gap-10 text-sm text-gray-500 font-medium">
           <div className="flex items-center gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-gray-900">200</span>
+            <span className="text-2xl sm:text-3xl font-bold text-gray-900">{totalVideos || 200}</span>
             <span>סרטונים</span>
           </div>
           <div className="w-px h-8 bg-gray-200" aria-hidden="true" />
@@ -72,7 +82,7 @@ export default async function Home() {
           </div>
           <div className="w-px h-8 bg-gray-200" aria-hidden="true" />
           <div className="flex items-center gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-gray-900">125</span>
+            <span className="text-2xl sm:text-3xl font-bold text-gray-900">{totalVideos || 200}</span>
             <span>סיכומי AI</span>
           </div>
         </div>
@@ -80,13 +90,56 @@ export default async function Home() {
 
       {/* Category Chips */}
       <section className="py-6" id="categories" aria-label="קטגוריות">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-gray-900">קטגוריות</h2>
+          <Link
+            href="/categories"
+            className="text-sm text-primary hover:text-primary-700 font-medium transition-colors flex items-center gap-1"
+          >
+            כל הקטגוריות
+            <svg className="w-4 h-4 rtl:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </Link>
+        </div>
         <CategoryBar categories={categories} />
       </section>
 
       {/* Recent Videos */}
       <section className="py-8" aria-label="סרטונים אחרונים">
-        <VideoGrid videos={videos} title="סרטונים אחרונים" />
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-gray-900">סרטונים אחרונים</h2>
+          <Link
+            href="/videos?sort=newest"
+            className="text-sm text-primary hover:text-primary-700 font-medium transition-colors flex items-center gap-1"
+          >
+            כל הסרטונים
+            <svg className="w-4 h-4 rtl:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </Link>
+        </div>
+        <VideoGrid videos={recentVideos} />
       </section>
+
+      {/* Popular Videos */}
+      {popularVideos.length > 0 && (
+        <section className="py-8" aria-label="סרטונים פופולריים">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900">סרטונים פופולריים</h2>
+            <Link
+              href="/videos?sort=popular"
+              className="text-sm text-primary hover:text-primary-700 font-medium transition-colors flex items-center gap-1"
+            >
+              הכל
+              <svg className="w-4 h-4 rtl:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </Link>
+          </div>
+          <VideoGrid videos={popularVideos} />
+        </section>
+      )}
 
       {/* CTA Section */}
       <section className="py-8 pb-16" aria-label="חיפוש נוסף">

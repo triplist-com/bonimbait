@@ -4,7 +4,7 @@ export default function Footer() {
   return (
     <footer className="bg-white border-t border-gray-100 mt-16">
       <div className="container-page py-10">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 items-start">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-8 items-start">
           {/* Brand */}
           <div>
             <Link href="/" className="flex items-center gap-2 mb-3">
@@ -32,18 +32,40 @@ export default function Footer() {
             </p>
           </div>
 
-          {/* Links */}
+          {/* Navigation */}
           <div>
-            <h4 className="font-semibold text-gray-900 mb-3 text-sm">קישורים</h4>
+            <h4 className="font-semibold text-gray-900 mb-3 text-sm">ניווט</h4>
             <nav className="flex flex-col gap-2">
               <Link href="/" className="text-sm text-gray-500 hover:text-primary transition-colors">
                 דף הבית
               </Link>
+              <Link href="/videos" className="text-sm text-gray-500 hover:text-primary transition-colors">
+                סרטונים
+              </Link>
+              <Link href="/categories" className="text-sm text-gray-500 hover:text-primary transition-colors">
+                קטגוריות
+              </Link>
               <Link href="/search" className="text-sm text-gray-500 hover:text-primary transition-colors">
                 חיפוש
               </Link>
+            </nav>
+          </div>
+
+          {/* Info */}
+          <div>
+            <h4 className="font-semibold text-gray-900 mb-3 text-sm">מידע</h4>
+            <nav className="flex flex-col gap-2">
               <Link href="/about" className="text-sm text-gray-500 hover:text-primary transition-colors">
                 אודות
+              </Link>
+              <Link href="/contact" className="text-sm text-gray-500 hover:text-primary transition-colors">
+                צור קשר
+              </Link>
+              <Link href="/privacy" className="text-sm text-gray-500 hover:text-primary transition-colors">
+                מדיניות פרטיות
+              </Link>
+              <Link href="/terms" className="text-sm text-gray-500 hover:text-primary transition-colors">
+                תנאי שימוש
               </Link>
             </nav>
           </div>

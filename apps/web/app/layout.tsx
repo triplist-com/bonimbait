@@ -13,6 +13,7 @@ const heebo = Heebo({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://bonimbait.com'),
   title: {
     template: '%s | בונים בית',
     default: 'בונים בית - מאגר הידע לבנייה פרטית בישראל',

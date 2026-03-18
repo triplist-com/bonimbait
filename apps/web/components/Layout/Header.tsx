@@ -7,7 +7,8 @@ import SearchBar from '@/components/SearchBar';
 
 const navItems = [
   { label: 'ראשי', href: '/' },
-  { label: 'קטגוריות', href: '/#categories' },
+  { label: 'סרטונים', href: '/videos' },
+  { label: 'קטגוריות', href: '/categories' },
   { label: 'אודות', href: '/about' },
 ];
 

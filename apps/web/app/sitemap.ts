@@ -2,18 +2,19 @@ import type { MetadataRoute } from 'next';
 
 const BASE_URL = 'https://bonimbait.com';
 
+// Actual category slugs matching data/videos.json
 const categorySlugs = [
-  'planning',
-  'costs',
-  'construction',
-  'electrical',
-  'finishing',
-  'contractors',
-  'regulations',
-  'tips',
+  'planning-permits',
+  'structure-construction',
+  'finishes-design',
+  'electrical-plumbing',
+  'contractors-labor',
+  'costs-pricing',
+  'general-tips',
+  'landscaping-yard',
 ];
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
   const staticPages: MetadataRoute.Sitemap = [
@@ -24,16 +25,46 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1.0,
     },
     {
-      url: `${BASE_URL}/about`,
+      url: `${BASE_URL}/videos`,
       lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.5,
+      changeFrequency: 'daily',
+      priority: 0.9,
+    },
+    {
+      url: `${BASE_URL}/categories`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.8,
     },
     {
       url: `${BASE_URL}/search`,
       lastModified: now,
       changeFrequency: 'daily',
       priority: 0.8,
+    },
+    {
+      url: `${BASE_URL}/about`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: `${BASE_URL}/contact`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.4,
+    },
+    {
+      url: `${BASE_URL}/privacy`,
+      lastModified: now,
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+    {
+      url: `${BASE_URL}/terms`,
+      lastModified: now,
+      changeFrequency: 'yearly',
+      priority: 0.3,
     },
   ];
 
@@ -44,13 +75,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  // Placeholder for video pages - in production, fetch video IDs from the API
-  // const videoPages: MetadataRoute.Sitemap = videoIds.map((id) => ({
-  //   url: `${BASE_URL}/video/${id}`,
-  //   lastModified: now,
-  //   changeFrequency: 'monthly' as const,
-  //   priority: 0.6,
-  // }));
+  // Generate video pages from local data
+  let videoPages: MetadataRoute.Sitemap = [];
+  try {
+    // Dynamic import to avoid bundling in client
+    const { getVideos } = await import('./api/_lib/data');
+    const { videos } = getVideos({ limit: 1000 });
+    videoPages = videos.map((v) => ({
+      url: `${BASE_URL}/video/${v.id}`,
+      lastModified: v.published_at ? new Date(v.published_at) : now,
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    }));
+  } catch {
+    // Skip video pages if data unavailable
+  }
 
-  return [...staticPages, ...categoryPages];
+  return [...staticPages, ...categoryPages, ...videoPages];
 }

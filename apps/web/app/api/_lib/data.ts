@@ -54,8 +54,29 @@ let _data: DataFile | null = null;
 function loadData(): DataFile {
   if (_data) return _data;
 
-  const filePath = path.join(process.cwd(), 'data', 'videos.json');
-  const raw = fs.readFileSync(filePath, 'utf-8');
+  // Try multiple paths to handle both local dev and Vercel deployment
+  const candidates = [
+    path.join(process.cwd(), 'data', 'videos.json'),
+    path.join(process.cwd(), 'apps', 'web', 'data', 'videos.json'),
+    path.resolve(__dirname, '..', '..', '..', 'data', 'videos.json'),
+  ];
+
+  let raw: string | null = null;
+  for (const filePath of candidates) {
+    try {
+      raw = fs.readFileSync(filePath, 'utf-8');
+      break;
+    } catch {
+      // try next candidate
+    }
+  }
+
+  if (!raw) {
+    throw new Error(
+      `Could not find videos.json. Tried: ${candidates.join(', ')}. CWD: ${process.cwd()}`,
+    );
+  }
+
   _data = JSON.parse(raw) as DataFile;
   return _data;
 }
@@ -196,4 +217,47 @@ export interface SearchResultItem {
 export function getTotalVideoCount(): number {
   const data = loadData();
   return data.total_videos;
+}
+
+export function getSuggestions(query: string, limit = 6): string[] {
+  const data = loadData();
+  const q = query.trim().toLowerCase();
+  if (!q || q.length < 2) return [];
+
+  const seen = new Set<string>();
+  const results: string[] = [];
+
+  // Match video titles containing the query terms
+  for (const v of data.videos) {
+    if (results.length >= limit) break;
+    const titleLower = v.title.toLowerCase();
+    if (titleLower.includes(q)) {
+      // Use the full title as a suggestion, truncated
+      const suggestion = v.title.length > 60 ? v.title.substring(0, 57) + '...' : v.title;
+      if (!seen.has(suggestion)) {
+        seen.add(suggestion);
+        results.push(suggestion);
+      }
+    }
+  }
+
+  // Also match key_points for broader suggestions
+  if (results.length < limit) {
+    for (const v of data.videos) {
+      if (results.length >= limit) break;
+      for (const kp of v.key_points || []) {
+        if (results.length >= limit) break;
+        const kpLower = kp.toLowerCase();
+        if (kpLower.includes(q)) {
+          const suggestion = kp.length > 60 ? kp.substring(0, 57) + '...' : kp;
+          if (!seen.has(suggestion)) {
+            seen.add(suggestion);
+            results.push(suggestion);
+          }
+        }
+      }
+    }
+  }
+
+  return results;
 }

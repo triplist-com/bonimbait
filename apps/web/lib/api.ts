@@ -130,9 +130,12 @@ export async function searchVideos(
   };
 }
 
-export async function getSuggestions(_query: string): Promise<string[]> {
-  // Not implemented yet — return empty
-  return [];
+export async function getSuggestions(query: string): Promise<string[]> {
+  if (query.trim().length < 2) return [];
+  const data = await apiFetch<{ suggestions: string[] }>(
+    `/api/suggestions?q=${encodeURIComponent(query.trim())}`,
+  );
+  return data.suggestions;
 }
 
 // ---------------------------------------------------------------------------
