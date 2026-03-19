@@ -11,8 +11,6 @@ from config import get_settings
 from database import get_db
 from models.category import Category
 from schemas.search import (
-    AnswerRequest,
-    AnswerResponse,
     SearchResponse,
     SearchResultItem,
     SuggestResponse,
@@ -181,13 +179,5 @@ async def search_suggest(
     return SuggestResponse(suggestions=suggestions, query=q)
 
 
-@router.post("/answer", response_model=AnswerResponse)
-async def answer_question(
-    request: AnswerRequest,
-    service: SearchService = Depends(get_search_service),
-) -> AnswerResponse:
-    """Generate an AI answer based on video content (placeholder)."""
-    return await service.answer(
-        question=request.question,
-        category_id=request.category_id,
-    )
+    # NOTE: AI answer generation is handled by routers/answer.py
+    # The old placeholder endpoint has been removed.
