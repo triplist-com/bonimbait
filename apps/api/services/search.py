@@ -70,20 +70,18 @@ class SearchService:
         if cached is not None:
             return cached
 
-        # Run both searches in parallel
-        semantic_task = self._semantic_search(query, top_k=50)
-        fts_task = self._fulltext_search(query, top_k=50)
-
-        semantic_results, fts_results = await asyncio.gather(
-            semantic_task, fts_task, return_exceptions=True
-        )
-
-        # Handle partial failures gracefully
-        if isinstance(semantic_results, BaseException):
-            logger.warning("Semantic search failed: %s", semantic_results)
+        # Run searches sequentially — asyncio.gather on the same
+        # SQLAlchemy AsyncSession is unsafe, especially with pgbouncer.
+        try:
+            semantic_results = await self._semantic_search(query, top_k=50)
+        except Exception as exc:
+            logger.warning("Semantic search failed: %s", exc)
             semantic_results = []
-        if isinstance(fts_results, BaseException):
-            logger.warning("Full-text search failed: %s", fts_results)
+
+        try:
+            fts_results = await self._fulltext_search(query, top_k=50)
+        except Exception as exc:
+            logger.warning("Full-text search failed: %s", exc)
             fts_results = []
 
         # Merge with RRF
