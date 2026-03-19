@@ -10,13 +10,16 @@ function formatPrice(price: string | number): string {
     // Strip trailing "ש\"ח" since we add ₪ ourselves
     const cleaned = price.replace(/\s*ש"ח\s*$/g, '').trim();
     // If it's a range like "200-220", format each number
+    // Wrap in LTR span so lower number appears on the left
     if (cleaned.includes('-')) {
       const parts = cleaned.split('-').map((p) => p.trim());
-      const formatted = parts.map((p) => {
+      const nums = parts.map((p) => {
         const num = Number(p.replace(/,/g, ''));
-        return isNaN(num) ? p : num.toLocaleString('he-IL');
+        return { raw: p, num, formatted: isNaN(num) ? p : num.toLocaleString('he-IL') };
       });
-      return `${formatted.join(' - ')} ₪`;
+      // Sort so lower number is first (left in LTR)
+      nums.sort((a, b) => (a.num || 0) - (b.num || 0));
+      return `\u200E${nums.map((n) => n.formatted).join(' - ')} ₪`;
     }
     const num = Number(cleaned.replace(/,/g, ''));
     if (!isNaN(num)) return `${num.toLocaleString('he-IL')} ₪`;

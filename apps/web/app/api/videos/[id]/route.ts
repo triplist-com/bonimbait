@@ -31,7 +31,7 @@ export async function GET(
     costs_data: video.costs?.length
       ? video.costs.map((c) => ({
           item: c.item,
-          price: typeof c.price === 'string' ? parseFloat(c.price.replace(/[^\d.]/g, '')) || 0 : c.price,
+          price: c.price,
           unit: c.unit,
           context: c.context,
         }))

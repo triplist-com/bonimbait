@@ -139,35 +139,127 @@ export async function getSuggestions(query: string): Promise<string[]> {
 }
 
 // ---------------------------------------------------------------------------
-// AI Answer — stubbed for now (Python API not deployed)
+// AI Answer — wired to live backend
 // ---------------------------------------------------------------------------
 
-export async function getAnswer(_query: string): Promise<AnswerResponse> {
+function mapConfidence(score: number): 'high' | 'medium' | 'low' {
+  if (score >= 0.7) return 'high';
+  if (score >= 0.4) return 'medium';
+  return 'low';
+}
+
+export async function getAnswer(query: string): Promise<AnswerResponse> {
+  const raw = await apiFetch<{
+    answer: string;
+    sources: Array<{
+      video_id: string;
+      youtube_id: string;
+      title: string;
+      timestamp: number;
+      relevance_score: number;
+    }>;
+    confidence: number;
+    query: string;
+  }>('/api/answer', {
+    method: 'POST',
+    body: JSON.stringify({ query }),
+  });
+
   return {
-    answer: 'תכונת AI תהיה זמינה בקרוב. בינתיים, ניתן לצפות בסרטונים הרלוונטיים למטה.',
-    sources: [],
-    confidence: 'low',
+    answer: raw.answer,
+    sources: raw.sources.map((s) => ({
+      video_id: s.video_id,
+      youtube_id: s.youtube_id,
+      title: s.title,
+      timestamp: s.timestamp,
+    })),
+    confidence: mapConfidence(raw.confidence),
   };
 }
 
 /**
- * Stream an AI answer via SSE — stubbed for now.
+ * Stream an AI answer via SSE from the backend.
  */
 export function streamAnswer(
   query: string,
   onChunk: (text: string) => void,
   onDone: (sources: AnswerSource[], confidence: 'high' | 'medium' | 'low') => void,
-  _onError?: (err: Error) => void,
+  onError?: (err: Error) => void,
 ): AbortController {
   const controller = new AbortController();
 
-  // Immediately return the placeholder message
-  setTimeout(() => {
-    if (!controller.signal.aborted) {
-      onChunk('תכונת AI תהיה זמינה בקרוב. בינתיים, ניתן לצפות בסרטונים הרלוונטיים למטה.');
-      onDone([], 'low');
-    }
-  }, 300);
+  const base =
+    typeof window !== 'undefined'
+      ? ''
+      : process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
+  fetch(`${base}/api/answer/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+    signal: controller.signal,
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        throw new Error(`API error ${res.status}: ${res.statusText}`);
+      }
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error('No response body');
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        // Keep the last (possibly incomplete) line in the buffer
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const json = line.slice(6).trim();
+          if (!json) continue;
+
+          try {
+            const event = JSON.parse(json) as {
+              type: string;
+              content?: string;
+              sources?: Array<{
+                video_id: string;
+                youtube_id: string;
+                title: string;
+                timestamp: number;
+                relevance_score: number;
+              }>;
+              confidence?: number;
+            };
+
+            if (event.type === 'chunk' && event.content) {
+              onChunk(event.content);
+            } else if (event.type === 'done') {
+              const sources: AnswerSource[] = (event.sources || []).map((s) => ({
+                video_id: s.video_id,
+                youtube_id: s.youtube_id,
+                title: s.title,
+                timestamp: s.timestamp,
+              }));
+              onDone(sources, mapConfidence(event.confidence ?? 0));
+            }
+          } catch {
+            // skip malformed JSON
+          }
+        }
+      }
+    })
+    .catch((err: Error) => {
+      if (err.name === 'AbortError') return;
+      if (onError) {
+        onError(err);
+      }
+    });
 
   return controller;
 }

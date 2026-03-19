@@ -12,14 +12,16 @@ from database import get_db
 from schemas.answer import AnswerRequest, AnswerResponse
 from services.answer import AnswerService
 from services.answer_cache import AnswerCache
+from services.budget_tracker import BudgetTracker
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/answer", tags=["answer"])
 
-# Shared singleton instances so cache is preserved across requests.
+# Shared singleton instances so cache and budget are preserved across requests.
 _answer_cache = AnswerCache()
-_answer_service = AnswerService(cache=_answer_cache)
+_budget_tracker = BudgetTracker()
+_answer_service = AnswerService(cache=_answer_cache, budget_tracker=_budget_tracker)
 
 
 def get_answer_service() -> AnswerService:
@@ -85,3 +87,14 @@ async def get_cached_answer(
     if cached is None:
         raise HTTPException(status_code=404, detail="No cached answer found for this query.")
     return cached
+
+
+# ------------------------------------------------------------------
+# GET /api/answer/budget  — budget stats (admin use)
+# ------------------------------------------------------------------
+
+
+@router.get("/budget")
+async def get_budget_stats() -> dict:
+    """Return current daily budget statistics."""
+    return _budget_tracker.daily_stats

@@ -47,6 +47,72 @@ interface DataFile {
   videos: VideoRecord[];
 }
 
+// ---- Hebrew fuzzy search helpers ----
+
+// Hebrew keyboard adjacency map (standard Israeli keyboard layout)
+const HEBREW_ADJACENT: Record<string, string[]> = {
+  'ק': ['ר', 'ו'],
+  'ר': ['ק', 'א', 'ו'],
+  'א': ['ר', 'ט', 'ו'],
+  'ט': ['א', 'ו', 'ן'],
+  'ו': ['ק', 'ר', 'א', 'ט', 'ן', 'ם'],
+  'ן': ['ט', 'ו', 'ם', 'פ'],
+  'ם': ['ו', 'ן', 'פ'],
+  'פ': ['ן', 'ם'],
+  'ש': ['ד', 'ג', 'כ'],
+  'ד': ['ש', 'ג', 'כ', 'ע'],
+  'ג': ['ש', 'ד', 'כ', 'ע', 'י'],
+  'כ': ['ש', 'ד', 'ג', 'ע', 'י', 'ח'],
+  'ע': ['ד', 'ג', 'כ', 'י', 'ח', 'ל'],
+  'י': ['ג', 'כ', 'ע', 'ח', 'ל'],
+  'ח': ['כ', 'ע', 'י', 'ל', 'ך'],
+  'ל': ['ע', 'י', 'ח', 'ך', 'ף'],
+  'ך': ['ח', 'ל', 'ף'],
+  'ף': ['ל', 'ך'],
+  'ז': ['ס', 'ב', 'ה'],
+  'ס': ['ז', 'ב', 'ה', 'נ'],
+  'ב': ['ז', 'ס', 'ה', 'נ', 'מ'],
+  'ה': ['ז', 'ס', 'ב', 'נ', 'מ', 'צ'],
+  'נ': ['ס', 'ב', 'ה', 'מ', 'צ', 'ת'],
+  'מ': ['ב', 'ה', 'נ', 'צ', 'ת', 'ץ'],
+  'צ': ['ה', 'נ', 'מ', 'ת', 'ץ'],
+  'ת': ['נ', 'מ', 'צ', 'ץ'],
+  'ץ': ['מ', 'צ', 'ת'],
+};
+
+// Final-form equivalences (sofit letters)
+const HEBREW_NORMALIZE: Record<string, string> = {
+  'ך': 'כ', 'ם': 'מ', 'ן': 'נ', 'ף': 'פ', 'ץ': 'צ',
+};
+
+function normalizeHebrew(text: string): string {
+  return text.replace(/[ךםןףץ]/g, (ch) => HEBREW_NORMALIZE[ch] || ch);
+}
+
+/**
+ * Check if two Hebrew strings are a fuzzy match (allowing one typo per word).
+ * Returns true if `needle` matches `haystack` exactly or with adjacent-key substitution.
+ */
+function hebrewFuzzyMatch(haystack: string, needle: string): boolean {
+  const h = normalizeHebrew(haystack.toLowerCase());
+  const n = normalizeHebrew(needle.toLowerCase());
+
+  // Exact substring match
+  if (h.includes(n)) return true;
+
+  // Try replacing each character in needle with adjacent keys
+  for (let i = 0; i < n.length; i++) {
+    const ch = needle[i];
+    const adjacents = HEBREW_ADJACENT[ch] || [];
+    for (const adj of adjacents) {
+      const variant = n.slice(0, i) + normalizeHebrew(adj) + n.slice(i + 1);
+      if (h.includes(variant)) return true;
+    }
+  }
+
+  return false;
+}
+
 // ---- Singleton cache ----
 
 let _data: DataFile | null = null;
@@ -159,9 +225,15 @@ export function searchVideos(
     const keyPointsJoined = (v.key_points || []).join(' ').toLowerCase();
 
     for (const term of terms) {
+      // Exact match scores higher than fuzzy
       if (titleLower.includes(term)) score += 10;
+      else if (hebrewFuzzyMatch(titleLower, term)) score += 7;
+
       if (summaryLower.includes(term)) score += 5;
+      else if (hebrewFuzzyMatch(summaryLower, term)) score += 3;
+
       if (keyPointsJoined.includes(term)) score += 3;
+      else if (hebrewFuzzyMatch(keyPointsJoined, term)) score += 2;
     }
 
     if (score > 0) {
@@ -235,7 +307,7 @@ export function getSuggestions(query: string, limit = 6): string[] {
   for (const v of data.videos) {
     if (results.length >= limit) break;
     const titleLower = v.title.toLowerCase();
-    if (titleLower.includes(q)) {
+    if (titleLower.includes(q) || hebrewFuzzyMatch(titleLower, q)) {
       // Use the full title as a suggestion, truncated
       const suggestion = v.title.length > 60 ? v.title.substring(0, 57) + '...' : v.title;
       if (!seen.has(suggestion)) {
@@ -252,7 +324,7 @@ export function getSuggestions(query: string, limit = 6): string[] {
       for (const kp of v.key_points || []) {
         if (results.length >= limit) break;
         const kpLower = kp.toLowerCase();
-        if (kpLower.includes(q)) {
+        if (kpLower.includes(q) || hebrewFuzzyMatch(kpLower, q)) {
           const suggestion = kp.length > 60 ? kp.substring(0, 57) + '...' : kp;
           if (!seen.has(suggestion)) {
             seen.add(suggestion);

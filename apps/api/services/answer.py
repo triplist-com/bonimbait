@@ -20,6 +20,7 @@ from models.embedding import Embedding
 from models.video import Video, VideoSegment
 from schemas.answer import AnswerResponse, AnswerSource, StreamChunk
 from services.answer_cache import AnswerCache
+from services.budget_tracker import BudgetTracker
 from services.answer_prompts import (
     SYSTEM_PROMPT,
     build_segment_context,
@@ -60,9 +61,14 @@ _MAX_CONTEXT_CHARS = 200_000  # ~50K tokens at ~4 chars/token
 class AnswerService:
     """Orchestrates retrieval and generation for the RAG pipeline."""
 
-    def __init__(self, cache: AnswerCache | None = None) -> None:
+    def __init__(
+        self,
+        cache: AnswerCache | None = None,
+        budget_tracker: BudgetTracker | None = None,
+    ) -> None:
         self._anthropic = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
         self._cache = cache or AnswerCache()
+        self._budget_tracker = budget_tracker
 
     # ------------------------------------------------------------------
     # Public API
@@ -78,6 +84,16 @@ class AnswerService:
         cached = self._cache.get(query)
         if cached is not None:
             return cached
+
+        # Check budget before calling Claude
+        if self._budget_tracker and self._budget_tracker.is_budget_exceeded:
+            logger.warning("Daily budget exceeded — returning video-only fallback")
+            return AnswerResponse(
+                answer="תקציב AI היומי נוצל. בינתיים, ניתן לצפות בסרטונים הרלוונטיים למטה.",
+                sources=[],
+                confidence=0.0,
+                query=query,
+            )
 
         segments = await self._retrieve_segments(query, db)
         context = self._build_context(segments)
@@ -107,6 +123,13 @@ class AnswerService:
 
         answer_text = message.content[0].text
 
+        # Record token usage for budget tracking
+        if self._budget_tracker:
+            self._budget_tracker.record_usage(
+                input_tokens=message.usage.input_tokens,
+                output_tokens=message.usage.output_tokens,
+            )
+
         sources = self._extract_sources(segments)
 
         response = AnswerResponse(
@@ -126,6 +149,18 @@ class AnswerService:
         db: AsyncSession,
     ) -> AsyncGenerator[str, None]:
         """Yield Server-Sent-Event formatted chunks for a streaming answer."""
+        # Check budget before calling Claude
+        if self._budget_tracker and self._budget_tracker.is_budget_exceeded:
+            logger.warning("Daily budget exceeded — returning video-only fallback (stream)")
+            budget_chunk = StreamChunk(
+                type="chunk",
+                content="תקציב AI היומי נוצל. בינתיים, ניתן לצפות בסרטונים הרלוונטיים למטה.",
+            )
+            yield f"data: {budget_chunk.model_dump_json()}\n\n"
+            done = StreamChunk(type="done", sources=[], confidence=0.0)
+            yield f"data: {done.model_dump_json()}\n\n"
+            return
+
         segments = await self._retrieve_segments(query, db)
         context = self._build_context(segments)
         confidence = self._estimate_confidence(query, segments)
@@ -157,6 +192,14 @@ class AnswerService:
                 collected_answer += text_chunk
                 chunk = StreamChunk(type="chunk", content=text_chunk)
                 yield f"data: {chunk.model_dump_json()}\n\n"
+
+            # Record token usage after stream completes
+            final_message = await stream.get_final_message()
+            if self._budget_tracker:
+                self._budget_tracker.record_usage(
+                    input_tokens=final_message.usage.input_tokens,
+                    output_tokens=final_message.usage.output_tokens,
+                )
 
         # Final event with metadata
         done_event = StreamChunk(
