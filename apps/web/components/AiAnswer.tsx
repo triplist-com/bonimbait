@@ -5,12 +5,16 @@ import Link from 'next/link';
 import type { AnswerSource } from '@/lib/types';
 import { formatTimestamp } from '@/lib/types';
 
+type AgentStep = 'searching' | 'found' | 'composing' | 'done' | null;
+
 interface AiAnswerProps {
   answer: string;
   sources?: AnswerSource[];
   confidence?: 'high' | 'medium' | 'low' | null;
   isStreaming?: boolean;
   error?: string | null;
+  step?: AgentStep;
+  isCostRelated?: boolean;
 }
 
 const confidenceConfig = {
@@ -19,12 +23,39 @@ const confidenceConfig = {
   low: { label: 'ביטחון נמוך', color: 'bg-red-100 text-red-700' },
 };
 
+const stepMessages: Record<string, { icon: string; text: string }> = {
+  searching: { icon: '🔍', text: 'מחפש בסרטונים רלוונטיים...' },
+  found: { icon: '📚', text: 'מצאתי סרטונים שמדברים על זה...' },
+  composing: { icon: '✍️', text: 'מרכיב תשובה...' },
+};
+
+function StepIndicator({ step }: { step: AgentStep }) {
+  if (!step || step === 'done') return null;
+
+  const current = stepMessages[step];
+  if (!current) return null;
+
+  return (
+    <div className="flex items-center gap-2 text-sm text-gray-500 mb-3 animate-fade-in">
+      <span className="text-lg">{current.icon}</span>
+      <span className="font-medium">{current.text}</span>
+      <span className="inline-flex gap-1 ms-1">
+        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
+        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '160ms' }} />
+        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '320ms' }} />
+      </span>
+    </div>
+  );
+}
+
 export default function AiAnswer({
   answer,
   sources,
   confidence,
   isStreaming,
   error,
+  step,
+  isCostRelated,
 }: AiAnswerProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const isLong = answer.length > 600;
@@ -81,6 +112,9 @@ export default function AiAnswer({
           )}
         </div>
 
+        {/* Agent step indicator */}
+        {isStreaming && !answer && <StepIndicator step={step ?? null} />}
+
         {/* Answer text */}
         <div
           className={`text-gray-700 leading-relaxed text-sm whitespace-pre-line ${
@@ -88,7 +122,7 @@ export default function AiAnswer({
           }`}
         >
           {answer}
-          {isStreaming && (
+          {isStreaming && answer && (
             <span className="inline-flex gap-1 ms-1 align-middle">
               <span
                 className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse-dot"
@@ -134,6 +168,24 @@ export default function AiAnswer({
                 </Link>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Cost wizard CTA */}
+        {isCostRelated && !isStreaming && answer && (
+          <div className="mt-4 pt-4 border-t border-primary-100">
+            <Link
+              href="/calculator"
+              className="inline-flex items-center gap-2 bg-primary hover:bg-primary-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 15.75V18m-7.5-6.75h.008v.008H8.25v-.008zm0 2.25h.008v.008H8.25V13.5zm0 2.25h.008v.008H8.25v-.008zm0 2.25h.008v.008H8.25V18zm2.498-6.75h.007v.008h-.007v-.008zm0 2.25h.007v.008h-.007V13.5zm0 2.25h.007v.008h-.007v-.008zm0 2.25h.007v.008h-.007V18zm2.504-6.75h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V13.5zm0 2.25h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V18zm2.498-6.75h.008v.008H15.75v-.008zm0 2.25h.008v.008H15.75V13.5z" />
+              </svg>
+              חשב עלות לבית שלך
+              <svg className="w-4 h-4 rtl:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+              </svg>
+            </Link>
           </div>
         )}
       </div>

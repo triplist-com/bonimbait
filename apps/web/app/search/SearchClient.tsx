@@ -32,6 +32,8 @@ function SearchContent() {
     confidence,
     isStreaming,
     error: answerError,
+    step,
+    isCostRelated,
     start: startAnswer,
   } = useStreamingAnswer();
 
@@ -94,6 +96,8 @@ function SearchContent() {
                   confidence={confidence}
                   isStreaming={isStreaming}
                   error={answerError}
+                  step={step}
+                  isCostRelated={isCostRelated}
                 />
               )}
             </div>
