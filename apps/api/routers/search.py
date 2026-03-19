@@ -130,7 +130,6 @@ async def search_debug(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Temporary debug endpoint to diagnose search issues."""
-    import traceback
     results = {}
 
     # Test FTS directly
@@ -143,30 +142,31 @@ async def search_debug(
     except Exception as e:
         results["fts_error"] = f"{type(e).__name__}: {e}"
 
-    # Test video FTS
+    # Test vector search via the SearchService method
     try:
-        vfts = await db.execute(
-            text("SELECT COUNT(*) FROM videos WHERE search_vector @@ plainto_tsquery('simple', :q)"),
-            {"q": q},
-        )
-        results["fts_video_count"] = vfts.scalar_one()
+        service = SearchService(db=db)
+        semantic = await service._semantic_search(q, top_k=5)
+        results["semantic_count"] = len(semantic)
+        if semantic:
+            results["semantic_first_score"] = semantic[0].score
     except Exception as e:
-        results["fts_video_error"] = f"{type(e).__name__}: {e}"
+        results["semantic_error"] = f"{type(e).__name__}: {e}"
 
-    # Test embedding count
+    # Test FTS via the SearchService method
     try:
-        ec = await db.execute(text("SELECT COUNT(*) FROM embeddings"))
-        results["embedding_count"] = ec.scalar_one()
+        service2 = SearchService(db=db)
+        fts_results = await service2._fulltext_search(q, top_k=5)
+        results["fts_service_count"] = len(fts_results)
     except Exception as e:
-        results["embedding_error"] = f"{type(e).__name__}: {e}"
+        results["fts_service_error"] = f"{type(e).__name__}: {e}"
 
-    # Test OpenAI key
+    # Test full hybrid search
     try:
-        from services.openai_client import get_embedding
-        emb = await get_embedding(q)
-        results["openai_embedding_dim"] = len(emb)
+        service3 = SearchService(db=db)
+        hybrid, total = await service3.hybrid_search(q, limit=5)
+        results["hybrid_count"] = total
     except Exception as e:
-        results["openai_error"] = f"{type(e).__name__}: {e}"
+        results["hybrid_error"] = f"{type(e).__name__}: {e}"
 
     return results
 
