@@ -124,6 +124,53 @@ async def search_videos(
     )
 
 
+@router.get("/search/debug")
+async def search_debug(
+    q: str = Query(..., min_length=1),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Temporary debug endpoint to diagnose search issues."""
+    import traceback
+    results = {}
+
+    # Test FTS directly
+    try:
+        fts = await db.execute(
+            text("SELECT COUNT(*) FROM video_segments WHERE search_vector @@ plainto_tsquery('simple', :q)"),
+            {"q": q},
+        )
+        results["fts_segment_count"] = fts.scalar_one()
+    except Exception as e:
+        results["fts_error"] = f"{type(e).__name__}: {e}"
+
+    # Test video FTS
+    try:
+        vfts = await db.execute(
+            text("SELECT COUNT(*) FROM videos WHERE search_vector @@ plainto_tsquery('simple', :q)"),
+            {"q": q},
+        )
+        results["fts_video_count"] = vfts.scalar_one()
+    except Exception as e:
+        results["fts_video_error"] = f"{type(e).__name__}: {e}"
+
+    # Test embedding count
+    try:
+        ec = await db.execute(text("SELECT COUNT(*) FROM embeddings"))
+        results["embedding_count"] = ec.scalar_one()
+    except Exception as e:
+        results["embedding_error"] = f"{type(e).__name__}: {e}"
+
+    # Test OpenAI key
+    try:
+        from services.openai_client import get_embedding
+        emb = await get_embedding(q)
+        results["openai_embedding_dim"] = len(emb)
+    except Exception as e:
+        results["openai_error"] = f"{type(e).__name__}: {e}"
+
+    return results
+
+
 @router.get("/search/suggest", response_model=SuggestResponse)
 async def search_suggest(
     q: str = Query(..., min_length=2, description="Autocomplete query"),
