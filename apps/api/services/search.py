@@ -77,12 +77,15 @@ class SearchService:
         except Exception as exc:
             logger.warning("Semantic search failed: %s", exc)
             semantic_results = []
+            # Rollback to clear the failed transaction state so FTS can proceed
+            await self._db.rollback()
 
         try:
             fts_results = await self._fulltext_search(query, top_k=50)
         except Exception as exc:
             logger.warning("Full-text search failed: %s", exc)
             fts_results = []
+            await self._db.rollback()
 
         # Merge with RRF
         merged = self._reciprocal_rank_fusion(semantic_results, fts_results)
@@ -213,12 +216,12 @@ class SearchService:
         sql = text("""
             SELECT
                 e.video_id,
-                1 - (e.embedding <=> :query_vector::vector) AS score,
+                1 - (e.embedding <=> CAST(:query_vector AS vector)) AS score,
                 vs.text AS snippet,
                 vs.start_time
             FROM embeddings e
             JOIN video_segments vs ON vs.id = e.video_segment_id
-            ORDER BY e.embedding <=> :query_vector::vector
+            ORDER BY e.embedding <=> CAST(:query_vector AS vector)
             LIMIT :top_k
         """)
 
