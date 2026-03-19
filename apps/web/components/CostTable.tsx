@@ -4,13 +4,30 @@ interface CostTableProps {
   items: CostItem[];
 }
 
-function formatNIS(amount: number): string {
+function formatPrice(price: string | number): string {
+  if (typeof price === 'string') {
+    // Price is already a formatted string like "200-220 ש\"ח" or "80 ש\"ח"
+    // Strip trailing "ש\"ח" since we add ₪ ourselves
+    const cleaned = price.replace(/\s*ש"ח\s*$/g, '').trim();
+    // If it's a range like "200-220", format each number
+    if (cleaned.includes('-')) {
+      const parts = cleaned.split('-').map((p) => p.trim());
+      const formatted = parts.map((p) => {
+        const num = Number(p.replace(/,/g, ''));
+        return isNaN(num) ? p : num.toLocaleString('he-IL');
+      });
+      return `${formatted.join(' - ')} ₪`;
+    }
+    const num = Number(cleaned.replace(/,/g, ''));
+    if (!isNaN(num)) return `${num.toLocaleString('he-IL')} ₪`;
+    return price;
+  }
   return new Intl.NumberFormat('he-IL', {
     style: 'currency',
     currency: 'ILS',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount);
+  }).format(price);
 }
 
 export default function CostTable({ items }: CostTableProps) {
@@ -39,7 +56,7 @@ export default function CostTable({ items }: CostTableProps) {
               >
                 <td className="py-3 px-4 text-gray-900 font-medium">{item.item}</td>
                 <td className="py-3 px-4 text-primary font-semibold">
-                  {formatNIS(item.price)}
+                  {formatPrice(item.price)}
                 </td>
                 <td className="py-3 px-4 text-gray-600">{item.unit}</td>
                 <td className="py-3 px-4 text-gray-500 text-xs">{item.context || '-'}</td>
@@ -58,7 +75,7 @@ export default function CostTable({ items }: CostTableProps) {
           >
             <div className="flex items-start justify-between mb-2">
               <span className="font-medium text-gray-900">{item.item}</span>
-              <span className="text-primary font-bold text-lg">{formatNIS(item.price)}</span>
+              <span className="text-primary font-bold text-lg">{formatPrice(item.price)}</span>
             </div>
             <div className="flex items-center gap-4 text-xs text-gray-500">
               <span>יחידה: {item.unit}</span>

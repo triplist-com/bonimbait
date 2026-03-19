@@ -16,6 +16,9 @@ engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DEBUG,
     pool_pre_ping=True,
+    # Disable prepared statement cache for compatibility with Supabase
+    # transaction pooler (pgbouncer in transaction mode).
+    connect_args={"prepared_statement_cache_size": 0, "statement_cache_size": 0},
 )
 
 async_session = async_sessionmaker(

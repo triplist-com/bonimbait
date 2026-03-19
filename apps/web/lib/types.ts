@@ -35,7 +35,7 @@ export interface KeyPoint {
 
 export interface CostItem {
   item: string;
-  price: number;
+  price: string | number;
   unit: string;
   context?: string;
 }
