@@ -174,8 +174,12 @@ export function searchVideos(
     }
   }
 
-  // Sort by score descending
-  scored.sort((a, b) => b.score - a.score);
+  // Sort by date (newest first), using score as tiebreaker
+  scored.sort((a, b) => {
+    const dateCmp = b.video.published_at.localeCompare(a.video.published_at);
+    if (dateCmp !== 0) return dateCmp;
+    return b.score - a.score;
+  });
 
   const page = Math.max(1, params.page || 1);
   const limit = Math.min(100, Math.max(1, params.limit || 20));
