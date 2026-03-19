@@ -95,7 +95,9 @@ class SearchService:
         page_results = merged[offset : offset + limit]
 
         result = (page_results, total)
-        search_cache.set(cache_key, result)
+        # Only cache non-empty results to avoid caching transient failures
+        if total > 0:
+            search_cache.set(cache_key, result)
         return result
 
     async def suggest(self, query: str, limit: int = 5) -> list[str]:
