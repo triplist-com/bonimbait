@@ -38,6 +38,11 @@ export interface CategoryRecord {
   name_he: string;
   description_he: string;
   video_count: number;
+  ai_summary?: string;
+  ai_key_points?: string[];
+  ai_costs_data?: Array<{item: string; price: string; unit: string}>;
+  ai_tips?: string[];
+  ai_warnings?: string[];
 }
 
 interface DataFile {

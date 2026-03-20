@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import SearchBar from '@/components/SearchBar';
 import CategoryBar from '@/components/CategoryBar';
+import ContentSummary from '@/components/ContentSummary';
 import VideoGrid from '@/components/VideoGrid';
 import Pagination from '@/components/Pagination';
 import StructuredData from '@/components/StructuredData';
@@ -99,6 +100,20 @@ export default function CategoryPageClient() {
           <SearchBar />
         </div>
       </section>
+
+      {/* AI Category Summary */}
+      {category?.ai_summary && (
+        <section className="pb-6">
+          <ContentSummary
+            summary={category.ai_summary}
+            keyPoints={category.ai_key_points?.map((text) => ({ text }))}
+            costs={category.ai_costs_data}
+            tips={category.ai_tips}
+            warnings={category.ai_warnings}
+            variant="full"
+          />
+        </section>
+      )}
 
       {/* Category Chips + Sort */}
       <section className="pb-6" aria-label="סינון">

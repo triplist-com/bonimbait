@@ -53,6 +53,11 @@ async def list_categories(
             icon=cat.icon,
             video_count=count,
             created_at=cat.created_at,
+            ai_summary=cat.ai_summary,
+            ai_key_points=cat.ai_key_points,
+            ai_costs_data=cat.ai_costs_data,
+            ai_tips=cat.ai_tips,
+            ai_warnings=cat.ai_warnings,
         )
         for cat, count in rows
     ]
