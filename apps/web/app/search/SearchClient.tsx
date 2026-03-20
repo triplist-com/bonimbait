@@ -96,6 +96,7 @@ function SearchContent() {
                   isStreaming={isStreaming}
                   error={answerError}
                   isCostRelated={isCostRelated}
+                  searchQuery={query}
                 />
               )}
             </div>

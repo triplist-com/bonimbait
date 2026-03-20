@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { AnswerSource } from '@/lib/types';
 import { formatTimestamp } from '@/lib/types';
+import WizardModal from '@/components/WizardModal';
 
 interface AiAnswerProps {
   answer: string;
@@ -12,6 +13,7 @@ interface AiAnswerProps {
   isStreaming?: boolean;
   error?: string | null;
   isCostRelated?: boolean;
+  searchQuery?: string;
 }
 
 const confidenceConfig = {
@@ -27,8 +29,10 @@ export default function AiAnswer({
   isStreaming,
   error,
   isCostRelated,
+  searchQuery,
 }: AiAnswerProps) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
   const isLong = answer.length > 600;
 
   if (error) {
@@ -146,8 +150,8 @@ export default function AiAnswer({
         {/* Cost wizard CTA */}
         {isCostRelated && !isStreaming && answer && (
           <div className="mt-4 pt-4 border-t border-primary-100">
-            <Link
-              href="/calculator"
+            <button
+              onClick={() => setIsWizardOpen(true)}
               className="inline-flex items-center gap-2 bg-primary hover:bg-primary-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -157,9 +161,16 @@ export default function AiAnswer({
               <svg className="w-4 h-4 rtl:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
               </svg>
-            </Link>
+            </button>
           </div>
         )}
+
+        {/* Wizard Modal */}
+        <WizardModal
+          isOpen={isWizardOpen}
+          onClose={() => setIsWizardOpen(false)}
+          searchQuery={searchQuery}
+        />
       </div>
     </div>
   );
