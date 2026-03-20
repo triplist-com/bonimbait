@@ -14,7 +14,28 @@ import type {
 // Generic fetcher — uses same-origin Next.js API routes
 // ---------------------------------------------------------------------------
 
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+// Default timeouts in milliseconds
+const DEFAULT_TIMEOUT = 10_000; // 10s for regular requests
+const STREAM_TIMEOUT = 30_000; // 30s for streaming requests
+
+// Hebrew user-friendly error messages for gateway errors
+const GATEWAY_ERROR_MESSAGES: Record<number, string> = {
+  502: 'השרת אינו זמין כרגע. אנא נסו שוב בעוד מספר דקות.',
+  503: 'השירות בתחזוקה זמנית. אנא נסו שוב בקרוב.',
+  504: 'הבקשה ארכה זמן רב מדי. אנא נסו שוב.',
+};
+
+function getHebrewErrorMessage(status: number): string {
+  return (
+    GATEWAY_ERROR_MESSAGES[status] ||
+    'אירעה שגיאה בעת עיבוד הבקשה. אנא נסו שוב.'
+  );
+}
+
+async function apiFetch<T>(
+  path: string,
+  init?: RequestInit & { timeout?: number },
+): Promise<T> {
   // For server-side rendering we need an absolute URL.
   // NEXT_PUBLIC_SITE_URL is set on Vercel; fallback to localhost for dev.
   const base =
@@ -22,17 +43,35 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
       ? ''
       : process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
-  const res = await fetch(`${base}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-  });
-  if (!res.ok) {
-    throw new Error(`API error ${res.status}: ${res.statusText}`);
+  const timeout = init?.timeout ?? DEFAULT_TIMEOUT;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const res = await fetch(`${base}${path}`, {
+      ...init,
+      signal: init?.signal ?? controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(init?.headers ?? {}),
+      },
+    });
+
+    if (!res.ok) {
+      if (res.status >= 502 && res.status <= 504) {
+        throw new Error(getHebrewErrorMessage(res.status));
+      }
+      throw new Error(`API error ${res.status}: ${res.statusText}`);
+    }
+    return res.json() as Promise<T>;
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error(getHebrewErrorMessage(504));
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
-  return res.json() as Promise<T>;
 }
 
 // ---------------------------------------------------------------------------
@@ -217,6 +256,8 @@ export function streamAnswer(
       ? ''
       : process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
+  const timeoutId = setTimeout(() => controller.abort(), STREAM_TIMEOUT);
+
   fetch(`${base}/api/answer/stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -279,6 +320,7 @@ export function streamAnswer(
       }
     })
     .catch((err: Error) => {
+      clearTimeout(timeoutId);
       if (err.name === 'AbortError') return;
       if (onError) {
         onError(err);
