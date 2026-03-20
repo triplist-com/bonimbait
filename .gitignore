@@ -42,3 +42,4 @@ venv/
 # Misc
 *.log
 .vercel
+.claude/worktrees/
