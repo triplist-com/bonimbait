@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { SCENARIOS } from '../lib/calculator-scenarios';
 
 const BASE_URL = 'https://bonimbait.com';
 
@@ -97,5 +98,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Skip video pages if data unavailable
   }
 
-  return [...staticPages, ...categoryPages, ...videoPages];
+  // Calculator main page + 20 scenario pages
+  const calculatorPages: MetadataRoute.Sitemap = [
+    {
+      url: `${BASE_URL}/calculator`,
+      lastModified: now,
+      changeFrequency: 'monthly' as const,
+      priority: 0.9,
+    },
+    ...SCENARIOS.map((scenario) => ({
+      url: `${BASE_URL}/calculator/${scenario.slug}`,
+      lastModified: now,
+      changeFrequency: 'monthly' as const,
+      priority: 0.8,
+    })),
+  ];
+
+  return [...staticPages, ...categoryPages, ...calculatorPages, ...videoPages];
 }
