@@ -37,3 +37,17 @@ class StreamChunk(BaseModel):
     content: str | None = None
     sources: list[AnswerSource] | None = None
     confidence: float | None = None
+
+
+class PregeneratedAnswerResponse(BaseModel):
+    """Response for a pre-generated answer match."""
+
+    answer: str
+    sources: list[dict] = []
+    key_points: list[str] = []
+    costs_data: list[dict] = []
+    tips: list[str] = []
+    warnings: list[str] = []
+    confidence: float = Field(ge=0.0, le=1.0)
+    query: str
+    pregenerated: bool = True

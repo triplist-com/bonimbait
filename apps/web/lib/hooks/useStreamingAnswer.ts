@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { streamAnswer, getAnswer } from '@/lib/api';
+import { streamAnswer, getAnswer, getPregeneratedAnswer } from '@/lib/api';
 import type { AnswerSource } from '@/lib/types';
 
 interface StreamingAnswerState {
@@ -52,44 +52,114 @@ export function useStreamingAnswer() {
       isCostRelated,
     });
 
-    const controller = streamAnswer(
-      query,
-      (text) => {
-        setState((prev) => ({ ...prev, answer: prev.answer + text }));
-      },
-      (sources, confidence) => {
-        setState((prev) => ({
-          ...prev,
-          sources,
-          confidence,
-          isStreaming: false,
-        }));
-      },
-      () => {
-        // Fallback to non-streaming
-        getAnswer(query)
-          .then((data) => {
-            setState({
-              answer: data.answer,
-              sources: data.sources,
-              confidence: data.confidence,
-              isStreaming: false,
-              error: null,
-              isCostRelated,
-            });
-          })
-          .catch(() => {
+    // Try pre-generated answer first for instant response
+    getPregeneratedAnswer(query)
+      .then((pregenerated) => {
+        if (pregenerated) {
+          // Instant match — no streaming needed
+          const sources: AnswerSource[] = (pregenerated.sources || []).map((s) => ({
+            video_id: s.video_id || '',
+            youtube_id: s.youtube_id || '',
+            title: s.title || '',
+            timestamp: s.timestamp || 0,
+          }));
+          const confidence =
+            pregenerated.confidence >= 0.7
+              ? 'high' as const
+              : pregenerated.confidence >= 0.4
+                ? 'medium' as const
+                : 'low' as const;
+          setState({
+            answer: pregenerated.answer,
+            sources,
+            confidence,
+            isStreaming: false,
+            error: null,
+            isCostRelated,
+          });
+          return;
+        }
+
+        // No pre-generated match — fall through to streaming
+        const controller = streamAnswer(
+          query,
+          (text) => {
+            setState((prev) => ({ ...prev, answer: prev.answer + text }));
+          },
+          (sources, confidence) => {
             setState((prev) => ({
               ...prev,
-              error: 'שגיאה בקבלת תשובה. אנא נסו שוב.',
+              sources,
+              confidence,
               isStreaming: false,
-              isCostRelated,
             }));
-          });
-      },
-    );
+          },
+          () => {
+            // Fallback to non-streaming
+            getAnswer(query)
+              .then((data) => {
+                setState({
+                  answer: data.answer,
+                  sources: data.sources,
+                  confidence: data.confidence,
+                  isStreaming: false,
+                  error: null,
+                  isCostRelated,
+                });
+              })
+              .catch(() => {
+                setState((prev) => ({
+                  ...prev,
+                  error: 'שגיאה בקבלת תשובה. אנא נסו שוב.',
+                  isStreaming: false,
+                  isCostRelated,
+                }));
+              });
+          },
+        );
 
-    controllerRef.current = controller;
+        controllerRef.current = controller;
+      })
+      .catch(() => {
+        // Pre-generated lookup failed — fall through to streaming
+        const controller = streamAnswer(
+          query,
+          (text) => {
+            setState((prev) => ({ ...prev, answer: prev.answer + text }));
+          },
+          (sources, confidence) => {
+            setState((prev) => ({
+              ...prev,
+              sources,
+              confidence,
+              isStreaming: false,
+            }));
+          },
+          () => {
+            getAnswer(query)
+              .then((data) => {
+                setState({
+                  answer: data.answer,
+                  sources: data.sources,
+                  confidence: data.confidence,
+                  isStreaming: false,
+                  error: null,
+                  isCostRelated,
+                });
+              })
+              .catch(() => {
+                setState((prev) => ({
+                  ...prev,
+                  error: 'שגיאה בקבלת תשובה. אנא נסו שוב.',
+                  isStreaming: false,
+                  isCostRelated,
+                }));
+              });
+          },
+        );
+
+        controllerRef.current = controller;
+      });
   }, []);
 
   const cancel = useCallback(() => {

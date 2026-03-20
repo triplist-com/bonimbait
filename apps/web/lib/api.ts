@@ -6,6 +6,7 @@ import type {
   AnswerResponse,
   AnswerSource,
   PaginatedVideos,
+  PregeneratedAnswer,
   VideoListParams,
 } from './types';
 
@@ -136,6 +137,29 @@ export async function getSuggestions(query: string): Promise<string[]> {
     `/api/suggestions?q=${encodeURIComponent(query.trim())}`,
   );
   return data.suggestions;
+}
+
+// ---------------------------------------------------------------------------
+// Pre-generated Answer — instant lookup via 3-tier matching
+// ---------------------------------------------------------------------------
+
+export async function getPregeneratedAnswer(query: string): Promise<PregeneratedAnswer | null> {
+  const base =
+    typeof window !== 'undefined'
+      ? ''
+      : process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
+  try {
+    const res = await fetch(
+      `${base}/api/answer/pregenerated?q=${encodeURIComponent(query)}`,
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+    if (res.status === 404) return null;
+    if (!res.ok) return null;
+    return (await res.json()) as PregeneratedAnswer;
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------

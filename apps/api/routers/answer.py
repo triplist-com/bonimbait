@@ -9,9 +9,10 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
-from schemas.answer import AnswerRequest, AnswerResponse
+from schemas.answer import AnswerRequest, AnswerResponse, PregeneratedAnswerResponse
 from services.answer import AnswerService
 from services.answer_cache import AnswerCache
+from services.answer_matcher import AnswerMatcher
 from services.budget_tracker import BudgetTracker
 
 logger = logging.getLogger(__name__)
@@ -22,10 +23,15 @@ router = APIRouter(prefix="/api/answer", tags=["answer"])
 _answer_cache = AnswerCache()
 _budget_tracker = BudgetTracker()
 _answer_service = AnswerService(cache=_answer_cache, budget_tracker=_budget_tracker)
+_answer_matcher = AnswerMatcher()
 
 
 def get_answer_service() -> AnswerService:
     return _answer_service
+
+
+def get_answer_matcher() -> AnswerMatcher:
+    return _answer_matcher
 
 
 # ------------------------------------------------------------------
@@ -69,6 +75,42 @@ async def generate_answer_stream(
             "Cache-Control": "no-cache",
             "X-Accel-Buffering": "no",
         },
+    )
+
+
+# ------------------------------------------------------------------
+# GET /api/answer/pregenerated  — 3-tier pre-generated answer lookup
+# ------------------------------------------------------------------
+
+
+@router.get("/pregenerated", response_model=PregeneratedAnswerResponse)
+async def get_pregenerated_answer(
+    q: str = Query(..., min_length=3, max_length=500, description="User query"),
+    db: AsyncSession = Depends(get_db),
+    matcher: AnswerMatcher = Depends(get_answer_matcher),
+) -> PregeneratedAnswerResponse:
+    """Look up a pre-generated answer using 3-tier matching."""
+    try:
+        match = await matcher.find_match(query=q, db=db)
+    except Exception:
+        logger.exception("Pregenerated answer lookup failed for query: %s", q)
+        raise HTTPException(
+            status_code=502,
+            detail="Failed to look up pre-generated answer.",
+        )
+
+    if match is None:
+        raise HTTPException(status_code=404, detail="No pre-generated answer found.")
+
+    return PregeneratedAnswerResponse(
+        answer=match.answer,
+        sources=match.sources,
+        key_points=match.key_points,
+        costs_data=match.costs_data,
+        tips=match.tips,
+        warnings=match.warnings,
+        confidence=match.confidence,
+        query=q,
     )
 
 
