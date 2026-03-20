@@ -14,6 +14,15 @@ from schemas.search import (
     SearchResultItem,
     SuggestResponse,
 )
+from schemas.wizard import (
+    PhaseBreakdown,
+    WizardCalculateRequest,
+    WizardCalculateResponse,
+    WizardOption,
+    WizardPrefillResponse,
+    WizardQuestion,
+    WizardQuestionsResponse,
+)
 from schemas.video import (
     PaginatedVideosResponse,
     VideoCreate,
@@ -44,4 +53,11 @@ __all__ = [
     "VideoSegmentRead",
     "VideoSegmentResponse",
     "VideoSummary",
+    "PhaseBreakdown",
+    "WizardCalculateRequest",
+    "WizardCalculateResponse",
+    "WizardOption",
+    "WizardPrefillResponse",
+    "WizardQuestion",
+    "WizardQuestionsResponse",
 ]
