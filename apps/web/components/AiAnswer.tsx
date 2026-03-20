@@ -5,15 +5,12 @@ import Link from 'next/link';
 import type { AnswerSource } from '@/lib/types';
 import { formatTimestamp } from '@/lib/types';
 
-type AgentStep = 'searching' | 'found' | 'composing' | 'done' | null;
-
 interface AiAnswerProps {
   answer: string;
   sources?: AnswerSource[];
   confidence?: 'high' | 'medium' | 'low' | null;
   isStreaming?: boolean;
   error?: string | null;
-  step?: AgentStep;
   isCostRelated?: boolean;
 }
 
@@ -23,38 +20,12 @@ const confidenceConfig = {
   low: { label: 'ביטחון נמוך', color: 'bg-red-100 text-red-700' },
 };
 
-const stepMessages: Record<string, { icon: string; text: string }> = {
-  searching: { icon: '🔍', text: 'מחפש בסרטונים רלוונטיים...' },
-  found: { icon: '📚', text: 'מצאתי סרטונים שמדברים על זה...' },
-  composing: { icon: '✍️', text: 'מרכיב תשובה...' },
-};
-
-function StepIndicator({ step }: { step: AgentStep }) {
-  if (!step || step === 'done') return null;
-
-  const current = stepMessages[step];
-  if (!current) return null;
-
-  return (
-    <div className="flex items-center gap-2 text-sm text-gray-500 mb-3 animate-fade-in">
-      <span className="text-lg">{current.icon}</span>
-      <span className="font-medium">{current.text}</span>
-      <span className="inline-flex gap-1 ms-1">
-        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
-        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '160ms' }} />
-        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '320ms' }} />
-      </span>
-    </div>
-  );
-}
-
 export default function AiAnswer({
   answer,
   sources,
   confidence,
   isStreaming,
   error,
-  step,
   isCostRelated,
 }: AiAnswerProps) {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -71,7 +42,11 @@ export default function AiAnswer({
   if (!answer && !isStreaming) return null;
 
   return (
-    <div className="gradient-border rounded-2xl">
+    <div
+      className={`gradient-border rounded-2xl transition-opacity duration-500 ease-out ${
+        answer ? 'opacity-100' : 'opacity-0'
+      }`}
+    >
       <div className="bg-gradient-to-br from-primary-50/80 to-white rounded-2xl p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
@@ -111,9 +86,6 @@ export default function AiAnswer({
             </button>
           )}
         </div>
-
-        {/* Agent step indicator */}
-        {isStreaming && !answer && <StepIndicator step={step ?? null} />}
 
         {/* Answer text */}
         <div

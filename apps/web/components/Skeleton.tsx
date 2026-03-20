@@ -44,18 +44,18 @@ export function SearchSkeleton() {
   );
 }
 
-export function AnswerSkeleton() {
+export function AnswerShimmer() {
   return (
-    <div className="bg-gradient-to-br from-primary-50 to-white border border-primary-100 rounded-2xl p-6 animate-fade-in">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="skeleton h-7 w-36 rounded-full" />
-      </div>
-      <div className="space-y-3">
-        <div className="skeleton h-4 w-full" />
-        <div className="skeleton h-4 w-11/12" />
-        <div className="skeleton h-4 w-4/5" />
-        <div className="skeleton h-4 w-3/4" />
-      </div>
+    <div className="relative h-[120px] rounded-2xl overflow-hidden bg-gray-100">
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(90deg, transparent 0%, rgba(243,244,246,0.8) 20%, rgba(249,250,251,1) 50%, rgba(243,244,246,0.8) 80%, transparent 100%)',
+          backgroundSize: '200% 100%',
+          animation: 'shimmer 1.8s ease-in-out infinite',
+        }}
+      />
     </div>
   );
 }

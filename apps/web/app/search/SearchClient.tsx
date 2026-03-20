@@ -8,7 +8,7 @@ import AiAnswer from '@/components/AiAnswer';
 import CategoryBar from '@/components/CategoryBar';
 import VideoCard from '@/components/VideoCard';
 import Pagination from '@/components/Pagination';
-import { VideoGridSkeleton, AnswerSkeleton } from '@/components/Skeleton';
+import { VideoGridSkeleton, AnswerShimmer } from '@/components/Skeleton';
 import { useStreamingAnswer } from '@/lib/hooks/useStreamingAnswer';
 import { searchVideos } from '@/lib/api';
 import type { SearchResult } from '@/lib/types';
@@ -32,7 +32,6 @@ function SearchContent() {
     confidence,
     isStreaming,
     error: answerError,
-    step,
     isCostRelated,
     start: startAnswer,
   } = useStreamingAnswer();
@@ -87,8 +86,8 @@ function SearchContent() {
           {/* AI Answer with aria-live for screen reader announcements */}
           <section className="pb-8 animate-slide-up" aria-label="תשובת AI">
             <div aria-live="polite" aria-atomic="false">
-              {!answer && !isStreaming && !answerError ? (
-                <AnswerSkeleton />
+              {isStreaming && !answer ? (
+                <AnswerShimmer />
               ) : (
                 <AiAnswer
                   answer={answer}
@@ -96,7 +95,6 @@ function SearchContent() {
                   confidence={confidence}
                   isStreaming={isStreaming}
                   error={answerError}
-                  step={step}
                   isCostRelated={isCostRelated}
                 />
               )}
@@ -208,7 +206,7 @@ export default function SearchClient() {
           <div className="max-w-2xl mx-auto mb-8">
             <div className="skeleton h-12 w-full rounded-xl" />
           </div>
-          <AnswerSkeleton />
+          <AnswerShimmer />
           <div className="mt-8">
             <VideoGridSkeleton />
           </div>
