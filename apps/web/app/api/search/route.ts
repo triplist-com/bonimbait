@@ -33,10 +33,10 @@ export async function GET(request: NextRequest) {
     bestScore: number;
     bestSeg: (typeof hits)[number];
   }> = [];
-  for (const [yt, segs] of grouped.entries()) {
+  grouped.forEach((segs, yt) => {
     segs.sort((a, b) => b.score - a.score);
     perVideo.push({ youtube_id: yt, bestScore: segs[0].score, bestSeg: segs[0] });
-  }
+  });
   perVideo.sort((a, b) => b.bestScore - a.bestScore);
 
   const enriched = perVideo

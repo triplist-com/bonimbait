@@ -110,7 +110,8 @@ function normalizeHebrewToken(tok: string): string {
 }
 
 function extractContentTerms(query: string): string[] {
-  const cleaned = query.replace(/[^\p{L}\s]/gu, ' ');
+  // Keep Hebrew (U+0590-U+05FF), Latin letters, and whitespace; drop punctuation/digits.
+  const cleaned = query.replace(/[^֐-׿a-zA-Z\s]/g, ' ');
   const raw = cleaned.split(/\s+/).filter(Boolean);
   const out: string[] = [];
   for (const r of raw) {

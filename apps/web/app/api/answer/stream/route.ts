@@ -42,9 +42,10 @@ export async function POST(request: NextRequest) {
 
   // Pick top segment per video, keep top 5 videos as sources for the answer
   const grouped = groupByVideo(hits);
-  const perVideo = Array.from(grouped.entries()).map(([yt, segs]) => {
+  const perVideo: Array<{ yt: string; best: (typeof hits)[number] }> = [];
+  grouped.forEach((segs, yt) => {
     segs.sort((a, b) => b.score - a.score);
-    return { yt, best: segs[0] };
+    perVideo.push({ yt, best: segs[0] });
   });
   perVideo.sort((a, b) => b.best.score - a.best.score);
   const topSources = perVideo.slice(0, 5);
