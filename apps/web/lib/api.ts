@@ -143,6 +143,7 @@ export async function searchVideos(
       category_name?: string;
       score: number;
       snippet?: string;
+      matching_segment_time?: number;
     }>;
     total: number;
     query: string;
@@ -164,6 +165,7 @@ export async function searchVideos(
       },
       score: r.score,
       snippet: r.snippet || '',
+      matching_segment_time: r.matching_segment_time,
     })),
     total: raw.total,
     query: raw.query,
