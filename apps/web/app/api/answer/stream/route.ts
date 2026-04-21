@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   // Step 1: semantic search over segments
   let hits;
   try {
-    hits = await semanticSearchSegments(query, 40);
+    hits = await semanticSearchSegments(query, 80);
   } catch (err) {
     console.error('semantic search failed:', err);
     return new Response(
@@ -40,17 +40,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Pick top segment per video, keep top 5 videos as sources for the answer
+  // Pick up to 3 top segments per video, from the top 5 videos.
+  // Feeding several segments per video dramatically improves answer quality when
+  // the key fact (e.g. exact numbers) lives in a sibling segment of the best-ranked one.
   const grouped = groupByVideo(hits);
-  const perVideo: Array<{ yt: string; best: (typeof hits)[number] }> = [];
+  const perVideo: Array<{ yt: string; segs: typeof hits }> = [];
   grouped.forEach((segs, yt) => {
     segs.sort((a, b) => b.score - a.score);
-    perVideo.push({ yt, best: segs[0] });
+    perVideo.push({ yt, segs });
   });
-  perVideo.sort((a, b) => b.best.score - a.best.score);
-  const topSources = perVideo.slice(0, 5);
+  perVideo.sort((a, b) => b.segs[0].score - a.segs[0].score);
+  const topVideos = perVideo.slice(0, 5);
 
-  // Build Claude context
   const contextBlocks: string[] = [];
   const sources: Array<{
     video_id: string;
@@ -60,20 +61,25 @@ export async function POST(request: NextRequest) {
     relevance_score: number;
   }> = [];
 
-  for (let i = 0; i < topSources.length; i++) {
-    const { yt, best } = topSources[i];
+  let blockIdx = 0;
+  for (const { yt, segs } of topVideos) {
     const v = getVideo(yt);
     if (!v) continue;
-    const ts = Math.max(0, Math.floor(best.start_time));
-    contextBlocks.push(
-      `[מקור ${i + 1}] סרטון: ${v.title}\nמתוך דקה ${Math.floor(ts / 60)}:${String(ts % 60).padStart(2, '0')}\n${best.text.slice(0, 900)}`,
-    );
+    const picked = segs.slice(0, 3);
+    for (const s of picked) {
+      blockIdx += 1;
+      const ts = Math.max(0, Math.floor(s.start_time));
+      contextBlocks.push(
+        `[מקור ${blockIdx}] סרטון: ${v.title}\nמתוך דקה ${Math.floor(ts / 60)}:${String(ts % 60).padStart(2, '0')}\n${s.text.slice(0, 800)}`,
+      );
+    }
+    // Source shown to the user = best segment per video (one source per video)
     sources.push({
       video_id: v.id,
       youtube_id: v.youtube_id,
       title: v.title,
-      timestamp: best.start_time,
-      relevance_score: best.score,
+      timestamp: picked[0].start_time,
+      relevance_score: picked[0].score,
     });
   }
 
