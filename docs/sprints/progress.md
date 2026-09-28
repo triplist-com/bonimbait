@@ -22,3 +22,17 @@
 - Sprints 1-3 (data pipeline) can partially overlap with Sprints 6-7 (frontend) since they're independent
 - Sprint 4-5 (backend API) blocks Sprint 7 (frontend integration)
 - Each sprint targets one Opus 4.6 context window of productive work
+
+---
+
+## Parity program (see PARITY_PLAN.md)
+
+| Wave | Scope | Status | Date |
+|---|---|---|---|
+| 1 | Foundation (schema, auth, payments interface) + live-site crawl | Done | 2026-09-28 |
+| 2 | Content, Directory, Community & Commerce, Leads, data load | Done | 2026-09-28 |
+| 3 | Admin CMS, search index for posts, CTA integration, QA | In progress | |
+| 4 | Cutover to bonimbayit.co.il | Not started | |
+
+**URL parity after Wave 2:** 1214/1214 pass against a local build (1203 × 200; the rest redirect as live or are listed in `scripts/migrate/parity_exceptions.json`).
+**Open:** hosted Supabase project (the old one is gone), UPay credentials + docs, Resend key + lead inbox address, product-data ownership fix (loader vs commerce migration).
