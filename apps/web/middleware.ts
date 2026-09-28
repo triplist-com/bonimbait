@@ -1,35 +1,56 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { NextResponse, type NextRequest } from 'next/server';
+import { updateSession } from '@/lib/supabase/middleware';
+import { findRedirect } from '@/lib/redirects/lookup';
+import { wantsTrailingSlash } from '@/lib/site';
 
+/**
+ * Request pipeline:
+ *  1. Legacy redirects from the `redirects` table (301/302/…; cached).
+ *  2. Trailing-slash canonicalization for pages (WordPress parity) with a 301.
+ *     next.config sets skipTrailingSlashRedirect so /api/* is never redirected
+ *     (payment webhooks must not get a 308).
+ *  3. Supabase session refresh.
+ *  4. /admin requires a signed-in user (role is checked in app/admin/layout).
+ */
 export async function middleware(request: NextRequest) {
-  // Protect /admin/* routes
-  if (request.nextUrl.pathname.startsWith("/admin")) {
-    const token = await getToken({
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
+  const { pathname, search } = request.nextUrl;
+  const isApi = pathname === '/api' || pathname.startsWith('/api/');
 
-    if (!token) {
-      const signInUrl = new URL("/api/auth/signin", request.url);
-      signInUrl.searchParams.set("callbackUrl", request.url);
-      return NextResponse.redirect(signInUrl);
-    }
-
-    // Check if the user's email is in the admin whitelist
-    const adminEmails = (process.env.ADMIN_EMAILS ?? "")
-      .split(",")
-      .map((e) => e.trim())
-      .filter(Boolean);
-
-    if (!token.email || !adminEmails.includes(token.email as string)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // 1. Legacy redirects (never for API routes or the admin/auth area).
+  if (!isApi && !pathname.startsWith('/admin') && !pathname.startsWith('/auth')) {
+    const hit = await findRedirect(pathname);
+    if (hit) {
+      const target = new URL(hit.to, request.url);
+      if (!target.search && search) target.search = search;
+      return NextResponse.redirect(target, hit.code);
     }
   }
 
-  return NextResponse.next();
+  // 2. Trailing slash for page routes.
+  // Plain URL on purpose: NextURL re-applies its own trailing-slash
+  // formatting and would drop the slash we add.
+  if (wantsTrailingSlash(pathname)) {
+    const url = new URL(request.url);
+    url.pathname = `${url.pathname}/`;
+    return NextResponse.redirect(url, 301);
+  }
+
+  // 3. Session refresh.
+  const { response, user } = await updateSession(request);
+
+  // 4. Admin area: must be signed in (role enforced server-side in the layout).
+  if (pathname.startsWith('/admin') && !user) {
+    const login = new URL('/login/', request.url);
+    login.searchParams.set('next', pathname);
+    return NextResponse.redirect(login);
+  }
+
+  return response;
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: [
+    // Everything except Next internals and static assets served from /public.
+    '/((?!_next/static|_next/image|favicon.ico|icon.svg|manifest.json|robots.txt|sitemap.xml|images/|fonts/).*)',
+  ],
 };
