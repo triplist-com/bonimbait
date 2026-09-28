@@ -105,3 +105,28 @@ with (security_invoker = true) as
     round(t, 2)                        as score_attitude_avg,
     round(l, 2)                        as score_reliability_avg
   from overall;
+
+-- ---------------------------------------------------------------------------
+-- 4. Fix: business owners could never upload to media/businesses/<id>/.
+--    In the Wave 1 policy (…120600_parity_storage.sql) the subquery reads
+--    `storage.foldername(name)` while selecting from public.businesses, which
+--    has its own `name` column, so `name` resolved to businesses.name (the
+--    business's display name) instead of objects.name. Qualify it.
+-- ---------------------------------------------------------------------------
+drop policy if exists "media business owner write" on storage.objects;
+create policy "media business owner write" on storage.objects
+  for all to authenticated
+  using (
+    bucket_id = 'media'
+    and (storage.foldername(objects.name))[1] = 'businesses'
+    and exists (select 1 from public.businesses b
+                where b.id::text = (storage.foldername(objects.name))[2]
+                  and b.owner_member_id = auth.uid())
+  )
+  with check (
+    bucket_id = 'media'
+    and (storage.foldername(objects.name))[1] = 'businesses'
+    and exists (select 1 from public.businesses b
+                where b.id::text = (storage.foldername(objects.name))[2]
+                  and b.owner_member_id = auth.uid())
+  );

@@ -15,6 +15,9 @@ export type ClaimState =
   | { status: 'sent' }
   | { status: 'error'; message: string; fieldErrors?: Record<string, string> };
 
+/** Form value, or undefined when absent (the shared zod schemas reject null). */
+const val = (formData: FormData, name: string) => formData.get(name) ?? undefined;
+
 /**
  * "Claim this business": records a claim_business lead for the signed-in
  * member through the shared submitLead(). An admin verifies it and assigns
@@ -32,11 +35,11 @@ export async function claimBusinessAction(_prev: ClaimState, formData: FormData)
   const result = await submitLead({
     type: 'claim_business',
     payload: {
-      full_name: formData.get('full_name'),
-      phone: formData.get('phone'),
-      email: formData.get('email'),
-      role_in_business: formData.get('role'),
-      message: formData.get('message'),
+      full_name: val(formData, 'full_name'),
+      phone: val(formData, 'phone'),
+      email: val(formData, 'email'),
+      role_in_business: val(formData, 'role'),
+      message: val(formData, 'message'),
     },
     context: { account_email: user.email ?? null },
     businessId: business.id,

@@ -56,12 +56,12 @@ async function handleLead(mode: Mode, formData: FormData): Promise<LeadFormState
   }
 
   const payload = {
-    full_name: formData.get('full_name'),
-    email: formData.get('email'),
-    phone: formData.get('phone'),
+    full_name: formData.get('full_name') ?? undefined,
+    email: formData.get('email') ?? undefined,
+    phone: formData.get('phone') ?? undefined,
     region: region || undefined,
     construction_stage: stage || undefined,
-    terms: formData.get('terms'),
+    terms: formData.get('terms') ?? undefined,
   };
   if (Object.keys(fieldErrors).length > 0) {
     // Report every problem at once, and never insert a lead that failed our checks.

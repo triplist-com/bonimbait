@@ -67,8 +67,8 @@ export async function joinProAction(_prev: JoinState, formData: FormData): Promi
   // full list in the payload.
   const payload = {
     business_name: businessName,
-    phone: formData.get('phone'),
-    email: formData.get('email'),
+    phone: formData.get('phone') ?? undefined,
+    email: formData.get('email') ?? undefined,
     region: regionSlugs[0],
     message: about || undefined,
   };
