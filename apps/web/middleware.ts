@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 import { findRedirect } from '@/lib/redirects/lookup';
 import { wantsTrailingSlash } from '@/lib/site';
+import { commerceRedirect } from '@/lib/commerce/middleware';
 
 /**
  * Request pipeline:
@@ -11,6 +12,8 @@ import { wantsTrailingSlash } from '@/lib/site';
  *     (payment webhooks must not get a 308).
  *  3. Supabase session refresh.
  *  4. /admin requires a signed-in user (role is checked in app/admin/layout).
+ *  5. Commerce: /checkout/ 302 -> /cart/ when the cart is empty (WooCommerce
+ *     parity), signed-out /checkout/ and /account/ -> /login/.
  */
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -44,6 +47,10 @@ export async function middleware(request: NextRequest) {
     login.searchParams.set('next', pathname);
     return NextResponse.redirect(login);
   }
+
+  // 5. Commerce redirects (lib/commerce/middleware.ts).
+  const commerce = commerceRedirect(request, Boolean(user));
+  if (commerce) return commerce;
 
   return response;
 }
