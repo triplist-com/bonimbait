@@ -10,18 +10,20 @@ type Props = {
 };
 
 /** Live WordPress pagination: /recommended/page/<n>/ */
-function pageNumber(raw: string): number {
-  if (!/^\d{1,4}$/.test(raw)) notFound();
-  return Number(raw);
+function filtersFor({ params, searchParams }: Props) {
+  if (!/^\d{1,4}$/.test(params.n)) notFound();
+  return parseFilters(searchParams, Number(params.n));
 }
 
-export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
-  return listingMetadata(parseFilters(searchParams, pageNumber(params.n)));
-}
-
-export default function RecommendedPagedPage({ params, searchParams }: Props) {
-  const filters = parseFilters(searchParams, pageNumber(params.n));
+// Redirects and 404s happen in generateMetadata so they get a real status
+// code (the root loading.tsx would stream the page body after a 200).
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const filters = filtersFor(props);
   // /recommended/page/1/ is the listing root, as in WordPress.
   if (filters.page <= 1) permanentRedirect(listingHref({ ...filters, page: 1 }));
-  return <DirectoryListing filters={filters} />;
+  return listingMetadata(filters);
+}
+
+export default function RecommendedPagedPage(props: Props) {
+  return <DirectoryListing filters={filtersFor(props)} />;
 }

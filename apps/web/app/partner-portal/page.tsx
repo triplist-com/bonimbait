@@ -20,11 +20,20 @@ import { REVIEW_SCORE_LABELS } from '@/lib/db/reviews';
 import type { BusinessRow, LeadRow, ReviewRow } from '@/lib/db/types';
 import { ContactsForm, DetailsForm, MediaForm, TaxonomyForm } from '@/components/directory/PortalEditor';
 
-export const metadata: Metadata = {
-  title: { absolute: 'ניהול העסק - בונים בית' },
-  alternates: { canonical: absoluteUrl('/partner-portal/') },
-  robots: { index: false, follow: false },
-};
+const LOGIN_URL = '/login/?next=%2Fpartner-portal%2F';
+
+/**
+ * Signed-out visitors get a real 3xx to the login page. It must happen here:
+ * the root loading.tsx streams the page body after a 200 has been sent.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  if (!(await getProfile())) redirect(LOGIN_URL);
+  return {
+    title: { absolute: 'ניהול העסק - בונים בית' },
+    alternates: { canonical: absoluteUrl('/partner-portal/') },
+    robots: { index: false, follow: false },
+  };
+}
 
 const STATUS_LABEL: Record<BusinessRow['status'], string> = {
   draft: 'טיוטה',
@@ -137,7 +146,7 @@ function ReviewsList({ reviews }: { reviews: ReviewRow[] }) {
  */
 export default async function PartnerPortalPage({ searchParams }: { searchParams: { b?: string } }) {
   const profile = await getProfile();
-  if (!profile) redirect('/login/?next=%2Fpartner-portal%2F');
+  if (!profile) redirect(LOGIN_URL);
 
   const db = createClient();
   const owned = await listOwnedBusinesses(db, profile.id);

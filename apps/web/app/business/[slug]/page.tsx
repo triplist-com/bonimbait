@@ -34,7 +34,9 @@ const load = cache(async (rawSlug: string) => {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const data = await load(params.slug);
-  if (!data) return { title: 'בעל המקצוע לא נמצא', robots: { index: false } };
+  // notFound() here (not only in the page) so the status is a real 404: the
+  // root loading.tsx makes the page body stream after a 200 has been sent.
+  if (!data) notFound();
   const { business } = data;
   const canonical = absoluteUrl(businessPath(business.slug));
   // Yoast pattern of the live site when the import has no stored title.

@@ -7,7 +7,14 @@ import { businessHref, decodeSlug } from '@/lib/directory/format';
 import { createPublicClient } from '@/lib/directory/server';
 import ClaimForm from '@/components/directory/ClaimForm';
 
-export const metadata: Metadata = { title: 'בקשת ניהול עסק', robots: { index: false, follow: false } };
+// Status-affecting checks run in generateMetadata, before the root
+// loading.tsx starts streaming a 200.
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const business = await getPublishedBusinessBySlug(createPublicClient(), decodeSlug(params.slug));
+  if (!business) notFound();
+  if (!(await getProfile())) redirect(`/login/?next=${encodeURIComponent(`${businessHref(business.slug)}claim/`)}`);
+  return { title: 'בקשת ניהול עסק', robots: { index: false, follow: false } };
+}
 
 export default async function ClaimBusinessPage({ params }: { params: { slug: string } }) {
   const business = await getPublishedBusinessBySlug(createPublicClient(), decodeSlug(params.slug));

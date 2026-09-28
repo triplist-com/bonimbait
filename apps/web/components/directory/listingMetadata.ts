@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { absoluteUrl } from '@/lib/site';
 import { type ListingFilters, listingHref } from '@/lib/directory/listing';
 import { listingHeading, loadListing } from './DirectoryListing';
@@ -14,6 +15,12 @@ const LIVE_DESCRIPTION =
  * searches are noindex.
  */
 export async function listingMetadata(filters: ListingFilters): Promise<Metadata> {
+  // A page past the end is a real 404 (like WordPress). Checked here because
+  // metadata resolves before the root loading.tsx starts streaming a 200.
+  if (filters.page > 1) {
+    const { result } = await loadListing(filters);
+    if (filters.page > result.pageCount) notFound();
+  }
   const canonical = absoluteUrl(
     listingHref({ specialty: filters.specialty, region: filters.region, page: filters.page }),
   );

@@ -12,7 +12,7 @@ type Props = { params: { slug: string } };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const business = await getPublishedBusinessBySlug(createPublicClient(), decodeSlug(params.slug));
-  if (!business) return { title: 'בעל המקצוע לא נמצא', robots: { index: false } };
+  if (!business) notFound(); // real 404 status (see app/business/[slug]/page.tsx)
   return {
     title: `חוות דעת על ${business.name}`,
     robots: { index: false, follow: true },

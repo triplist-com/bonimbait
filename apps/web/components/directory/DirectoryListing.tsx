@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { listDirectoryEntries, listRegions, listSpecialties } from '@/lib/db/businesses';
 import { getReviewStats } from '@/lib/db/reviews';
@@ -17,8 +18,8 @@ import { createPublicClient } from '@/lib/directory/server';
 import BusinessCard from './BusinessCard';
 import ListingFilters, { SortSelect } from './ListingFilters';
 
-/** Shared data load for the listing and its metadata. */
-export async function loadListing(filters: Filters) {
+/** Directory data, fetched once per request (shared by metadata and page). */
+const loadDirectoryData = cache(async () => {
   const db = createPublicClient();
   const [entries, specialties, regions] = await Promise.all([
     listDirectoryEntries(db),
@@ -26,8 +27,14 @@ export async function loadListing(filters: Filters) {
     listRegions(db),
   ]);
   const stats = await getReviewStats(db, entries.map((e) => e.id));
-  const result = applyListing(entries, filters, { specialties, regions, stats });
-  return { entries, specialties, regions, stats, result };
+  return { entries, specialties, regions, stats };
+});
+
+/** Shared data load for the listing and its metadata. */
+export async function loadListing(filters: Filters) {
+  const data = await loadDirectoryData();
+  const result = applyListing(data.entries, filters, data);
+  return { ...data, result };
 }
 
 export function listingHeading(specialty: { name: string } | null, region: { name: string } | null): string {
