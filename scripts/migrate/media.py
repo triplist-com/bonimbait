@@ -100,6 +100,27 @@ def save_manifest(m: dict) -> None:
 
 DEAD = ("404", "gone")  # not served by the live site (404, or a redirect to the homepage)
 
+# Manifest entries from before per-target tracking were uploaded to the local stack.
+LEGACY_TARGET = "127.0.0.1:54321"
+
+
+def upload_target() -> str:
+    """host:port of the Storage API uploads go to (local stack or the hosted project)."""
+    return urlsplit(supabase_env().get("API_URL") or f"http://{LEGACY_TARGET}").netloc
+
+
+def uploaded_to(entry: Optional[dict]) -> list[str]:
+    if not entry or entry.get("status") != "uploaded":
+        return []
+    return entry.get("uploaded_to", [LEGACY_TARGET])
+
+
+def _record(manifest: dict, n: str, entry: dict, target: str) -> None:
+    """Store a work() result, accumulating the Storage targets the file is in."""
+    if entry["status"] == "uploaded":
+        entry["uploaded_to"] = sorted(set(uploaded_to(manifest.get(n))) | {target})
+    manifest[n] = entry
+
 
 class Rewriter:
     """Callable used by the loader: live uploads URL -> Storage URL.
@@ -285,12 +306,14 @@ def migrate_images(urls: Iterable[str], concurrency: int = 3, limit: Optional[in
                    retry_errors: bool = True, log_every: int = 50) -> dict:
     """Download + upload each URL not yet migrated; resolve dead ones. Returns counters.
 
-    Idempotent: uploaded/replaced/dead entries are skipped, except that an
+    Idempotent per Storage target: entries already uploaded to the current
+    target (see upload_target) and dead entries are skipped, except that an
     "uploaded" entry whose cached file turns out to be HTML (the live site's
     redirect-to-homepage for a missing file) is re-checked and its bad Storage
     object deleted.
     """
     manifest = load_manifest()
+    target = upload_target()
     todo: list[str] = []
     seen: list[str] = []
     for u in urls:
@@ -305,7 +328,16 @@ def migrate_images(urls: Iterable[str], concurrency: int = 3, limit: Optional[in
             _delete(e["key"])
             todo.append(n)
             continue
-        if e and (e["status"] in ("uploaded", "replaced", *DEAD)
+        if e and e["status"] == "uploaded" and target not in uploaded_to(e):
+            todo.append(n)  # cached locally, but not in this Storage yet
+            continue
+        if e and e["status"] == "replaced":
+            r = e.get("replacement")
+            if r and r not in seen and target not in uploaded_to(manifest.get(r)):
+                seen.append(r)
+                todo.append(r)
+            continue
+        if e and (e["status"] in ("uploaded", *DEAD)
                   or (e["status"].startswith("error") and not retry_errors)):
             continue
         todo.append(n)
@@ -330,7 +362,7 @@ def migrate_images(urls: Iterable[str], concurrency: int = 3, limit: Optional[in
             for f in as_completed(futs):
                 n, entry = f.result()
                 with _lock:
-                    manifest[n] = entry
+                    _record(manifest, n, entry, target)
                     done += 1
                     s = entry["status"]
                     stats["uploaded" if s == "uploaded" else "dead" if s in DEAD else "error"] += 1
@@ -350,9 +382,9 @@ def migrate_images(urls: Iterable[str], concurrency: int = 3, limit: Optional[in
                 manifest[n]["replacement"] = None
                 continue
             c = normalize(cand)
-            if manifest.get(c, {}).get("status") != "uploaded":
+            if target not in uploaded_to(manifest.get(c)):
                 c, entry = work(c)
-                manifest[c] = entry
+                _record(manifest, c, entry, target)
             if manifest[c]["status"] == "uploaded":
                 manifest[n] = {**manifest[n], "status": "replaced", "replacement": c, "key": manifest[c]["key"]}
                 stats["replaced"] += 1

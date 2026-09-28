@@ -18,6 +18,7 @@ from pathlib import Path
 from urllib.parse import unquote
 
 import psycopg
+import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from paths import database_url, migration_dir  # noqa: E402
@@ -154,6 +155,30 @@ DB_ORPHAN_QUERIES = {
 HARD_ORPHANS = {"posts_without_category", "products_with_old_host_images"}
 
 
+def storage_check(manifest: dict, sample_size: int = 25) -> dict:
+    """Are migrated files really in the target Storage? The manifest must record
+    an upload to this target for every referenced file, and a sample of public
+    URLs must answer 200 (a load without `--only images` rewrites links but
+    uploads nothing)."""
+    target = media.upload_target()
+    keys = {e["key"] for e in manifest.values() if e["status"] in ("uploaded", "replaced")}
+    in_target = {e["key"] for e in manifest.values()
+                 if e["status"] == "uploaded" and target in media.uploaded_to(e)}
+    missing = sorted(keys - in_target)
+    sample = sorted(in_target)[:: max(1, len(in_target) // sample_size)][:sample_size]
+    bad_http = []
+    for key in sample:
+        url = media.public_url(key)
+        try:
+            code = requests.head(url, timeout=30, allow_redirects=True).status_code
+        except requests.RequestException as e:
+            code = type(e).__name__
+        if code != 200:
+            bad_http.append(f"{code} {url}")
+    return {"target": target, "files": len(keys), "not_uploaded_to_target": missing,
+            "sampled": len(sample), "sample_failures": bad_http}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--json", action="store_true")
@@ -177,6 +202,8 @@ def main() -> int:
     img_404 = sorted(u for u, e in manifest.items() if e["status"] in ("404", "gone"))
     img_err = sorted(u for u, e in manifest.items() if e["status"] not in ("uploaded", "replaced", "404", "gone"))
 
+    storage = storage_check(manifest)
+
     rep_path = migration_dir() / "load_report.json"
     loader = json.loads(rep_path.read_text(encoding="utf-8")) if rep_path.exists() else {}
 
@@ -189,7 +216,8 @@ def main() -> int:
         "images": {"manifest": by_status, "dead_on_live": img_404, "errors": img_err[:20],
                    "rows_still_pointing_at_live_uploads": live_urls_left,
                    "old_host_references": old_host_refs,
-                   "loader_rewrite": loader.get("image_urls")},
+                   "loader_rewrite": loader.get("image_urls"),
+                   "storage": storage},
         "sanitize": loader.get("sanitize"),
     }
     if args.json:
@@ -209,8 +237,15 @@ def main() -> int:
             print("  dead", u)
         print(f"old-host wp-content references in content tables: {live_urls_left}",
               old_host_refs or "")
+        print(f"storage {storage['target']}: {storage['files']} files, "
+              f"{len(storage['not_uploaded_to_target'])} not uploaded to this target "
+              f"(run load.py --only images --images all), "
+              f"{len(storage['sample_failures'])}/{storage['sampled']} sampled URLs failing")
+        for f in storage["sample_failures"][:10]:
+            print("  ", f)
     bad = (not result["all_counts_match"] or any(db_orphans[k] for k in HARD_ORPHANS)
-           or bool(old_host_refs))
+           or bool(old_host_refs) or bool(storage["not_uploaded_to_target"])
+           or bool(storage["sample_failures"]))
     return 1 if bad else 0
 
 

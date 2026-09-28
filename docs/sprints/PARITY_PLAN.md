@@ -133,7 +133,11 @@ Each wave's agents run in parallel. A wave starts only after the previous wave i
 ### Wave 4 — Cutover
 Owner actions are marked **(owner)**.
 1. Freeze content on WordPress **(owner)**.
-2. Re-run the crawl + import.
+2. Re-run the crawl + import against production. Set `MIGRATION_DATABASE_URL` (session pooler), `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and `MEDIA_BASE_URL`, then run:
+   - `crawl_rest.py`, `crawl_videos.py`, `crawl_businesses.py`, `crawl_product_terms.py`, `reconcile_sitemaps.py`
+   - `load.py --only images --images all`. **A plain `load.py` does not upload files.**
+   - `load.py`
+   - `verify_load.py`, which must exit 0. It fails if any file isn't in the target Storage.
 3. `url_parity.py` must be 100% green against staging.
 4. Configure UPay production keys **(owner)**.
 5. Point the bonimbayit.co.il DNS to Vercel **(owner)**.
