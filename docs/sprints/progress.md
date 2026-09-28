@@ -31,8 +31,13 @@
 |---|---|---|---|
 | 1 | Foundation (schema, auth, payments interface) + live-site crawl | Done | 2026-09-28 |
 | 2 | Content, Directory, Community & Commerce, Leads, data load | Done | 2026-09-28 |
-| 3 | Admin CMS, search index for posts, CTA integration, QA | In progress | |
+| 3 | Admin CMS (done); search index for posts, CTA integration, QA (open) | In progress | |
 | 4 | Cutover to bonimbayit.co.il | Not started | |
 
 **URL parity after Wave 2:** 1214/1214 pass against a local build (1203 × 200; the rest redirect as live or are listed in `scripts/migrate/parity_exceptions.json`).
 **Open:** hosted Supabase project (the old one is gone), UPay credentials + docs, Resend key + lead inbox address, product-data ownership fix (loader vs commerce migration).
+
+**2026-09-29: new app live on bonimbait.com** (PR #16, merge `68cd819`). Hosted Supabase `nfbasjadvakbsusupcoy` is migrated and loaded. URL parity is 1214/1214 against https://bonimbait.com.
+- `SITE_NOINDEX=true` keeps bonimbait.com out of search until the cutover to bonimbayit.co.il.
+- Mock payments are refused on production, so online purchase stays hidden until UPay is configured.
+- Rollback target, if needed: the previous production deployment `bonimbait-5jtax0zqs`.
