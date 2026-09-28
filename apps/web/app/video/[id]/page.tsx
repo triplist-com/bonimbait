@@ -17,6 +17,11 @@ import VideoPageClient from './VideoPageClient';
 
 export const revalidate = 3600;
 
+// Rendered on first request, then cached (ISR).
+export function generateStaticParams() {
+  return [];
+}
+
 interface VideoPageProps {
   params: { id: string };
 }
@@ -46,7 +51,9 @@ export async function generateMetadata({ params }: VideoPageProps): Promise<Meta
     });
   }
 
-  const video = YOUTUBE_ID.test(params.id) ? safeGetVideo(params.id) : null;
+  // 404 from metadata: app/loading.tsx streams the page after a 200 is sent.
+  if (!YOUTUBE_ID.test(decodeSlug(params.id))) notFound();
+  const video = safeGetVideo(params.id);
   if (!video) return { title: 'סרטון', description: 'צפו בסרטון בנושא בנייה פרטית - בונים בית' };
 
   const thumbnailUrl = video.thumbnail_url || `https://img.youtube.com/vi/${video.youtube_id}/hqdefault.jpg`;

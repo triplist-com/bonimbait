@@ -6,13 +6,19 @@ import { decodeSlug } from '@/lib/content/db';
 
 export const revalidate = 3600;
 
+// Rendered on first request, then cached (ISR).
+export function generateStaticParams() {
+  return [];
+}
+
 interface Props {
   params: { slug: string };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const author = await loadAuthor(decodeSlug(params.slug));
-  if (!author) return { title: 'העמוד לא נמצא', robots: { index: false } };
+  // 404 from metadata: app/loading.tsx streams the page after a 200 is sent.
+  if (!author) notFound();
   const result = await loadPostsPage(1, undefined, author.id);
   return authorMetadata(author, 1, totalPagesOf(result));
 }

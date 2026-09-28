@@ -17,6 +17,11 @@ import CategoryPageClient from './CategoryPageClient';
 
 export const revalidate = 3600;
 
+// Rendered on first request, then cached (ISR).
+export function generateStaticParams() {
+  return [];
+}
+
 interface Props {
   params: { slug: string };
 }
@@ -39,7 +44,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const category = findVideoCategory(slug);
-  if (!category) return { title: 'הקטגוריה לא נמצאה', robots: { index: false } };
+  // 404 from metadata: app/loading.tsx streams the page after a 200 is sent.
+  if (!category) notFound();
   const name = category.name_he;
   const description = category.description_he || `כל הסרטונים והמידע בנושא ${name} לבנייה פרטית בישראל`;
   return {

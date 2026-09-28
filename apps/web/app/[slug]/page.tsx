@@ -38,7 +38,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (special) return special.metadata ? await special.metadata() : {};
 
   const found = await resolveRootContent(slug);
-  if (!found) return { title: 'העמוד לא נמצא', robots: { index: false } };
+  // notFound() here (not only in the page) so the response is a real 404:
+  // app/loading.tsx makes the page body stream after a 200 has been sent.
+  if (!found) notFound();
 
   if (found.type === 'post') {
     const { post } = found;

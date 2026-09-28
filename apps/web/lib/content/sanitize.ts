@@ -105,10 +105,51 @@ function stripTags(html: string): string {
     .trim();
 }
 
+// Placeholders left by the migration loader (scripts/migrate/SANITIZE.md) are
+// swapped for text tokens before sanitizing, then for our own trusted markup.
+const TOKEN_LEAD_FORM = 'BBEMBEDLEADFORMTOKEN';
+const TOKEN_WHATSAPP = 'BBEMBEDWHATSAPPTOKEN';
+
+function consultationUrl(): string {
+  const base = process.env.NEXT_PUBLIC_CALENDLY_URL || 'https://calendly.com/tzuri-galili-bonimbayit/demo45min';
+  return `${base}${base.includes('?') ? '&' : '?'}utm_source=website&utm_medium=post_inline&utm_campaign=consultation`;
+}
+
+const LEAD_FORM_HTML = () =>
+  `<div class="bb-inline-cta"><p class="bb-inline-cta-title">רוצים לבנות בלי חריגות בתקציב?</p>` +
+  `<p>השאירו את הבדיקה לנו: פגישת ייעוץ תקציב בניה ראשונית ללא עלות.</p>` +
+  `<a class="bb-inline-cta-button" href="${consultationUrl()}" target="_blank" rel="noopener noreferrer">לתיאום פגישת ייעוץ חינם</a></div>`;
+
+const WHATSAPP_HTML =
+  `<div class="bb-inline-cta bb-inline-cta-whatsapp"><p class="bb-inline-cta-title">הצטרפו לקהילת בונים בית</p>` +
+  `<p>קבוצות WhatsApp אזוריות של בונים ומשפצים פרטיים בלבד.</p>` +
+  `<a class="bb-inline-cta-button" href="/הצטרפו-לקבוצות-הווטסאפ/">להצטרפות לקבוצה באזורכם</a></div>`;
+
+function replacePlaceholders(source: string): string {
+  return (
+    source
+      .replace(/<div[^>]*data-bb-embed=["']lead-form["'][^>]*>\s*<\/div>/gi, `<p>${TOKEN_LEAD_FORM}</p>`)
+      .replace(/<div[^>]*data-bb-embed=["']whatsapp-join["'][^>]*>\s*<\/div>/gi, `<p>${TOKEN_WHATSAPP}</p>`)
+      // Popup triggers become links to the consultation booking.
+      .replace(/<a([^>]*?)\sdata-bb-action=["']lead-popup["']([^>]*)>/gi, (_m, a: string, b: string) => {
+        const attrs = `${a}${b}`.replace(/\shref=["'][^"']*["']/gi, '');
+        return `<a${attrs} href="${consultationUrl()}">`;
+      })
+  );
+}
+
+function injectPlaceholders(html: string): string {
+  return html
+    .replace(new RegExp(`<p>\\s*${TOKEN_LEAD_FORM}\\s*</p>`, 'g'), LEAD_FORM_HTML())
+    .replace(new RegExp(`<p>\\s*${TOKEN_WHATSAPP}\\s*</p>`, 'g'), WHATSAPP_HTML)
+    .replace(new RegExp(`${TOKEN_LEAD_FORM}|${TOKEN_WHATSAPP}`, 'g'), '');
+}
+
 export function prepareContentHtml(raw: string | null | undefined): PreparedHtml {
-  const source = raw ?? '';
-  const jsonLd = extractJsonLd(source);
-  const hadForm = /<form[\s>]/i.test(source);
+  const original = raw ?? '';
+  const jsonLd = extractJsonLd(original);
+  const hadForm = /<form[\s>]|data-bb-embed=/i.test(original);
+  const source = replacePlaceholders(original);
 
   let html = sanitizeHtml(source, {
     allowedTags: [
@@ -138,7 +179,8 @@ export function prepareContentHtml(raw: string | null | undefined): PreparedHtml
       col: ['span'],
       ol: ['start', 'type', 'reversed'],
       details: ['open'],
-      '*': ['dir', 'style'],
+      // `id` keeps in-content anchor links (#section) working.
+      '*': ['dir', 'style', 'id'],
     },
     allowedStyles: { '*': { 'text-align': [ALIGN] } },
     allowedSchemes: ['http', 'https', 'mailto', 'tel', 'whatsapp'],
@@ -195,6 +237,7 @@ export function prepareContentHtml(raw: string | null | undefined): PreparedHtml
 
   // Empty paragraphs left behind by removed widgets.
   html = html.replace(/<p>(\s|&nbsp;|<br \/>)*<\/p>/g, '');
+  html = injectPlaceholders(html);
 
   // Heading anchors + table of contents.
   const toc: TocItem[] = [];
@@ -203,12 +246,42 @@ export function prepareContentHtml(raw: string | null | undefined): PreparedHtml
     const text = stripTags(inner);
     if (!text) return `<h${level}${attrs}>${inner}</h${level}>`;
     n += 1;
-    const id = `section-${n}`;
+    const existing = attrs.match(/\sid="([^"]+)"/);
+    const id = existing ? existing[1] : `section-${n}`;
     toc.push({ id, text, level: Number(level) as 2 | 3 });
-    return `<h${level}${attrs} id="${id}">${inner}</h${level}>`;
+    return existing ? `<h${level}${attrs}>${inner}</h${level}>` : `<h${level}${attrs} id="${id}">${inner}</h${level}>`;
   });
 
+  // The loader strips in-content JSON-LD, so rebuild FAQPage from <details> blocks
+  // (the live posts' FAQ sections carried FAQPage schema).
+  if (!jsonLd.some((n) => n['@type'] === 'FAQPage')) {
+    const faq = extractFaq(html);
+    if (faq.length >= 2) {
+      jsonLd.push({
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faq.map((q) => ({
+          '@type': 'Question',
+          name: q.question,
+          acceptedAnswer: { '@type': 'Answer', text: q.answer },
+        })),
+      });
+    }
+  }
+
   return { html, toc, jsonLd, hadForm };
+}
+
+function extractFaq(html: string): Array<{ question: string; answer: string }> {
+  const out: Array<{ question: string; answer: string }> = [];
+  const re = /<details\b[^>]*>\s*<summary\b[^>]*>([\s\S]*?)<\/summary>([\s\S]*?)<\/details>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html))) {
+    const question = stripTags(m[1]);
+    const answer = stripTags(m[2].replace(/<\/(p|li|div)>/gi, ' '));
+    if (question && answer) out.push({ question, answer });
+  }
+  return out;
 }
 
 /** Plain-text excerpt from HTML (for meta descriptions and cards). */

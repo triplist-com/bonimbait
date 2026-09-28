@@ -4,5 +4,6 @@ import { permanentRedirect } from 'next/navigation';
 // via the `redirects` table (supabase/migrations/20260928130000_content_redirects.sql);
 // this stub is the fallback when that table is unavailable.
 export default function AboutRedirect() {
-  permanentRedirect('/אודותינו/');
+  // Encoded: the Location header must be ASCII.
+  permanentRedirect(encodeURI('/אודותינו/'));
 }
