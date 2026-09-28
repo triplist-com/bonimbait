@@ -1,117 +1,127 @@
 import type { MetadataRoute } from 'next';
-import { SCENARIOS } from '../lib/calculator-scenarios';
+import { SCENARIOS } from '@/lib/calculator-scenarios';
 import { absoluteUrl } from '@/lib/site';
+import { getPublicDb, safeQuery } from '@/lib/content/db';
+import { listSlugs } from '@/lib/content/queries';
+import { listAuthors, listPostCategories, listPublishedPostSlugs } from '@/lib/db/posts';
+import { listPublishedPageSlugs } from '@/lib/db/pages';
+import { listVideoPageSlugs } from '@/lib/db/videos';
 
-// Actual category slugs matching data/videos.json
-const categorySlugs = [
-  'planning-permits',
-  'structure-construction',
-  'finishes-design',
-  'electrical-plumbing',
-  'contractors-labor',
-  'costs-pricing',
-  'general-tips',
-  'landscaping-yard',
+/**
+ * One sitemap for every public URL (~1,450 entries, far below the 50,000
+ * per-file limit, so no generateSitemaps split: Next 14 would not emit an
+ * index for it at /sitemap.xml).
+ *
+ * DB-backed sections degrade to empty lists if Supabase is unavailable.
+ */
+
+export const revalidate = 3600;
+
+type Entry = MetadataRoute.Sitemap[number];
+type Freq = NonNullable<Entry['changeFrequency']>;
+
+function entry(path: string, priority: number, changeFrequency: Freq, lastModified?: string | Date | null): Entry {
+  return {
+    url: absoluteUrl(path),
+    lastModified: lastModified ? new Date(lastModified) : undefined,
+    changeFrequency,
+    priority,
+  };
+}
+
+/** Fixed routes, including other workstreams' pages that are not `pages` rows. */
+const FIXED_ROUTES: Array<[string, number, Freq]> = [
+  ['/', 1.0, 'daily'],
+  ['/blog/', 0.9, 'daily'],
+  ['/search/', 0.8, 'weekly'],
+  ['/videos/', 0.7, 'weekly'],
+  ['/categories/', 0.6, 'weekly'],
+  ['/calculator/', 0.9, 'monthly'],
+  // Directory
+  ['/recommended/', 0.9, 'daily'],
+  ['/join-us/', 0.6, 'monthly'],
+  // Community & Commerce
+  ['/membership-tiers/', 0.8, 'monthly'],
+  ['/הטבות-לקהילה/', 0.7, 'weekly'],
+  ['/shop/', 0.6, 'weekly'],
+  // Leads
+  ['/צור-קשר/', 0.5, 'yearly'],
+  ['/הצטרפו-לקבוצות-הווטסאפ/', 0.7, 'monthly'],
+  ['/strategic-partners/', 0.5, 'monthly'],
+  // Thank-you pages are indexed on the live site (Leads: LEADS_NOINDEX_THANK_YOU).
+  ['/strategic-partners/thank-you/', 0.2, 'yearly'],
+  ['/thank-you/', 0.2, 'yearly'],
+  ['/תודה-על-השארת-פרטים-מוצר/', 0.2, 'yearly'],
 ];
+
+/**
+ * `pages` rows not listed: transactional, portal, redirected and duplicate
+ * utility pages (they still resolve; they're just not in the sitemap).
+ */
+const EXCLUDED_PAGE_SLUGS = new Set([
+  'homepage',
+  'blog',
+  'cart',
+  'checkout',
+  'thank-you-order',
+  'thank-you-review',
+  'תודה-על-השארת-פרטים', // 301 -> /thank-you/
+  'partner-portal',
+  'partner-portal-2',
+  'search-result', // 301 -> /search/
+]);
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
+  const fixed = FIXED_ROUTES.map(([path, priority, freq]) => entry(path, priority, freq, now));
+  const seen = new Set(fixed.map((e) => e.url));
+  const push = (list: Entry[], e: Entry) => {
+    if (seen.has(e.url)) return;
+    seen.add(e.url);
+    list.push(e);
+  };
 
-  const staticPages: MetadataRoute.Sitemap = [
-    {
-      url: absoluteUrl(),
-      lastModified: now,
-      changeFrequency: 'daily',
-      priority: 1.0,
-    },
-    {
-      url: absoluteUrl(`/videos`),
-      lastModified: now,
-      changeFrequency: 'daily',
-      priority: 0.9,
-    },
-    {
-      url: absoluteUrl(`/categories`),
-      lastModified: now,
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: absoluteUrl(`/search`),
-      lastModified: now,
-      changeFrequency: 'daily',
-      priority: 0.8,
-    },
-    {
-      url: absoluteUrl(`/about`),
-      lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-    {
-      url: absoluteUrl(`/contact`),
-      lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.4,
-    },
-    {
-      url: absoluteUrl(`/privacy`),
-      lastModified: now,
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
-    {
-      url: absoluteUrl(`/terms`),
-      lastModified: now,
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
-    {
-      url: absoluteUrl(`/calculator`),
-      lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-  ];
+  const calculators = SCENARIOS.map((s) => entry(`/calculator/${s.slug}/`, 0.8, 'monthly', now));
 
-  const categoryPages: MetadataRoute.Sitemap = categorySlugs.map((slug) => ({
-    url: absoluteUrl(`/category/${slug}`),
-    lastModified: now,
-    changeFrequency: 'weekly' as const,
-    priority: 0.7,
-  }));
-
-  // Generate video pages from local data
-  let videoPages: MetadataRoute.Sitemap = [];
+  // AI-index video categories and YouTube-id video pages (static data).
+  const indexed: Entry[] = [];
   try {
-    // Dynamic import to avoid bundling in client
-    const { getVideos } = await import('./api/_lib/data');
-    const { videos } = getVideos({ limit: 1000 });
-    videoPages = videos.map((v) => ({
-      url: absoluteUrl(`/video/${v.id}`),
-      lastModified: v.published_at ? new Date(v.published_at) : now,
-      changeFrequency: 'monthly' as const,
-      priority: 0.6,
-    }));
+    const { getCategories, getVideos } = await import('./api/_lib/data');
+    for (const c of getCategories()) indexed.push(entry(`/category/${c.slug}/`, 0.6, 'weekly', now));
+    for (const v of getVideos({ limit: 5000 }).videos) {
+      indexed.push(entry(`/video/${v.youtube_id}/`, 0.5, 'monthly', v.published_at || null));
+    }
   } catch {
-    // Skip video pages if data unavailable
+    // Static index unavailable: skip.
   }
 
-  // Calculator main page + 20 scenario pages
-  const calculatorPages: MetadataRoute.Sitemap = [
-    {
-      url: absoluteUrl(`/calculator`),
-      lastModified: now,
-      changeFrequency: 'monthly' as const,
-      priority: 0.9,
-    },
-    ...SCENARIOS.map((scenario) => ({
-      url: absoluteUrl(`/calculator/${scenario.slug}`),
-      lastModified: now,
-      changeFrequency: 'monthly' as const,
-      priority: 0.8,
-    })),
-  ];
+  const db = getPublicDb();
+  const content: Entry[] = [];
+  if (db) {
+    const [posts, pages, categories, authors, videoPages, businesses, products] = await Promise.all([
+      safeQuery(() => listPublishedPostSlugs(db), []),
+      safeQuery(() => listPublishedPageSlugs(db), []),
+      safeQuery(() => listPostCategories(db), []),
+      safeQuery(() => listAuthors(db), []),
+      safeQuery(() => listVideoPageSlugs(db), []),
+      listSlugs(db, 'businesses'),
+      listSlugs(db, 'products'),
+    ]);
 
-  return [...staticPages, ...categoryPages, ...calculatorPages, ...videoPages];
+    for (const p of posts) push(content, entry(`/${p.slug}/`, 0.8, 'monthly', p.updated_at));
+    for (const p of pages) {
+      if (EXCLUDED_PAGE_SLUGS.has(p.slug.normalize('NFC'))) continue;
+      push(content, entry(`/${p.slug}/`, 0.5, 'monthly', p.updated_at));
+    }
+    for (const c of categories) push(content, entry(`/category/${c.slug}/`, 0.7, 'weekly', c.updated_at));
+    for (const a of authors) push(content, entry(`/author/${a.slug}/`, 0.4, 'weekly', a.updated_at));
+    for (const v of videoPages) push(content, entry(`/video/${v.legacy_slug}/`, 0.6, 'monthly', v.updated_at));
+    for (const b of businesses) push(content, entry(`/business/${b.slug}/`, 0.7, 'weekly', b.updated_at));
+    for (const p of products) push(content, entry(`/product/${p.slug}/`, 0.6, 'weekly', p.updated_at));
+  }
+  // Special pages without a `pages` row fallback.
+  push(content, entry('/בונים-בית-tv/', 0.7, 'weekly', now));
+  push(content, entry('/אודותינו/', 0.5, 'yearly', now));
+
+  return [...fixed, ...content, ...calculators, ...indexed.filter((e) => !seen.has(e.url))];
 }
