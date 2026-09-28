@@ -3,7 +3,7 @@
 --
 -- Why: on Supabase, tables in `public` are exposed through PostgREST. Without
 -- RLS, anyone holding the anon key (which ships to browsers once the web app
--- uses Supabase) could read AND write categories / video_segments /
+-- uses Supabase) could read AND write categories / videos / video_segments /
 -- embeddings / analytics_events.
 --
 -- Effect on apps/api: none. FastAPI connects as the table owner (postgres)
@@ -19,7 +19,7 @@ declare
   t text;
 begin
   -- Public read + staff write
-  foreach t in array array['public.categories', 'public.video_segments'] loop
+  foreach t in array array['public.categories', 'public.videos', 'public.video_segments'] loop
     if to_regclass(t) is not null then
       execute format('alter table %s enable row level security', t);
       execute format('drop policy if exists "public read" on %s', t);

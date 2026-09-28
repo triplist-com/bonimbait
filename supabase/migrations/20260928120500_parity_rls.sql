@@ -3,13 +3,16 @@
 --
 -- Model:
 --   * anon + members read PUBLISHED content.
---   * members read/write only their own profile and event registrations, and
---     read their own orders / payments / memberships (those are written by the
---     server with the service-role key during checkout).
---   * pros (business owners) edit their own business (guard trigger protects
---     moderation/billing columns) and read reviews + leads of that business.
+--   * members read/write only their own profile, and read their own orders /
+--     payments (those are written by the server with the service-role key
+--     during checkout).
+--   * pros (business owners) edit their own business and its private
+--     contacts (guard trigger protects moderation/ranking/routing columns)
+--     and read reviews + leads of that business.
 --   * editors + admins (public.is_staff()) have full access everywhere.
 --   * anyone may INSERT a lead.
+--   * gated data (business_contacts, whatsapp_groups.invite_url) is never
+--     publicly readable; server routes reveal it after a lead is recorded.
 --   * service_role bypasses RLS (Supabase default) — server-only usage.
 --
 -- Every policy is dropped first so the file is re-runnable.
@@ -34,15 +37,16 @@ declare
   t text;
 begin
   foreach t in array array[
-  'public.regions', 'public.profiles',
-  'public.post_categories', 'public.posts', 'public.post_category_assignments', 'public.pages',
-  'public.videos',
-  'public.specialties', 'public.businesses', 'public.business_specialties',
-  'public.business_regions', 'public.reviews',
-  'public.events', 'public.membership_tiers', 'public.products', 'public.orders',
-  'public.order_items', 'public.payments', 'public.memberships', 'public.event_registrations',
-  'public.leads', 'public.redirects'
-] loop
+    'public.whatsapp_groups', 'public.regions', 'public.profiles',
+    'public.post_categories', 'public.authors', 'public.posts',
+    'public.post_category_assignments', 'public.pages', 'public.video_pages',
+    'public.specialties', 'public.businesses', 'public.business_contacts',
+    'public.business_specialties', 'public.business_regions', 'public.reviews',
+    'public.service_plans', 'public.service_plan_prices',
+    'public.product_categories', 'public.products', 'public.product_category_assignments',
+    'public.orders', 'public.order_items', 'public.payments',
+    'public.leads', 'public.redirects'
+  ] loop
     perform public._parity_enable_rls(t::regclass);
   end loop;
 end;
@@ -62,11 +66,18 @@ create policy "public read" on public.specialties for select using (true);
 drop policy if exists "public read" on public.post_categories;
 create policy "public read" on public.post_categories for select using (true);
 
-drop policy if exists "public read active" on public.membership_tiers;
-create policy "public read active" on public.membership_tiers for select using (is_active);
+drop policy if exists "public read" on public.authors;
+create policy "public read" on public.authors for select using (true);
 
--- Redirects are public by nature (they are served to every visitor); the
--- middleware reads them with the anon key.
+drop policy if exists "public read" on public.product_categories;
+create policy "public read" on public.product_categories for select using (true);
+
+-- whatsapp_groups: no public policy (invite links are lead-gated). Public
+-- code reads the whatsapp_groups_public view instead.
+grant select on public.whatsapp_groups_public to anon, authenticated;
+
+-- Redirects are public by nature (served to every visitor); the middleware
+-- reads them with the anon key.
 drop policy if exists "public read active" on public.redirects;
 create policy "public read active" on public.redirects for select using (is_active);
 
@@ -87,7 +98,7 @@ create policy "own profile update" on public.profiles
 -- (role changes are blocked by the profiles_guard_role trigger)
 
 -- ---------------------------------------------------------------------------
--- Content: posts, pages, videos
+-- Content: posts, pages, video pages
 -- ---------------------------------------------------------------------------
 drop policy if exists "public read published" on public.posts;
 create policy "public read published" on public.posts
@@ -95,6 +106,10 @@ create policy "public read published" on public.posts
 
 drop policy if exists "public read published" on public.pages;
 create policy "public read published" on public.pages
+  for select using (status = 'published' and (published_at is null or published_at <= now()));
+
+drop policy if exists "public read published" on public.video_pages;
+create policy "public read published" on public.video_pages
   for select using (status = 'published' and (published_at is null or published_at <= now()));
 
 drop policy if exists "public read" on public.post_category_assignments;
@@ -106,13 +121,8 @@ create policy "public read" on public.post_category_assignments
               and (p.published_at is null or p.published_at <= now()))
   );
 
--- videos: existing rows get status = 'published' via the column default.
-drop policy if exists "public read published" on public.videos;
-create policy "public read published" on public.videos
-  for select using (status = 'published');
-
 -- ---------------------------------------------------------------------------
--- Directory: businesses, joins, reviews
+-- Directory: businesses, contacts, joins, reviews
 -- ---------------------------------------------------------------------------
 drop policy if exists "public read published" on public.businesses;
 create policy "public read published" on public.businesses
@@ -123,7 +133,7 @@ create policy "owner read" on public.businesses
   for select to authenticated using (owner_member_id = auth.uid());
 
 -- Any signed-in user may submit a business (join-as-pro); the guard trigger
--- forces owner = caller, status = 'pending', tier = 'free'.
+-- forces owner = caller, status = 'pending', tier = 'free', routing = 'site'.
 drop policy if exists "member submit" on public.businesses;
 create policy "member submit" on public.businesses
   for insert to authenticated with check (auth.uid() is not null);
@@ -133,6 +143,13 @@ create policy "owner update" on public.businesses
   for update to authenticated
   using (owner_member_id = auth.uid())
   with check (owner_member_id = auth.uid());
+
+-- Private contacts: owner only (plus staff). No public policy at all.
+drop policy if exists "owner manage" on public.business_contacts;
+create policy "owner manage" on public.business_contacts
+  for all to authenticated
+  using (exists (select 1 from public.businesses b where b.id = business_id and b.owner_member_id = auth.uid()))
+  with check (exists (select 1 from public.businesses b where b.id = business_id and b.owner_member_id = auth.uid()));
 
 -- Join tables: public read for published businesses; owners manage their own.
 drop policy if exists "public read" on public.business_specialties;
@@ -192,12 +209,26 @@ create policy "member submit" on public.reviews
   );
 
 -- ---------------------------------------------------------------------------
--- Commerce
+-- Service plans + shop
 -- ---------------------------------------------------------------------------
+drop policy if exists "public read active" on public.service_plans;
+create policy "public read active" on public.service_plans for select using (is_active);
+
+drop policy if exists "public read active" on public.service_plan_prices;
+create policy "public read active" on public.service_plan_prices
+  for select using (exists (select 1 from public.service_plans p where p.id = plan_id and p.is_active));
+
 drop policy if exists "public read published" on public.products;
 create policy "public read published" on public.products
   for select using (status = 'published');
 
+drop policy if exists "public read" on public.product_category_assignments;
+create policy "public read" on public.product_category_assignments
+  for select using (exists (select 1 from public.products p where p.id = product_id and p.status = 'published'));
+
+-- ---------------------------------------------------------------------------
+-- Orders / payments: members read their own; writes are service-role only.
+-- ---------------------------------------------------------------------------
 drop policy if exists "own orders read" on public.orders;
 create policy "own orders read" on public.orders
   for select to authenticated using (member_id = auth.uid());
@@ -213,40 +244,6 @@ create policy "own payments read" on public.payments
   for select to authenticated using (
     exists (select 1 from public.orders o where o.id = order_id and o.member_id = auth.uid())
   );
-
-drop policy if exists "own memberships read" on public.memberships;
-create policy "own memberships read" on public.memberships
-  for select to authenticated using (member_id = auth.uid());
-
--- ---------------------------------------------------------------------------
--- Events
--- ---------------------------------------------------------------------------
-drop policy if exists "public read published" on public.events;
-create policy "public read published" on public.events
-  for select using (status in ('published', 'cancelled'));
-
-drop policy if exists "own registrations read" on public.event_registrations;
-create policy "own registrations read" on public.event_registrations
-  for select to authenticated using (member_id = auth.uid());
-
--- Direct self-registration only for FREE, open, published events. Paid events
--- go through checkout (server, service role).
-drop policy if exists "own registrations insert" on public.event_registrations;
-create policy "own registrations insert" on public.event_registrations
-  for insert to authenticated with check (
-    auth.uid() is not null
-    and exists (select 1 from public.events e
-                where e.id = event_id
-                  and e.status = 'published'
-                  and e.registration_open
-                  and e.price_agorot = 0)
-  );
-
-drop policy if exists "own registrations update" on public.event_registrations;
-create policy "own registrations update" on public.event_registrations
-  for update to authenticated
-  using (member_id = auth.uid())
-  with check (member_id = auth.uid());
 
 -- ---------------------------------------------------------------------------
 -- Leads: anyone can insert; staff read (via "staff full access");
