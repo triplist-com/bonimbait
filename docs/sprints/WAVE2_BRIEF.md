@@ -64,7 +64,7 @@ One local Supabase stack runs for **all** agents. It's already started from the 
   - `notFound()` for unknown slugs
 - Before you finish:
   - `cd apps/web && npm run build && npm run lint` must pass.
-  - Run `python /Users/drorkashi/Projects/bonimbayit/scripts/migrate/url_parity.py --base http://localhost:<port>` against your running server, and report the result for **your** URL types.
+  - Run `/Users/drorkashi/Projects/bonimbayit/scripts/.venv/bin/python /Users/drorkashi/Projects/bonimbayit/scripts/migrate/url_parity.py --base http://localhost:<port>` (it has the deps; it overwrites the shared `data/migration/parity_report.csv`, so read your rows right after it runs) against your running server, and report the result for **your** URL types.
 - No paid API calls (OpenAI or Anthropic).
 - Commit on your branch with conventional commits. Don't push or merge.
 
