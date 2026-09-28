@@ -1,6 +1,5 @@
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
-import { isSupabaseConfigured } from '@/lib/supabase/env';
+import { createPublicClient } from '@/lib/commerce/public-db';
 import { listProductCategories, listPublishedProducts } from '@/lib/db/commerce';
 import type { ProductCategoryRow, ProductRow } from '@/lib/db/types';
 import StructuredData from '@/components/StructuredData';
@@ -18,8 +17,9 @@ const WHY_BUY = [
 ];
 
 async function loadData(): Promise<{ products: ProductRow[]; stages: ProductCategoryRow[] }> {
-  if (!isSupabaseConfigured()) return { products: [], stages: [] };
-  const db = createClient();
+  // Cookie-less client: this page renders inside the ISR root [slug] route.
+  const db = createPublicClient();
+  if (!db) return { products: [], stages: [] };
   const [products, stages] = await Promise.all([
     listPublishedProducts(db),
     listProductCategories(db, { taxonomy: 'category_product' }),
