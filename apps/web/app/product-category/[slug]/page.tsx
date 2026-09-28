@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { getProductCategoryBySlug, listPublishedProducts } from '@/lib/db/commerce';
 import { addProductToCart } from '@/lib/commerce/actions';
+import { onlinePaymentsEnabled } from '@/lib/payments';
 import { commerceMetadata, decodeSlug } from '@/lib/commerce/seo';
 import Breadcrumbs from '@/components/commerce/Breadcrumbs';
 import ProductCard from '@/components/commerce/ProductCard';
@@ -49,7 +50,7 @@ export default async function ProductCategoryPage({ params }: Props) {
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {products.map((p) => (
             <ProductCard key={p.id} product={p} showExcerpt={false}>
-              {p.is_purchasable && (
+              {p.is_purchasable && onlinePaymentsEnabled() && (
                 <form action={addProductToCart}>
                   <input type="hidden" name="product_id" value={p.id} />
                   <input type="hidden" name="quantity" value="1" />

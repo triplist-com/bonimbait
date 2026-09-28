@@ -25,6 +25,7 @@ import ConsultationCTA from '@/components/leads/ConsultationCTA';
 import PlanLeadForm from '@/components/commerce/PlanLeadForm';
 import StructuredData from '@/components/StructuredData';
 import { absoluteUrl } from '@/lib/site';
+import { onlinePaymentsEnabled } from '@/lib/payments';
 
 export const dynamic = 'force-dynamic';
 
@@ -323,6 +324,7 @@ function PlanCard({ plan }: { plan: ServicePlanWithPrices }) {
           השאירו פרטים ונחזור אליכם
         </a>
         {plan.is_purchasable_online &&
+          onlinePaymentsEnabled() &&
           plan.prices.map((price) => (
             <form key={price.id} action={buyServicePlan}>
               <input type="hidden" name="price_id" value={price.id} />

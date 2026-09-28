@@ -12,9 +12,33 @@ let cached: PaymentProvider | null = null;
  * The active payment provider, selected by PAYMENT_PROVIDER ('mock' | 'upay').
  * Defaults to 'mock' so development and staging work without credentials.
  */
+function providerName(): PaymentProviderName {
+  return (process.env.PAYMENT_PROVIDER ?? 'mock').trim().toLowerCase() as PaymentProviderName;
+}
+
+/**
+ * The mock provider marks orders paid without charging anyone, so it is refused
+ * on a Vercel production deployment unless PAYMENT_ALLOW_MOCK_IN_PRODUCTION=true.
+ */
+function mockBlocked(name: PaymentProviderName): boolean {
+  return (
+    name === 'mock' &&
+    process.env.VERCEL_ENV === 'production' &&
+    process.env.PAYMENT_ALLOW_MOCK_IN_PRODUCTION !== 'true'
+  );
+}
+
+/** Whether the site may offer online purchase (buy buttons, add to cart, checkout). */
+export function onlinePaymentsEnabled(): boolean {
+  return !mockBlocked(providerName());
+}
+
 export function getPaymentProvider(): PaymentProvider {
   if (cached) return cached;
-  const name = (process.env.PAYMENT_PROVIDER ?? 'mock').trim().toLowerCase() as PaymentProviderName;
+  const name = providerName();
+  if (mockBlocked(name)) {
+    throw new PaymentConfigurationError('Mock payments are disabled in production; configure PAYMENT_PROVIDER=upay');
+  }
   switch (name) {
     case 'mock':
       cached = new MockProvider();

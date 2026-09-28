@@ -11,6 +11,7 @@ import { getPurchasablePlanPrice } from '@/lib/db/commerce';
 import { unwrapMaybe } from '@/lib/db/client';
 import { submitLeadAction } from '@/lib/leads/actions';
 import type { LeadFormState } from '@/lib/leads/types';
+import { onlinePaymentsEnabled } from '@/lib/payments';
 import { addToCart, isUuid, removeFromCart, setQuantity } from './cart';
 import { readCart, writeCart } from './cart-server';
 import { bool, str } from './forms';
@@ -60,7 +61,7 @@ export async function servicePlanLeadAction(prev: LeadFormState, form: FormData)
 export async function addProductToCart(form: FormData): Promise<void> {
   const productId = str(form, 'product_id', 60);
   const quantity = Number(str(form, 'quantity', 4) || '1');
-  if (!isUuid(productId) || !isSupabaseConfigured()) redirect('/cart/');
+  if (!isUuid(productId) || !isSupabaseConfigured() || !onlinePaymentsEnabled()) redirect('/cart/');
   const product = unwrapMaybe(
     await createClient()
       .from('products')
@@ -77,7 +78,7 @@ export async function addProductToCart(form: FormData): Promise<void> {
 /** "רכישה אונליין" on /membership-tiers/ (only plans with is_purchasable_online). */
 export async function buyServicePlan(form: FormData): Promise<void> {
   const priceId = str(form, 'price_id', 60);
-  if (!isUuid(priceId) || !isSupabaseConfigured()) redirect('/membership-tiers/');
+  if (!isUuid(priceId) || !isSupabaseConfigured() || !onlinePaymentsEnabled()) redirect('/membership-tiers/');
   const found = await getPurchasablePlanPrice(createClient(), priceId);
   if (!found) redirect('/membership-tiers/');
   writeCart(addToCart(readCart(), { kind: 'service_plan', id: found.price.id, quantity: 1 }));

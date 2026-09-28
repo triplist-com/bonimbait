@@ -38,6 +38,14 @@ const nextConfig = {
         : []),
     ],
   },
+  // SITE_NOINDEX=true keeps a temporary domain (bonimbait.com before the move to
+  // bonimbayit.co.il) out of search results so it can't compete with the live
+  // site. Crawling stays allowed so search engines see the noindex and drop any
+  // pages they already indexed.
+  async headers() {
+    if (process.env.SITE_NOINDEX !== "true") return [];
+    return [{ source: "/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] }];
+  },
 };
 
 export default nextConfig;
