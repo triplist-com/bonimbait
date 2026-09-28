@@ -200,17 +200,24 @@ export const LEAD_SPECS = {
       payload: { group: d.group, not_professional: true, newsletter: d.newsletter },
     }),
   ),
-  /** Phone-reveal popup on /business/<slug>/ (CF7 #6). Needs businessId. */
+  /**
+   * /business/<slug>/ leads. Needs businessId. Two live forms share this type:
+   *  - the "הצג טלפון" popup (popup-verification-phone): name, email, mobile + terms;
+   *  - the "יצירת קשר עם …" form (CF7 #6): also project region + construction stage.
+   * Region/stage are therefore optional here; the Directory contact-form action
+   * requires them itself.
+   */
   business_contact: spec(
     z.object({
       full_name: requiredText(),
       email: emailField,
       phone: phoneField,
-      region: regionField(REGION_SLUGS),
-      construction_stage: stageField,
+      region: optionalRegion,
+      construction_stage: optionalStage,
+      terms: flag,
       message,
     }),
-    (d) => ({ ...base(d), whatsappGroupSlug: null, payload: {} }),
+    (d) => ({ ...base(d), whatsappGroupSlug: null, payload: { terms_accepted: d.terms } }),
   ),
   /** Benefit/product "חזרו אליי" forms (CF7 #74386 and the product form). */
   benefit: spec(
@@ -269,6 +276,21 @@ export const LEAD_SPECS = {
       message,
     }),
     (d) => ({ ...base(d), whatsappGroupSlug: null, payload: {} }),
+  ),
+  /** "Claim this business" request (Directory, /business/<slug>/claim/). Needs businessId. */
+  claim_business: spec(
+    z.object({
+      full_name: requiredText(),
+      phone: phoneField,
+      email: emailField,
+      role_in_business: optionalText(80),
+      message,
+    }),
+    (d) => ({
+      ...base(d),
+      whatsappGroupSlug: null,
+      payload: { role_in_business: d.role_in_business ?? null },
+    }),
   ),
 } satisfies Record<LeadType, Spec<z.ZodTypeAny>>;
 
