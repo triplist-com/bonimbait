@@ -47,6 +47,9 @@ export default function AccountLinks({ variant = 'desktop' }: { variant?: 'deskt
   if (state === 'signed-in') {
     return (
       <div className={drawer ? 'flex gap-2' : 'flex items-center gap-3'}>
+        <Link href={AUTH_LINKS.cart} className={linkCls}>
+          סל קניות
+        </Link>
         <Link href={AUTH_LINKS.account} className={linkCls}>
           החשבון שלי
         </Link>
@@ -61,6 +64,9 @@ export default function AccountLinks({ variant = 'desktop' }: { variant?: 'deskt
 
   return (
     <div className={drawer ? 'flex gap-2' : 'flex items-center gap-3'}>
+      <Link href={AUTH_LINKS.cart} className={linkCls}>
+        סל קניות
+      </Link>
       <Link href={AUTH_LINKS.login} className={linkCls}>
         התחברות
       </Link>
