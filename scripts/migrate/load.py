@@ -407,7 +407,8 @@ def load_businesses(ctx: Ctx) -> None:
     for b in bizs:
         seo = b.get("seo") or {}
         listing = b.get("listing") or {}
-        primary = b.get("primary_specialty")
+        # 2 crawled businesses have no primary chip: fall back to their first specialty.
+        primary = b.get("primary_specialty") or next(iter(b.get("specialties") or []), None)
         if primary and unicodedata.normalize("NFC", primary) not in spec_ids:
             ctx.orphan("business_specialty_not_found", {"business": b["slug"], "specialty": primary})
         lead_email = none_if_blank(b.get("lead_recipient_email"))
