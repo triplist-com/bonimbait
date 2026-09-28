@@ -389,44 +389,12 @@ export async function countRecentContactLeads(
       .from('leads')
       .select('id', { count: 'exact', head: true })
       .eq('type', 'business_contact')
-      .eq('payload->>ip_hash', ipHash)
+      .eq('ip_hash', ipHash)
       .gte('created_at', sinceIso);
   const [total, forBusiness] = await Promise.all([base(), base().eq('business_id', businessId)]);
   check(total);
   check(forBusiness);
   return { total: total.count ?? 0, forBusiness: forBusiness.count ?? 0 };
-}
-
-/**
- * Insert a lead with the service role (trusted writer), so the fields that
- * leads_guard resets for the public (member_id, forwarded_to) are kept.
- */
-export async function insertTrustedLead(adminDb: DbClient, row: TablesInsert<'leads'>): Promise<string> {
-  const inserted = unwrap(await adminDb.from('leads').insert(row).select('id').single());
-  return inserted.id;
-}
-
-/** Published business plus its private contact row (SERVICE ROLE). */
-export async function getBusinessForLead(
-  adminDb: DbClient,
-  businessId: string,
-): Promise<{
-  business: Pick<BusinessRow, 'id' | 'slug' | 'name' | 'lead_routing'>;
-  contact: BusinessContactRow | null;
-} | null> {
-  const business = unwrapMaybe(
-    await adminDb
-      .from('businesses')
-      .select('id, slug, name, lead_routing')
-      .eq('id', businessId)
-      .eq('status', 'published')
-      .maybeSingle(),
-  );
-  if (!business) return null;
-  const contact = unwrapMaybe(
-    await adminDb.from('business_contacts').select('*').eq('business_id', businessId).maybeSingle(),
-  );
-  return { business, contact };
 }
 
 /** Is this slug used by any business, whatever its status? (SERVICE ROLE) */

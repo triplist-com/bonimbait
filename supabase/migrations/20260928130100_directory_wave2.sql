@@ -54,13 +54,12 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
--- 2. Rate limiting for the phone-reveal popup. The server action stores a
---    salted hash of the visitor IP in payload.ip_hash and counts recent
---    business_contact leads per (ip, business) and per ip.
+-- 2. Rate limiting for the phone-reveal popup counts recent business_contact
+--    leads per leads.ip_hash (column + index added by the Leads migration
+--    …130300) and per business. An earlier draft of this file indexed
+--    payload->>'ip_hash'; that index is superseded and dropped.
 -- ---------------------------------------------------------------------------
-create index if not exists leads_business_contact_ip_idx
-  on public.leads ((payload ->> 'ip_hash'), created_at desc)
-  where type = 'business_contact';
+drop index if exists public.leads_business_contact_ip_idx;
 
 create index if not exists leads_business_created_idx
   on public.leads (business_id, created_at desc);

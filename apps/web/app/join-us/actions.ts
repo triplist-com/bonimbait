@@ -1,13 +1,16 @@
 'use server';
 
-import { createLead } from '@/lib/db/leads';
+import { headers } from 'next/headers';
 import { isBusinessSlugTaken, setBusinessRegions, setBusinessSpecialties, submitBusiness } from '@/lib/db/businesses';
 import { getUser } from '@/lib/auth/session';
 import { createAdminClient, isServiceRoleConfigured } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { REGIONS } from '@/lib/constants/community';
 import { absoluteUrl } from '@/lib/site';
-import { isValidEmail, normalizeIsraeliPhone } from '@/lib/directory/format';
+import { submitLead } from '@/lib/leads/submit';
+import { validateLead } from '@/lib/leads/schemas';
+import { clientIpFromHeaders } from '@/lib/leads/spam';
+import { HONEYPOT_FIELD } from '@/lib/leads/constants';
 import { textToHtml } from '@/lib/directory/html';
 
 export type JoinState =
@@ -46,70 +49,85 @@ async function uniqueSlug(name: string): Promise<string> {
 
 /**
  * Professional registration ("הרשמה לבעלי מקצוע"). Always records a
- * join_pro lead. A signed-in user also gets a draft listing that they own;
- * businesses_guard forces it to status 'pending' so an admin approves it.
+ * join_pro lead through the shared submitLead() (validation, honeypot,
+ * rate limit, notification). A signed-in user also gets a draft listing that
+ * they own; businesses_guard forces it to status 'pending' so an admin
+ * approves it, and the lead is linked to it.
  */
 export async function joinProAction(_prev: JoinState, formData: FormData): Promise<JoinState> {
-  if (text(formData, 'website_url', 200)) return { status: 'sent', draftCreated: false }; // honeypot
-
   const businessName = text(formData, 'business_name', 120);
-  const phone = normalizeIsraeliPhone(text(formData, 'phone', 30));
-  const email = text(formData, 'email', 254);
   const about = text(formData, 'about', 3000);
   const specialtyId = text(formData, 'specialty_id', 64);
   const regionSlugs = formData
     .getAll('regions')
     .filter((v): v is string => typeof v === 'string' && REGIONS.some((r) => r.slug === v));
 
-  const fieldErrors: Record<string, string> = {};
-  if (businessName.length < 2) fieldErrors.business_name = 'שדה חובה';
-  if (!phone) fieldErrors.phone = 'נא להזין מינימום 9–10 ספרות';
-  if (!isValidEmail(email)) fieldErrors.email = 'אימייל שגוי';
-  if (regionSlugs.length === 0) fieldErrors.regions = 'יש לבחור לפחות אזור אחד';
-  if (Object.keys(fieldErrors).length > 0) return { status: 'error', message: 'נא לתקן את השדות המסומנים', fieldErrors };
+  // Several work regions are allowed (the live CF7 form had one select); the
+  // shared join_pro schema stores one, so the first goes in `region` and the
+  // full list in the payload.
+  const payload = {
+    business_name: businessName,
+    phone: formData.get('phone'),
+    email: formData.get('email'),
+    region: regionSlugs[0],
+    message: about || undefined,
+  };
+  if (regionSlugs.length === 0) {
+    const shared = validateLead('join_pro', payload);
+    return {
+      status: 'error',
+      message: 'נא לתקן את השדות המסומנים',
+      fieldErrors: { ...(shared.ok ? {} : shared.fieldErrors), regions: 'יש לבחור לפחות אזור אחד' },
+    };
+  }
+
+  const user = await getUser();
+  const result = await submitLead({
+    type: 'join_pro',
+    payload,
+    context: { regions: regionSlugs.join(','), specialty_id: /^[0-9a-f-]{36}$/i.test(specialtyId) ? specialtyId : null },
+    sourceUrl: absoluteUrl('/join-us/'),
+    memberId: user?.id ?? null,
+    ip: clientIpFromHeaders(headers()),
+    spam: { honeypot: formData.get(HONEYPOT_FIELD) },
+  });
+  if (!result.ok) {
+    const fieldErrors = result.fieldErrors ? { ...result.fieldErrors } : undefined;
+    if (fieldErrors?.region) {
+      fieldErrors.regions = fieldErrors.region;
+      delete fieldErrors.region;
+    }
+    return { status: 'error', message: fieldErrors?._form ?? result.message, fieldErrors };
+  }
+  if (!result.lead || !user) return { status: 'sent', draftCreated: false };
 
   try {
     const db = createClient();
-    const { data: regionRows } = await db.from('regions').select('id, slug').in('slug', regionSlugs);
-    const regionIds = (regionRows ?? []).map((r) => r.id);
+    const { data: regionRows } = await db.from('regions').select('id').in('slug', regionSlugs);
     let validSpecialtyId: string | null = null;
     if (/^[0-9a-f-]{36}$/i.test(specialtyId)) {
       const { data } = await db.from('specialties').select('id').eq('id', specialtyId).maybeSingle();
       validSpecialtyId = data?.id ?? null;
     }
-
-    let businessId: string | null = null;
-    const user = await getUser();
-    if (user) {
-      // Owned draft listing (RLS "member submit"; guard forces pending/owner).
-      const business = await submitBusiness(db, {
-        slug: await uniqueSlug(businessName),
-        name: businessName,
-        description_html: about ? textToHtml(about) : null,
-        primary_specialty_id: validSpecialtyId,
-      });
-      businessId = business.id;
-      await setBusinessRegions(db, business.id, regionIds);
-      if (validSpecialtyId) await setBusinessSpecialties(db, business.id, [validSpecialtyId]);
-      await db
-        .from('business_contacts')
-        .upsert({ business_id: business.id, phone, email }, { onConflict: 'business_id' });
-    }
-
-    await createLead(db, {
-      type: 'join_pro',
-      fullName: businessName,
-      phone,
-      email,
-      message: about || null,
-      regionId: regionIds.length === 1 ? regionIds[0] : null,
-      businessId,
-      sourceUrl: absoluteUrl('/join-us/'),
-      payload: { business_name: businessName, regions: regionSlugs, specialty_id: validSpecialtyId },
+    // Owned draft listing (RLS "member submit"; guard forces pending/owner).
+    const business = await submitBusiness(db, {
+      slug: await uniqueSlug(businessName),
+      name: businessName,
+      description_html: about ? textToHtml(about) : null,
+      primary_specialty_id: validSpecialtyId,
     });
-    return { status: 'sent', draftCreated: businessId !== null };
+    await setBusinessRegions(db, business.id, (regionRows ?? []).map((r) => r.id));
+    if (validSpecialtyId) await setBusinessSpecialties(db, business.id, [validSpecialtyId]);
+    await db
+      .from('business_contacts')
+      .upsert({ business_id: business.id, phone: result.lead.phone, email: result.lead.email }, { onConflict: 'business_id' });
+    if (isServiceRoleConfigured()) {
+      await createAdminClient().from('leads').update({ business_id: business.id }).eq('id', result.lead.id);
+    }
+    return { status: 'sent', draftCreated: true };
   } catch (err) {
-    console.error('joinProAction failed', err);
-    return { status: 'error', message: 'אירעה שגיאה בשליחה. נסו שוב בעוד רגע.' };
+    // The lead is already recorded; the draft can be created by an admin.
+    console.error('joinProAction: draft business failed', err);
+    return { status: 'sent', draftCreated: false };
   }
 }

@@ -96,14 +96,35 @@ describe('validateLead', () => {
     expect(r.ok && r.lead.fullName).toBe('שיש בע״מ');
   });
 
-  it('requires a construction stage for business_contact', () => {
+  // The phone-reveal popup (name, email, mobile) has no region/stage; the
+  // Directory contact-form action requires them itself.
+  it('accepts business_contact without region or stage (phone popup)', () => {
+    const r = validateLead('business_contact', {
+      full_name: 'א',
+      phone: '0501234567',
+      email: 'a@b.co',
+      terms: 'on',
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.lead.payload.terms_accepted).toBe(true);
+  });
+
+  it('rejects an unknown construction stage for business_contact', () => {
     const r = validateLead('business_contact', {
       full_name: 'א',
       phone: '0501234567',
       email: 'a@b.co',
       region: 'south',
+      construction_stage: 'not-a-stage',
     });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.fieldErrors.construction_stage).toBe(MSG.stage);
+  });
+
+  it('validates claim_business', () => {
+    const r = validateLead('claim_business', { full_name: 'דנה', phone: '0501234567', email: 'd@b.co' });
+    expect(r.ok).toBe(true);
+    const bad = validateLead('claim_business', { full_name: 'דנה', phone: '12', email: 'd@b.co' });
+    expect(bad.ok).toBe(false);
   });
 });

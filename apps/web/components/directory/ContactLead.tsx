@@ -44,7 +44,7 @@ function HiddenFields({ businessId }: { businessId: string }) {
       <div aria-hidden="true" className="absolute -start-[9999px] h-px w-px overflow-hidden">
         <label>
           אתר
-          <input type="text" name="website_url" tabIndex={-1} autoComplete="off" />
+          <input type="text" name="company_website" tabIndex={-1} autoComplete="off" />
         </label>
       </div>
     </>
@@ -264,7 +264,7 @@ export function ContactBusinessForm({ businessId, businessName }: { businessId: 
       </label>
       <label className="block">
         <span className="mb-1 block text-sm font-medium text-gray-700">שלב הבניה שלך *</span>
-        <select name="stage" required defaultValue="" className={input}>
+        <select name="construction_stage" required defaultValue="" className={input}>
           <option value="" disabled>
             בחרו שלב
           </option>
@@ -274,7 +274,7 @@ export function ContactBusinessForm({ businessId, businessName }: { businessId: 
             </option>
           ))}
         </select>
-        <FieldError state={state} name="stage" />
+        <FieldError state={state} name="construction_stage" />
       </label>
       {state.status === 'error' && !state.fieldErrors && (
         <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">

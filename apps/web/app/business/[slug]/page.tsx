@@ -193,7 +193,7 @@ export default async function BusinessPage({ params }: Props) {
       <div className="container-page mt-8 grid gap-10 lg:grid-cols-[1fr_22rem]">
         <div className="min-w-0 space-y-12">
           {aboutHtml && (
-            <Section id="about" title={`קצת על ${business.name}`}>
+            <Section id="about" title="אודות">
               <div
                 className="prose-directory space-y-3 leading-7 text-gray-700 [&_a]:text-primary [&_a]:underline [&_h2]:text-xl [&_h2]:font-bold [&_h3]:font-bold [&_ol]:list-decimal [&_ol]:ps-6 [&_ul]:list-disc [&_ul]:ps-6"
                 dangerouslySetInnerHTML={{ __html: aboutHtml }}

@@ -33,7 +33,7 @@ export default function ReviewForm({ slug, defaultName }: { slug: string; defaul
     <form action={action} className="relative space-y-6" noValidate>
       <input type="hidden" name="slug" value={slug} />
       <div aria-hidden="true" className="absolute -start-[9999px] h-px w-px overflow-hidden">
-        <input type="text" name="website_url" tabIndex={-1} autoComplete="off" />
+        <input type="text" name="company_website" tabIndex={-1} autoComplete="off" />
       </div>
 
       <fieldset>

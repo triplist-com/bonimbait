@@ -26,7 +26,7 @@ function text(formData: FormData, name: string, max: number): string {
  * public until an editor approves it.
  */
 export async function submitReviewAction(_prev: ReviewFormState, formData: FormData): Promise<ReviewFormState> {
-  if (text(formData, 'website_url', 200)) redirect('/thank-you-review/'); // honeypot
+  if (text(formData, 'company_website', 200)) redirect('/thank-you-review/'); // honeypot
 
   const slug = decodeSlug(text(formData, 'slug', 300));
   const authorName = text(formData, 'author_name', 80);
