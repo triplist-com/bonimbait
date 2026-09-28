@@ -5,13 +5,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./', import.meta.url)),
-      // `server-only` throws outside a React Server Components bundle.
-      'server-only': fileURLToPath(new URL('./test/server-only-stub.ts', import.meta.url)),
+      'server-only': fileURLToPath(new URL('./tests/stubs/server-only.ts', import.meta.url)),
     },
   },
   test: {
+    include: ['tests/**/*.test.ts'],
     environment: 'node',
-    include: ['**/*.test.ts'],
-    exclude: ['node_modules/**', '.next/**'],
   },
 });

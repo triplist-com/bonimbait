@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeOrderTotals, formatAgorot, parseVatRate, vatOn, withVat } from './pricing';
+import { computeOrderTotals, formatAgorot, parseVatRate, vatOn, withVat } from '@/lib/commerce/pricing';
 
 describe('parseVatRate', () => {
   it('defaults to 18%', () => {

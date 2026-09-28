@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { MockProvider } from './mock';
-import { PaymentVerificationError, type CheckoutRequest } from './types';
+import { MockProvider } from '@/lib/payments/mock';
+import { PaymentVerificationError, type CheckoutRequest } from '@/lib/payments/types';
 
 const request: CheckoutRequest = {
   orderId: '33333333-3333-4333-8333-333333333333',

@@ -6,7 +6,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { applyPaymentResult } from '@/lib/db/commerce';
 import type { DbClient } from '@/lib/db/client';
-import { PaymentAmountMismatchError, decidePaymentTransition } from './payment-transitions';
+import { PaymentAmountMismatchError, decidePaymentTransition } from '@/lib/commerce/payment-transitions';
 
 type Row = Record<string, unknown>;
 

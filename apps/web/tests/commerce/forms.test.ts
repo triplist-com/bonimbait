@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isValidEmail, normalizePhone, validateContact } from './forms';
+import { isValidEmail, normalizePhone, validateContact } from '@/lib/commerce/forms';
 
 describe('form validation', () => {
   it('normalizes Israeli phones', () => {
