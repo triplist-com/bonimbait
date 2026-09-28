@@ -1,0 +1,20 @@
+{
+  "_doc": "Intentional differences from the live site. A URL listed here passes only if the target returns exactly this result and location (path compared decoded, without trailing slash).",
+  "exceptions": {
+    "/search-result/": {
+      "result": "301",
+      "location": "/search/",
+      "reason": "Live renders an empty WordPress search page; we consolidate onto the AI search page."
+    },
+    "/partner-portal/": {
+      "result": "302",
+      "location": "/login/?next=/partner-portal/",
+      "reason": "Live 302s signed-out visitors to wp-login.php; ours goes to our own login with a return path."
+    },
+    "/partner-portal-2/": {
+      "result": "302",
+      "location": "/partner-portal/",
+      "reason": "Duplicate of /partner-portal/ on live; consolidated with a redirect."
+    }
+  }
+}

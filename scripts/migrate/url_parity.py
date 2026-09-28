@@ -41,6 +41,14 @@ from common import LIVE_BASE, MIGRATION_DIR, USER_AGENT, fetch, sitemap_locs, so
 URLS_FILE = MIGRATION_DIR / "live_urls.json"
 REPORT_CSV = MIGRATION_DIR / "parity_report.csv"
 BASELINE_CSV = MIGRATION_DIR / "parity_baseline_live.csv"
+EXCEPTIONS_FILE = Path(__file__).with_name("parity_exceptions.json")
+
+
+def load_exceptions() -> dict[str, dict[str, str]]:
+    """Intentional differences from live, keyed by decoded path with trailing slash."""
+    if not EXCEPTIONS_FILE.exists():
+        return {}
+    return json.loads(EXCEPTIONS_FILE.read_text(encoding="utf-8"))["exceptions"]
 
 
 def load_baseline(path: str) -> dict[str, dict[str, str]]:
@@ -171,12 +179,15 @@ def main() -> None:
 
     # Pass = 200, or the same redirect behaviour the live site has for that URL.
     baseline = {} if is_live else load_baseline(args.baseline)
+    exceptions = {} if is_live else load_exceptions()
     for r in rows:
         live = baseline.get(r["live_url"])
         r["live_result"] = live["result"] if live else ""
         r["live_location"] = live["location"] if live else ""
         same_as_live = bool(live) and live["result"] == r["result"] and location_path(live["location"]) == location_path(r["location"])
-        r["pass"] = r["result"] == "200" or same_as_live or (is_live and r["result"] in ("301", "302"))
+        exc = exceptions.get(r["path"])
+        r["accepted_exception"] = bool(exc) and exc["result"] == r["result"] and location_path(exc["location"]) == location_path(r["location"])
+        r["pass"] = r["result"] == "200" or same_as_live or r["accepted_exception"] or (is_live and r["result"] in ("301", "302"))
 
     MIGRATION_DIR.mkdir(parents=True, exist_ok=True)
     targets = [REPORT_CSV] + ([Path(args.baseline)] if is_live and not args.limit else [])
@@ -201,9 +212,9 @@ def main() -> None:
     ok = total.get("200", 0)
     passed = sum(1 for r in rows if r["pass"])
     print(f"\n{ok}/{len(rows)} returned 200 ({100 * ok / max(len(rows), 1):.1f}%); "
-          f"{passed}/{len(rows)} pass (200 or same redirect as live). Report: {REPORT_CSV}")
+          f"{passed}/{len(rows)} pass (200, same redirect as live, or an accepted exception). Report: {REPORT_CSV}")
     for r in [r for r in rows if r["result"] != "200"][:30]:
-        mark = "ok  " if r["pass"] else "FAIL"
+        mark = ("exc " if r.get("accepted_exception") else "ok  ") if r["pass"] else "FAIL"
         print(f"  {mark} {r['status']} {r['path']} {('-> ' + r['location']) if r['location'] else ''}")
     sys.exit(0 if passed == len(rows) else 1)
 
