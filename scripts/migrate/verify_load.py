@@ -63,7 +63,7 @@ LEGACY_FILTER = {  # only count migrated rows (other agents may add zz-test- row
     "post_categories": "legacy_wp_id is not null",
     "post_tags": "legacy_wp_id is not null",
     "posts": "legacy_wp_id is not null",
-    "pages": "legacy_wp_id is not null",
+    "pages": "(legacy_wp_id is not null or template = 'service-archive')",
     "video_pages": "slug_not_test",
     "businesses": "legacy_wp_id is not null",
     "reviews": "source = 'migrated'",
