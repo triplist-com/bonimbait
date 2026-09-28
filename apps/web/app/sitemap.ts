@@ -118,6 +118,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     for (const v of videoPages) push(content, entry(`/video/${v.legacy_slug}/`, 0.6, 'monthly', v.updated_at));
     for (const b of businesses) push(content, entry(`/business/${b.slug}/`, 0.7, 'weekly', b.updated_at));
     for (const p of products) push(content, entry(`/product/${p.slug}/`, 0.6, 'weekly', p.updated_at));
+
+    // Both WooCommerce product taxonomies keep their live URL prefixes.
+    const productCategories = await safeQuery(async () => {
+      const { data, error } = await db.from('product_categories').select('slug, taxonomy, updated_at');
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    }, [] as Array<{ slug: string; taxonomy: string; updated_at: string }>);
+    for (const c of productCategories) {
+      const prefix = c.taxonomy === 'category_product' ? 'category-product' : 'product-category';
+      push(content, entry(`/${prefix}/${c.slug}/`, 0.5, 'weekly', c.updated_at));
+    }
   }
   // Special pages without a `pages` row fallback.
   push(content, entry('/בונים-בית-tv/', 0.7, 'weekly', now));

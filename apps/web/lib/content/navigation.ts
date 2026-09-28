@@ -39,6 +39,7 @@ export const AUTH_LINKS = {
   signup: '/signup/',
   // Member account area (Community & Commerce workstream).
   account: '/account/',
+  cart: '/cart/',
 } as const;
 
 export interface FooterColumn {
