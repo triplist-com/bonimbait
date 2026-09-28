@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import WizardClient from './WizardClient';
+import { absoluteUrl } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'מחשבון עלויות בנייה',
   description:
     'חשבו את עלויות הבנייה המשוערות לבית הפרטי שלכם. מחשבון מבוסס נתונים מ-900 סרטוני בנייה מקצועיים.',
   alternates: {
-    canonical: 'https://bonimbait.com/calculator',
+    canonical: absoluteUrl('/calculator'),
   },
 };
 

@@ -1,91 +1,122 @@
 import Link from 'next/link';
+import { CONTACT_EMAIL } from '@/lib/site';
+import { COMMUNITY_STATS, CONTACT_DETAILS, FOOTER_COLUMNS, SOCIAL_LINKS, type NavLink } from '@/lib/content/navigation';
+
+function FooterLink({ link }: { link: NavLink }) {
+  const cls = 'text-sm text-gray-400 hover:text-white transition-colors';
+  return link.external ? (
+    <a href={link.href} target="_blank" rel="noopener noreferrer" className={cls}>
+      {link.label}
+    </a>
+  ) : (
+    <Link href={link.href} className={cls}>
+      {link.label}
+    </Link>
+  );
+}
 
 export default function Footer() {
   return (
-    <footer className="bg-white border-t border-gray-100 mt-16">
-      <div className="container-page py-10">
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-8 items-start">
-          {/* Brand */}
-          <div>
-            <Link href="/" className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <svg
-                  className="w-4 h-4 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
+    <footer className="bg-gray-950 text-gray-300 mt-16">
+      {/* Community stats strip (live footer) */}
+      <div className="border-b border-white/10">
+        <div className="container-page py-8">
+          <ul className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {COMMUNITY_STATS.map((s) => {
+              const external = s.href.startsWith('http');
+              const inner = (
+                <>
+                  <span className="block text-xs uppercase tracking-wider text-gray-500">{s.network}</span>
+                  <span dir="ltr" className="block text-2xl font-bold text-white mt-1">{s.value}</span>
+                  <span className="block text-sm text-gray-400">{s.label}</span>
+                </>
+              );
+              const cls = 'block rounded-2xl bg-white/5 hover:bg-white/10 transition-colors p-4 text-center';
+              return (
+                <li key={s.network}>
+                  {external ? (
+                    <a href={s.href} target="_blank" rel="noopener noreferrer" className={cls}>
+                      {inner}
+                    </a>
+                  ) : (
+                    <Link href={s.href} className={cls}>
+                      {inner}
+                    </Link>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </div>
+
+      <div className="container-page py-12">
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-8">
+          {/* Brand block */}
+          <div className="col-span-2">
+            <Link href="/" className="flex items-center gap-2 mb-4">
+              <span className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"
                   />
                 </svg>
-              </div>
-              <span className="font-bold text-primary text-lg">בונים בית</span>
+              </span>
+              <span className="font-bold text-white text-xl">בונים בית</span>
             </Link>
-            <p className="text-sm text-gray-500 leading-relaxed">
-              מאגר ידע מקיף לבנייה פרטית בישראל.
-              <br />
-              סרטונים, מדריכים ותשובות מבוססות AI.
+            <p className="text-sm text-gray-400 leading-relaxed max-w-xs">
+              מרכז הידע לבניית בית: מדריכים, בעלי מקצוע וכלים לכל שלב במסע, מהמגרש ועד קבלת המפתח.
             </p>
+            <ul className="mt-5 space-y-1.5 text-sm text-gray-400">
+              <li>
+                <a href={`tel:${CONTACT_DETAILS.phone.replace(/-/g, '')}`} className="hover:text-white" dir="ltr">
+                  {CONTACT_DETAILS.phone}
+                </a>
+              </li>
+              <li>
+                <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-white">
+                  {CONTACT_EMAIL}
+                </a>
+              </li>
+              <li>{CONTACT_DETAILS.address}</li>
+            </ul>
+            <Link
+              href="/הצטרפו-לקבוצות-הווטסאפ/"
+              className="mt-5 inline-flex items-center rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 transition-colors"
+            >
+              הצטרפו לקהילה
+            </Link>
           </div>
 
-          {/* Navigation */}
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-3 text-sm">ניווט</h4>
-            <nav className="flex flex-col gap-2">
-              <Link href="/" className="text-sm text-gray-500 hover:text-primary transition-colors">
-                דף הבית
-              </Link>
-              <Link href="/videos" className="text-sm text-gray-500 hover:text-primary transition-colors">
-                סרטונים
-              </Link>
-              <Link href="/categories" className="text-sm text-gray-500 hover:text-primary transition-colors">
-                קטגוריות
-              </Link>
-              <Link href="/search" className="text-sm text-gray-500 hover:text-primary transition-colors">
-                חיפוש
-              </Link>
-            </nav>
-          </div>
-
-          {/* Info */}
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-3 text-sm">מידע</h4>
-            <nav className="flex flex-col gap-2">
-              <Link href="/about" className="text-sm text-gray-500 hover:text-primary transition-colors">
-                אודות
-              </Link>
-              <Link href="/contact" className="text-sm text-gray-500 hover:text-primary transition-colors">
-                צור קשר
-              </Link>
-              <Link href="/privacy" className="text-sm text-gray-500 hover:text-primary transition-colors">
-                מדיניות פרטיות
-              </Link>
-              <Link href="/terms" className="text-sm text-gray-500 hover:text-primary transition-colors">
-                תנאי שימוש
-              </Link>
-            </nav>
-          </div>
-
-          {/* AI Badge + Copyright */}
-          <div className="flex flex-col items-start sm:items-end gap-4">
-            <div className="flex items-center gap-1.5 bg-primary-50 text-primary text-xs font-semibold px-3 py-1.5 rounded-full">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"
-                />
-              </svg>
-              Powered by AI
+          {FOOTER_COLUMNS.map((col) => (
+            <div key={col.title}>
+              <h2 className="font-semibold text-white mb-3 text-sm">{col.title}</h2>
+              <ul className="flex flex-col gap-2">
+                {col.links.map((l) => (
+                  <li key={l.href}>
+                    <FooterLink link={l} />
+                  </li>
+                ))}
+              </ul>
             </div>
-            <span className="text-xs text-gray-400">
-              כל הזכויות שמורות &copy; {new Date().getFullYear()} בונים בית
-            </span>
-          </div>
+          ))}
+        </div>
+
+        <div className="mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span className="text-xs text-gray-500">
+            {new Date().getFullYear()} © כל הזכויות שמורות לבונים בית
+          </span>
+          <ul className="flex flex-wrap items-center gap-4">
+            {SOCIAL_LINKS.map((l) => (
+              <li key={l.href}>
+                <a href={l.href} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:text-white transition-colors">
+                  {l.label}
+                </a>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </footer>

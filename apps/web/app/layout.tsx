@@ -5,6 +5,8 @@ import Header from '@/components/Layout/Header';
 import Footer from '@/components/Layout/Footer';
 import StructuredData from '@/components/StructuredData';
 import Analytics from '@/components/Analytics';
+import ConsultationCTA from '@/components/leads/ConsultationCTA';
+import { SITE_URL, absoluteUrl } from '@/lib/site';
 
 const heebo = Heebo({
   subsets: ['hebrew', 'latin'],
@@ -13,7 +15,7 @@ const heebo = Heebo({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://bonimbait.com'),
+  metadataBase: new URL(SITE_URL),
   title: {
     template: '%s | בונים בית',
     default: 'בונים בית - מאגר הידע לבנייה פרטית בישראל',
@@ -41,7 +43,7 @@ export const metadata: Metadata = {
     siteName: 'בונים בית',
     locale: 'he_IL',
     type: 'website',
-    url: 'https://bonimbait.com',
+    url: absoluteUrl(),
   },
   twitter: {
     card: 'summary_large_image',
@@ -54,7 +56,7 @@ export const metadata: Metadata = {
     follow: true,
   },
   alternates: {
-    canonical: 'https://bonimbait.com',
+    canonical: absoluteUrl(),
   },
   other: {
     dir: 'rtl',
@@ -84,19 +86,21 @@ export default function RootLayout({
           </main>
           <Footer />
         </div>
+        {/* Site-wide floating consultation + WhatsApp buttons (Leads workstream). */}
+        <ConsultationCTA variant="floating" source="site" />
         <StructuredData
           data={{
             '@context': 'https://schema.org',
             '@type': 'WebSite',
             name: 'בונים בית',
-            url: 'https://bonimbait.com',
+            url: absoluteUrl(),
             description:
               'מאגר ידע מקיף לבנייה פרטית בישראל עם תשובות AI',
             inLanguage: 'he',
             potentialAction: {
               '@type': 'SearchAction',
               target:
-                'https://bonimbait.com/search?q={search_term_string}',
+                absoluteUrl('/search?q={search_term_string}'),
               'query-input': 'required name=search_term_string',
             },
           }}

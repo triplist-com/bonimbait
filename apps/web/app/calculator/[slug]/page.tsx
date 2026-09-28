@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { SCENARIOS, getScenarioBySlug, getRelatedScenarios } from '../../../lib/calculator-scenarios';
 import { calculateCost, formatNIS, getSqm } from '../../../lib/calculator';
 import ScenarioResult from './ScenarioResult';
+import { absoluteUrl } from '@/lib/site';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -24,12 +25,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: scenario.title,
     description: scenario.description,
     alternates: {
-      canonical: `https://bonimbait.com/calculator/${scenario.slug}`,
+      canonical: absoluteUrl(`/calculator/${scenario.slug}/`),
     },
     openGraph: {
       title: scenario.title,
       description: scenario.description,
-      url: `https://bonimbait.com/calculator/${scenario.slug}`,
+      url: absoluteUrl(`/calculator/${scenario.slug}/`),
       siteName: 'בונים בית',
       locale: 'he_IL',
       type: 'website',
@@ -43,7 +44,7 @@ function buildPrefillUrl(answers: Record<string, string | string[]>): string {
   for (const [key, value] of Object.entries(answers)) {
     params.set(`prefill_${key}`, Array.isArray(value) ? value.join(',') : value);
   }
-  return `/calculator?${params.toString()}`;
+  return `/calculator/?${params.toString()}`;
 }
 
 /** Finishing level labels */
@@ -134,7 +135,7 @@ export default async function CalculatorScenarioPage({ params }: PageProps) {
             בונים בית
           </Link>
           <span>/</span>
-          <Link href="/calculator" className="hover:text-primary transition-colors">
+          <Link href="/calculator/" className="hover:text-primary transition-colors">
             מחשבון עלויות
           </Link>
           <span>/</span>
@@ -284,7 +285,7 @@ export default async function CalculatorScenarioPage({ params }: PageProps) {
                 return (
                   <Link
                     key={rel.slug}
-                    href={`/calculator/${rel.slug}`}
+                    href={`/calculator/${rel.slug}/`}
                     className="block bg-white rounded-xl border border-gray-100 hover:border-primary-200 hover:shadow-sm p-4 transition-all"
                   >
                     <h3 className="text-sm font-bold text-gray-800 mb-1">{rel.title}</h3>
@@ -302,7 +303,7 @@ export default async function CalculatorScenarioPage({ params }: PageProps) {
         {/* Back to calculator */}
         <div className="text-center">
           <Link
-            href="/calculator"
+            href="/calculator/"
             className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary-700 font-medium transition-colors"
           >
             <svg

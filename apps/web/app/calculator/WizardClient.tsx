@@ -179,7 +179,7 @@ export default function WizardClient({ modal = false, searchQuery }: WizardClien
         Object.entries(answers).forEach(([k, v]) => {
           params.set(k, Array.isArray(v) ? v.join(',') : v);
         });
-        window.history.replaceState(null, '', `/calculator?${params.toString()}`);
+        window.history.replaceState(null, '', `/calculator/?${params.toString()}`);
       }
     } catch {
       setError('שגיאה בחישוב. נסו שוב.');
@@ -193,7 +193,7 @@ export default function WizardClient({ modal = false, searchQuery }: WizardClien
     setCurrentStep(0);
     setAnswers({});
     if (!modal && typeof window !== 'undefined') {
-      window.history.replaceState(null, '', '/calculator');
+      window.history.replaceState(null, '', '/calculator/');
     }
   }, [modal]);
 

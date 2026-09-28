@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getCategories } from '@/lib/api';
+import { absoluteUrl } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'קטגוריות',
   description:
     'עיינו בכל הקטגוריות של סרטונים בנושא בנייה פרטית בישראל - תכנון, עלויות, שלד, חשמל, גמרים ועוד.',
   alternates: {
-    canonical: 'https://bonimbait.com/categories',
+    canonical: absoluteUrl('/categories'),
   },
 };
 
@@ -50,7 +51,7 @@ export default async function CategoriesPage() {
             {categories.map((cat) => (
               <Link
                 key={cat.slug}
-                href={`/category/${cat.slug}`}
+                href={`/category/${cat.slug}/`}
                 className="group block bg-white rounded-xl border border-gray-100 p-6 shadow-card hover:shadow-card-hover hover:-translate-y-1 transition-all duration-200"
               >
                 <div className="text-3xl mb-3">{CATEGORY_ICONS[cat.slug] || '📁'}</div>

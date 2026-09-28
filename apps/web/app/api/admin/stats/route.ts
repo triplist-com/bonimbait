@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions, isAdmin } from "@/lib/auth";
+import { checkRole } from "@/lib/auth/session";
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8000";
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
+export const dynamic = "force-dynamic";
 
-  if (!isAdmin(session)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function GET() {
+  const auth = await checkRole("admin");
+
+  if (!auth.ok) {
+    return NextResponse.json(
+      { error: auth.status === 401 ? "Unauthorized" : "Forbidden" },
+      { status: auth.status },
+    );
   }
 
   try {
