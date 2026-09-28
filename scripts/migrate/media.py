@@ -2,7 +2,13 @@
 
 * Local cache: data/migration/raw/images/<storage key>
 * Manifest:    data/migration/raw/images/manifest.json
-      { "<normalized live url>": {"key": "uploads/2023/10/x.png", "status": "uploaded"|"404"|"error", ...} }
+      { "<normalized live url>": {"key": "uploads/2023/10/x.png",
+                                  "status": "uploaded"|"replaced"|"404"|"gone"|"error: ...", ...} }
+  "gone" = the live site redirects the file to its homepage (deleted upload).
+  "replaced" = dead, but the media library has a re-upload of the same file
+  (same name, ignoring -N / -WxH suffixes); "key" then points at that file.
+* Any file type is migrated (images, pdf, doc(x), xls(x), zip, mp4, ...); the
+  Storage content type comes from the extension.
 * Object key:  the uploads/YYYY/MM/file path. Supabase Storage only accepts ASCII
   keys, so a filename with other characters (Hebrew, spaces, %) becomes
   "<sha1[:10]>-<ascii remnant><.ext>" in the same uploads/YYYY/MM/ folder.
@@ -21,6 +27,7 @@ import os
 import re
 import threading
 import time
+import unicodedata
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Iterable, Optional
@@ -91,29 +98,46 @@ def save_manifest(m: dict) -> None:
     tmp.replace(p)
 
 
+DEAD = ("404", "gone")  # not served by the live site (404, or a redirect to the homepage)
+
+
 class Rewriter:
-    """Callable used by the loader: live uploads URL -> Storage URL (if migrated)."""
+    """Callable used by the loader: live uploads URL -> Storage URL.
+
+    * uploaded / replaced -> Storage public URL
+    * 404 / gone (dead on the live site too, no replacement) -> None: the caller
+      drops the reference (sanitize_html removes the <img>, unwraps the <a>)
+    * not migrated yet -> the live URL, unchanged (verify_load.py flags these)
+    """
 
     def __init__(self) -> None:
         self.manifest = load_manifest()
         self.seen: set[str] = set()
         self.rewritten = 0
         self.pending = 0
+        self.dropped = 0
 
-    def __call__(self, url: str) -> str:
+    def __call__(self, url: str) -> Optional[str]:
         if not is_upload(url):
             return url
         n = normalize(url)
         self.seen.add(n)
         entry = self.manifest.get(n)
-        if entry and entry.get("status") == "uploaded":
+        status = (entry or {}).get("status")
+        if status in ("uploaded", "replaced"):
             self.rewritten += 1
             return public_url(entry["key"])
+        if status in DEAD:
+            self.dropped += 1
+            return None
         self.pending += 1
         return url
 
     def maybe(self, url: Optional[str]) -> Optional[str]:
         return self(url) if url else url
+
+    def many(self, urls: Iterable[str]) -> list[str]:
+        return [u for u in (self(x) for x in urls or []) if u]
 
 
 # ---------------------------------------------------------------------------
@@ -131,23 +155,39 @@ def _session() -> requests.Session:
     return s
 
 
+def looks_like_html(path: Path) -> bool:
+    """The live site answers missing uploads with a 301 to "/", i.e. the homepage HTML."""
+    if not path.exists() or path.suffix.lower() in (".html", ".htm"):
+        return False
+    head = path.read_bytes()[:512].lstrip().lower()
+    return head.startswith(b"<!doctype") or head.startswith(b"<html") or b"<html" in head[:200]
+
+
 def _download(url: str, dest: Path) -> tuple[str, int]:
-    if dest.exists() and dest.stat().st_size > 0:
+    if dest.exists() and dest.stat().st_size > 0 and not looks_like_html(dest):
         return "cached", dest.stat().st_size
+    if dest.exists():
+        dest.unlink()  # a cached homepage from an earlier redirect-following run
     # Request the percent-encoded form of the decoded path.
     path = urlsplit(normalize(url)).path
     fetch_url = "https://bonimbayit.co.il" + quote(path)
     last = "error"
     for attempt in range(4):
         try:
-            r = _session().get(fetch_url, timeout=60)
-            if r.status_code == 404:
+            # Never follow redirects: a moved/deleted upload 301s to the homepage.
+            r = _session().get(fetch_url, timeout=60, allow_redirects=False)
+            if r.status_code in (404, 410):
                 return "404", 0
+            if 300 <= r.status_code < 400:
+                return "gone", 0
             if r.status_code in (429, 500, 502, 503, 504):
                 last = f"http {r.status_code}"
                 time.sleep(2 ** attempt)
                 continue
             r.raise_for_status()
+            ctype = r.headers.get("content-type", "").split(";")[0].strip().lower()
+            if ctype == "text/html" and dest.suffix.lower() not in (".html", ".htm"):
+                return "gone", 0
             dest.parent.mkdir(parents=True, exist_ok=True)
             tmp = dest.with_name(dest.name + ".part")
             tmp.write_bytes(r.content)
@@ -184,30 +224,94 @@ def _upload(key: str, src: Path) -> str:
     return f"error: {last}"
 
 
+def _delete(key: str) -> None:
+    """Remove a Storage object (e.g. a homepage HTML uploaded under an image key)."""
+    env = supabase_env()
+    try:
+        requests.delete(f"{env['API_URL'].rstrip('/')}/storage/v1/object/media/{quote(key)}",
+                        headers={"Authorization": f"Bearer {env['SERVICE_ROLE_KEY']}",
+                                 "apikey": env["SERVICE_ROLE_KEY"]}, timeout=60)
+    except requests.RequestException:
+        pass
+
+
+# ---------------------------------------------------------------------------
+# Replacements for dead uploads
+# ---------------------------------------------------------------------------
+_SIZE_RE = re.compile(r"-\d+x\d+$")
+_DUP_RE = re.compile(r"-(?:\d{1,2}|scaled)$")
+
+
+def _stem_key(url: str) -> tuple[str, str]:
+    """('gant-bonimbayit', '.pdf') for .../2023/11/gant-bonimbayit-1.pdf (size/dup suffixes dropped)."""
+    name = urlsplit(normalize(url)).path.rsplit("/", 1)[-1]
+    stem, ext = os.path.splitext(name)
+    stem = unicodedata.normalize("NFC", stem.lower())
+    stem = _SIZE_RE.sub("", stem)
+    while _DUP_RE.search(stem):
+        stem = _DUP_RE.sub("", stem)
+    return stem, ext.lower()
+
+
+def _media_library_index() -> dict[tuple[str, str], list[dict]]:
+    """WP media library (media.json) grouped by normalized stem + extension, newest first."""
+    from paths import migration_dir
+    p = migration_dir() / "media.json"
+    idx: dict[tuple[str, str], list[dict]] = {}
+    if not p.exists():
+        return idx
+    for m in json.loads(p.read_text(encoding="utf-8")):
+        if m.get("url") and is_upload(m["url"]):
+            idx.setdefault(_stem_key(m["url"]), []).append(m)
+    for v in idx.values():
+        v.sort(key=lambda m: m.get("date") or "", reverse=True)
+    return idx
+
+
+def find_replacement(dead_url: str, idx: dict) -> Optional[str]:
+    """Newest media-library file with the same name (ignoring folder, -N and -WxH suffixes).
+    Stems shorter than 6 chars are too generic to match safely."""
+    stem, ext = _stem_key(dead_url)
+    if len(stem) < 6:
+        return None
+    for m in idx.get((stem, ext), []):
+        if normalize(m["url"]) != normalize(dead_url):
+            return m["url"]
+    return None
+
+
+# ---------------------------------------------------------------------------
 def migrate_images(urls: Iterable[str], concurrency: int = 3, limit: Optional[int] = None,
                    retry_errors: bool = True, log_every: int = 50) -> dict:
-    """Download + upload each URL not yet uploaded. Returns counters."""
+    """Download + upload each URL not yet migrated; resolve dead ones. Returns counters.
+
+    Idempotent: uploaded/replaced/dead entries are skipped, except that an
+    "uploaded" entry whose cached file turns out to be HTML (the live site's
+    redirect-to-homepage for a missing file) is re-checked and its bad Storage
+    object deleted.
+    """
     manifest = load_manifest()
     todo: list[str] = []
-    seen: set[str] = set()
+    seen: list[str] = []
     for u in urls:
         if not is_upload(u):
             continue
         n = normalize(u)
         if n in seen:
             continue
-        seen.add(n)
+        seen.append(n)
         e = manifest.get(n)
-        if e and (e["status"] in ("uploaded", "404") or (e["status"].startswith("error") and not retry_errors)):
+        if e and e["status"] == "uploaded" and looks_like_html(images_dir() / e["key"]):
+            _delete(e["key"])
+            todo.append(n)
+            continue
+        if e and (e["status"] in ("uploaded", "replaced", *DEAD)
+                  or (e["status"].startswith("error") and not retry_errors)):
             continue
         todo.append(n)
     if limit is not None:
         todo = todo[:limit]
-    stats = {"requested": len(seen), "todo": len(todo), "uploaded": 0, "404": 0, "error": 0}
-    if not todo:
-        return stats
-    concurrency = min(concurrency, 3)  # politeness cap for the live site
-    started = time.time()
+    stats = {"requested": len(seen), "todo": len(todo), "uploaded": 0, "dead": 0, "replaced": 0, "error": 0}
 
     def work(n: str) -> tuple[str, dict]:
         key = storage_key(n)
@@ -218,21 +322,45 @@ def migrate_images(urls: Iterable[str], concurrency: int = 3, limit: Optional[in
             size = dest.stat().st_size
         return n, {"key": key, "status": status, "bytes": size}
 
+    started = time.time()
     done = 0
-    with ThreadPoolExecutor(max_workers=concurrency) as ex:
-        futs = [ex.submit(work, n) for n in todo]
-        for f in as_completed(futs):
-            n, entry = f.result()
-            with _lock:
-                manifest[n] = entry
-                done += 1
-                k = "uploaded" if entry["status"] == "uploaded" else "404" if entry["status"] == "404" else "error"
-                stats[k] += 1
-                if done % log_every == 0 or done == len(todo):
-                    save_manifest(manifest)
-                    rate = done / max(time.time() - started, 0.001)
-                    print(f"  images {done}/{len(todo)}  up={stats['uploaded']} 404={stats['404']} "
-                          f"err={stats['error']}  {rate:.1f}/s", flush=True)
+    if todo:
+        with ThreadPoolExecutor(max_workers=min(concurrency, 3)) as ex:  # politeness cap
+            futs = [ex.submit(work, n) for n in todo]
+            for f in as_completed(futs):
+                n, entry = f.result()
+                with _lock:
+                    manifest[n] = entry
+                    done += 1
+                    s = entry["status"]
+                    stats["uploaded" if s == "uploaded" else "dead" if s in DEAD else "error"] += 1
+                    if done % log_every == 0 or done == len(todo):
+                        save_manifest(manifest)
+                        rate = done / max(time.time() - started, 0.001)
+                        print(f"  images {done}/{len(todo)}  up={stats['uploaded']} dead={stats['dead']} "
+                              f"err={stats['error']}  {rate:.1f}/s", flush=True)
+
+    # Dead on the live site: substitute a re-upload of the same file, if the media library has one.
+    dead = [n for n in seen if manifest.get(n, {}).get("status") in DEAD and "replacement" not in manifest[n]]
+    if dead:
+        idx = _media_library_index()
+        for n in dead:
+            cand = find_replacement(n, idx)
+            if not cand:
+                manifest[n]["replacement"] = None
+                continue
+            c = normalize(cand)
+            if manifest.get(c, {}).get("status") != "uploaded":
+                c, entry = work(c)
+                manifest[c] = entry
+            if manifest[c]["status"] == "uploaded":
+                manifest[n] = {**manifest[n], "status": "replaced", "replacement": c, "key": manifest[c]["key"]}
+                stats["replaced"] += 1
+                stats["dead"] = max(0, stats["dead"] - 1)
+                print(f"  replaced {n}\n        -> {c}", flush=True)
+            else:
+                manifest[n]["replacement"] = None
     save_manifest(manifest)
+    stats["still_dead"] = sum(1 for n in seen if manifest.get(n, {}).get("status") in DEAD)
     stats["seconds"] = round(time.time() - started, 1)
     return stats
