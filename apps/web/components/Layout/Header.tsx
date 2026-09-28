@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import SearchBar from '@/components/SearchBar';
 import AccountLinks from './AccountLinks';
-import { CALENDLY_URL, HEADER_NAV, SECONDARY_NAV, isActivePath } from '@/lib/content/navigation';
+import ConsultationCTA from '@/components/leads/ConsultationCTA';
+import { HEADER_NAV, SECONDARY_NAV, isActivePath } from '@/lib/content/navigation';
 
 function Logo() {
   return (
@@ -23,8 +24,6 @@ function Logo() {
     </Link>
   );
 }
-
-const consultationHref = `${CALENDLY_URL}${CALENDLY_URL.includes('?') ? '&' : '?'}utm_source=header&utm_medium=website&utm_campaign=management`;
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -111,14 +110,9 @@ export default function Header() {
                 </Link>
               )}
 
-              <a
-                href={consultationHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hidden xl:inline-flex items-center rounded-lg bg-secondary text-white px-3.5 py-2 text-sm font-semibold hover:bg-secondary-600 transition-colors whitespace-nowrap"
-              >
-                פגישת ייעוץ ללא עלות
-              </a>
+              <div className="hidden xl:block">
+                <ConsultationCTA source="header" label="פגישת ייעוץ ללא עלות" className="!px-3.5 !py-2 !text-sm !rounded-lg whitespace-nowrap" />
+              </div>
 
               <div className="hidden lg:block">
                 <AccountLinks />
@@ -190,14 +184,7 @@ export default function Header() {
               ))}
             </nav>
             <div className="px-5 pb-6 space-y-3">
-              <a
-                href={consultationHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block text-center rounded-lg bg-secondary text-white py-3 text-sm font-semibold hover:bg-secondary-600"
-              >
-                פגישת ייעוץ תקציב בניה ללא עלות
-              </a>
+              <ConsultationCTA source="header-menu" className="w-full !text-sm" />
               <AccountLinks variant="drawer" />
             </div>
           </div>

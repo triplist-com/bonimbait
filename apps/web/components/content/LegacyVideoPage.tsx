@@ -8,7 +8,7 @@ import { findIndexedYoutubeId, legacyCategories, loadVideoPagesForYoutubeIds, vi
 import { absoluteUrl } from '@/lib/site';
 import ArticleBody from './ArticleBody';
 import Breadcrumbs from './Breadcrumbs';
-import ConsultationCTAPlaceholder from './ConsultationCTAPlaceholder';
+import ConsultationCTA from '@/components/leads/ConsultationCTA';
 import VideoPageCard from './VideoPageCard';
 
 function YouTubeEmbed({ id, title }: { id: string; title: string }) {
@@ -126,7 +126,7 @@ export default async function LegacyVideoPage({ page }: { page: VideoPageRow }) 
         {html.trim() && <ArticleBody html={html} className="mt-10 max-w-3xl" />}
 
         <div className="mt-12">
-          <ConsultationCTAPlaceholder source="video" />
+          <ConsultationCTA variant="card" source="video-page" />
         </div>
 
         {more.length > 0 && (

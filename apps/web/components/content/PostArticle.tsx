@@ -10,7 +10,7 @@ import { SITE_NAME, absoluteUrl } from '@/lib/site';
 import ArticleBody from './ArticleBody';
 import Breadcrumbs from './Breadcrumbs';
 import CommunityCTA from './CommunityCTA';
-import ConsultationCTAPlaceholder from './ConsultationCTAPlaceholder';
+import ConsultationCTA from '@/components/leads/ConsultationCTA';
 import { PostGrid } from './PostCard';
 import { TocInline, TocSidebar } from './TableOfContents';
 
@@ -122,7 +122,7 @@ export default async function PostArticle({ post }: { post: PostRow }) {
             <TocInline items={toc} />
             <ArticleBody html={html} />
             <div className="mt-12">
-              <ConsultationCTAPlaceholder source="post" />
+              <ConsultationCTA variant="card" source="post-footer" />
             </div>
             {author?.bio_html && (
               <section aria-label="על הכותב" className="mt-10 flex gap-4 rounded-2xl bg-white border border-gray-100 p-6">

@@ -115,10 +115,11 @@ function consultationUrl(): string {
   return `${base}${base.includes('?') ? '&' : '?'}utm_source=website&utm_medium=post_inline&utm_campaign=consultation`;
 }
 
-const LEAD_FORM_HTML = () =>
-  `<div class="bb-inline-cta"><p class="bb-inline-cta-title">רוצים לבנות בלי חריגות בתקציב?</p>` +
-  `<p>השאירו את הבדיקה לנו: פגישת ייעוץ תקציב בניה ראשונית ללא עלות.</p>` +
-  `<a class="bb-inline-cta-button" href="${consultationUrl()}" target="_blank" rel="noopener noreferrer">לתיאום פגישת ייעוץ חינם</a></div>`;
+/**
+ * Where a migrated lead form was. ArticleBody splits the HTML here and mounts
+ * the Leads workstream's <ConsultationCTA> (a React component) in its place.
+ */
+export const LEAD_FORM_SLOT = '<div data-bb-slot="lead-form"></div>';
 
 const WHATSAPP_HTML =
   `<div class="bb-inline-cta bb-inline-cta-whatsapp"><p class="bb-inline-cta-title">הצטרפו לקהילת בונים בית</p>` +
@@ -130,17 +131,18 @@ function replacePlaceholders(source: string): string {
     source
       .replace(/<div[^>]*data-bb-embed=["']lead-form["'][^>]*>\s*<\/div>/gi, `<p>${TOKEN_LEAD_FORM}</p>`)
       .replace(/<div[^>]*data-bb-embed=["']whatsapp-join["'][^>]*>\s*<\/div>/gi, `<p>${TOKEN_WHATSAPP}</p>`)
-      // Popup triggers become links to the consultation booking.
+      // Popup triggers: data-bb-cta opens the consultation modal (LeadPopupBridge);
+      // the Calendly href is the no-JS fallback.
       .replace(/<a([^>]*?)\sdata-bb-action=["']lead-popup["']([^>]*)>/gi, (_m, a: string, b: string) => {
         const attrs = `${a}${b}`.replace(/\shref=["'][^"']*["']/gi, '');
-        return `<a${attrs} href="${consultationUrl()}">`;
+        return `<a${attrs} href="${consultationUrl()}" data-bb-cta="consultation">`;
       })
   );
 }
 
 function injectPlaceholders(html: string): string {
   return html
-    .replace(new RegExp(`<p>\\s*${TOKEN_LEAD_FORM}\\s*</p>`, 'g'), LEAD_FORM_HTML())
+    .replace(new RegExp(`<p>\\s*${TOKEN_LEAD_FORM}\\s*</p>`, 'g'), LEAD_FORM_SLOT)
     .replace(new RegExp(`<p>\\s*${TOKEN_WHATSAPP}\\s*</p>`, 'g'), WHATSAPP_HTML)
     .replace(new RegExp(`${TOKEN_LEAD_FORM}|${TOKEN_WHATSAPP}`, 'g'), '');
 }
@@ -168,7 +170,7 @@ export function prepareContentHtml(raw: string | null | undefined): PreparedHtml
       (frame.tag === 'iframe' && !frame.attribs.src),
     disallowedTagsMode: 'discard',
     allowedAttributes: {
-      a: ['href', 'name', 'target', 'rel', 'title'],
+      a: ['href', 'name', 'target', 'rel', 'title', 'data-bb-cta'],
       img: ['src', 'srcset', 'sizes', 'alt', 'width', 'height', 'title', 'loading', 'decoding'],
       source: ['src', 'srcset', 'type', 'media'],
       iframe: ['src', 'width', 'height', 'title', 'allow', 'allowfullscreen', 'loading', 'referrerpolicy'],

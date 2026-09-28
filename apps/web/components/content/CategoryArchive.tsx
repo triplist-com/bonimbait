@@ -4,7 +4,7 @@ import { loadPostsPage, totalPagesOf } from '@/lib/content/archives';
 import { STAGE_CATEGORY_SLUGS } from '@/lib/content/queries';
 import { htmlToText } from '@/lib/content/sanitize';
 import CommunityCTA from './CommunityCTA';
-import ConsultationCTAPlaceholder from './ConsultationCTAPlaceholder';
+import ConsultationCTA from '@/components/leads/ConsultationCTA';
 import PostArchive from './PostArchive';
 import StageNav from './StageNav';
 
@@ -34,7 +34,7 @@ export default async function CategoryArchive({ category, page }: { category: Po
       before={isStage && page === 1 ? <StageNav heading={null} activeSlug={slug} /> : null}
       after={
         <div className="grid gap-8">
-          <ConsultationCTAPlaceholder variant="banner" source="category" />
+          <ConsultationCTA variant="banner" source="category-archive" />
           <CommunityCTA compact />
         </div>
       }

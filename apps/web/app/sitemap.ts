@@ -48,26 +48,27 @@ const FIXED_ROUTES: Array<[string, number, Freq]> = [
   ['/צור-קשר/', 0.5, 'yearly'],
   ['/הצטרפו-לקבוצות-הווטסאפ/', 0.7, 'monthly'],
   ['/strategic-partners/', 0.5, 'monthly'],
+  // Thank-you pages are indexed on the live site (Leads: LEADS_NOINDEX_THANK_YOU).
+  ['/strategic-partners/thank-you/', 0.2, 'yearly'],
+  ['/thank-you/', 0.2, 'yearly'],
+  ['/תודה-על-השארת-פרטים-מוצר/', 0.2, 'yearly'],
 ];
 
 /**
- * `pages` rows that must not be indexed: transactional, thank-you, portal and
- * duplicate utility pages (they still render; they're just not listed).
+ * `pages` rows not listed: transactional, portal, redirected and duplicate
+ * utility pages (they still resolve; they're just not in the sitemap).
  */
 const EXCLUDED_PAGE_SLUGS = new Set([
   'homepage',
   'blog',
   'cart',
   'checkout',
-  'thank-you',
   'thank-you-order',
   'thank-you-review',
-  'תודה-על-השארת-פרטים',
-  'תודה-על-השארת-פרטים-מוצר',
+  'תודה-על-השארת-פרטים', // 301 -> /thank-you/
   'partner-portal',
   'partner-portal-2',
-  'search-result',
-  'strategic-partners/thank-you',
+  'search-result', // 301 -> /search/
 ]);
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

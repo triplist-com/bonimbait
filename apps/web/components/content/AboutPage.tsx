@@ -2,7 +2,7 @@ import Link from 'next/link';
 import StructuredData from '@/components/StructuredData';
 import { CONTACT_EMAIL, absoluteUrl } from '@/lib/site';
 import Breadcrumbs from './Breadcrumbs';
-import ConsultationCTAPlaceholder from './ConsultationCTAPlaceholder';
+import ConsultationCTA from '@/components/leads/ConsultationCTA';
 
 /*
  * /אודותינו/. The live page is a PHP template (templates/about.php), so the
@@ -159,7 +159,7 @@ export default function AboutPage() {
           </div>
         </section>
 
-        <ConsultationCTAPlaceholder variant="banner" source="about" />
+        <ConsultationCTA variant="banner" source="about" />
       </div>
     </div>
   );

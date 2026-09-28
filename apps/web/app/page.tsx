@@ -7,12 +7,12 @@ import PopularQuestions from '@/components/PopularQuestions';
 import PromoVideo from '@/components/PromoVideo';
 import StructuredData from '@/components/StructuredData';
 import CommunityCTA from '@/components/content/CommunityCTA';
-import ConsultationCTAPlaceholder from '@/components/content/ConsultationCTAPlaceholder';
+import ConsultationCTA from '@/components/leads/ConsultationCTA';
 import { PostGrid } from '@/components/content/PostCard';
 import StageNav from '@/components/content/StageNav';
 import VideoPageCard from '@/components/content/VideoPageCard';
 import { getPublicDb, safeQuery } from '@/lib/content/db';
-import { COMMUNITY_STATS, CALENDLY_URL } from '@/lib/content/navigation';
+import { COMMUNITY_STATS } from '@/lib/content/navigation';
 import { getCategoryMap, listBenefitProducts, listFeaturedBusinesses } from '@/lib/content/queries';
 import { listIndexedVideos, loadLatestVideoPages } from '@/lib/content/videos';
 import { listPublishedPosts } from '@/lib/db/posts';
@@ -65,7 +65,6 @@ export default async function Home() {
     getCategoryMap(),
   ]);
   const indexedVideos = videoPages.length === 0 ? listIndexedVideos(6, 'popular') : [];
-  const consultationHref = `${CALENDLY_URL}${CALENDLY_URL.includes('?') ? '&' : '?'}utm_source=home_hero&utm_medium=website&utm_campaign=consultation`;
 
   return (
     <div>
@@ -96,17 +95,9 @@ export default async function Home() {
                 <SearchBar size="large" />
                 <p className="text-sm text-gray-400 mt-3">נסו: עלויות שלד, איך בוחרים קבלן, היתר בנייה</p>
               </div>
-              <a
-                href={consultationHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-secondary-700 hover:text-secondary-800"
-              >
-                לתיאום ייעוץ בניה מקצועי ללא עלות
-                <svg className="w-4 h-4 rtl:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-              </a>
+              <div className="mt-6">
+                <ConsultationCTA source="home-hero" label="לתיאום ייעוץ בניה מקצועי ללא עלות" />
+              </div>
             </div>
             <div className="order-1 lg:order-2">
               <PromoVideo />
@@ -277,7 +268,7 @@ export default async function Home() {
       {/* 7. Community + consultation */}
       <div className="container-page pb-16 space-y-8">
         <CommunityCTA />
-        <ConsultationCTAPlaceholder variant="banner" source="home" />
+        <ConsultationCTA variant="banner" source="home-banner" />
       </div>
     </div>
   );
