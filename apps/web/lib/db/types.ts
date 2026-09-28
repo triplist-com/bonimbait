@@ -402,6 +402,8 @@ export type ProductRow = {
   lead_urgent_option: boolean;
   /** Accordion sections: [{ title, html }]. */
   details: Json;
+  /** Yoast canonical path from the import (Migration workstream, 20260928130400). */
+  seo_canonical: string | null;
 } & Timestamps;
 
 export type ProductCategoryAssignmentRow = { product_id: string; category_id: string; created_at: string };
