@@ -39,13 +39,13 @@ export default function Footer() {
               <Link href="/" className="text-sm text-gray-500 hover:text-primary transition-colors">
                 דף הבית
               </Link>
-              <Link href="/videos" className="text-sm text-gray-500 hover:text-primary transition-colors">
+              <Link href="/videos/" className="text-sm text-gray-500 hover:text-primary transition-colors">
                 סרטונים
               </Link>
-              <Link href="/categories" className="text-sm text-gray-500 hover:text-primary transition-colors">
+              <Link href="/categories/" className="text-sm text-gray-500 hover:text-primary transition-colors">
                 קטגוריות
               </Link>
-              <Link href="/search" className="text-sm text-gray-500 hover:text-primary transition-colors">
+              <Link href="/search/" className="text-sm text-gray-500 hover:text-primary transition-colors">
                 חיפוש
               </Link>
             </nav>
@@ -55,16 +55,16 @@ export default function Footer() {
           <div>
             <h4 className="font-semibold text-gray-900 mb-3 text-sm">מידע</h4>
             <nav className="flex flex-col gap-2">
-              <Link href="/about" className="text-sm text-gray-500 hover:text-primary transition-colors">
+              <Link href="/about/" className="text-sm text-gray-500 hover:text-primary transition-colors">
                 אודות
               </Link>
-              <Link href="/contact" className="text-sm text-gray-500 hover:text-primary transition-colors">
+              <Link href="/contact/" className="text-sm text-gray-500 hover:text-primary transition-colors">
                 צור קשר
               </Link>
-              <Link href="/privacy" className="text-sm text-gray-500 hover:text-primary transition-colors">
+              <Link href="/privacy/" className="text-sm text-gray-500 hover:text-primary transition-colors">
                 מדיניות פרטיות
               </Link>
-              <Link href="/terms" className="text-sm text-gray-500 hover:text-primary transition-colors">
+              <Link href="/terms/" className="text-sm text-gray-500 hover:text-primary transition-colors">
                 תנאי שימוש
               </Link>
             </nav>

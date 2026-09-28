@@ -140,7 +140,7 @@ export default function WizardResult({ result, onRestart }: WizardResultProps) {
             {result.sources.map((source) => (
               <Link
                 key={`${source.video_id}-${source.timestamp}`}
-                href={`/video/${source.video_id}?t=${source.timestamp}`}
+                href={`/video/${source.video_id}/?t=${source.timestamp}`}
                 className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary-700 bg-primary-50 hover:bg-primary-100 px-2.5 py-1.5 rounded-lg transition-colors font-medium"
               >
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">

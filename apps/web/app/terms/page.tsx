@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { CONTACT_EMAIL, absoluteUrl } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'תנאי שימוש',
   description: 'תנאי השימוש של אתר בונים בית.',
   alternates: {
-    canonical: 'https://bonimbait.com/terms',
+    canonical: absoluteUrl('/terms'),
   },
 };
 
@@ -77,7 +78,7 @@ export default function TermsPage() {
             <h2 className="text-xl font-bold text-gray-900 mb-3">7. יצירת קשר</h2>
             <p>
               לשאלות בנושא תנאי השימוש, ניתן לפנות אלינו בכתובת{' '}
-              <a href="mailto:info@bonimbait.com" className="text-primary hover:underline">info@bonimbait.com</a>.
+              <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary hover:underline">{CONTACT_EMAIL}</a>.
             </p>
           </div>
         </section>

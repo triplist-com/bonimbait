@@ -19,8 +19,8 @@ export default function VideoCard({ video, snippet, matchingSegmentTime, segment
   // Link to internal video page; append timestamp anchor when available
   const href =
     matchingSegmentTime != null
-      ? `/video/${video.id}?t=${Math.floor(matchingSegmentTime)}`
-      : `/video/${video.id}`;
+      ? `/video/${video.id}/?t=${Math.floor(matchingSegmentTime)}`
+      : `/video/${video.id}/`;
 
   // Badge shows segment timestamp when available, otherwise video duration
   const badgeText =

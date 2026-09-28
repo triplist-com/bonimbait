@@ -17,7 +17,7 @@ export default function CategoryChip({
 }: CategoryChipProps) {
   return (
     <Link
-      href={`/category/${slug}`}
+      href={`/category/${slug}/`}
       className={`inline-flex items-center gap-2 whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border ${
         isActive
           ? 'bg-primary text-white border-primary shadow-md scale-105'

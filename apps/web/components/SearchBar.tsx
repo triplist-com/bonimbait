@@ -79,7 +79,7 @@ export default function SearchBar({
       if (onSearch) {
         onSearch(trimmed);
       } else {
-        router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+        router.push(`/search/?q=${encodeURIComponent(trimmed)}`);
       }
     },
     [onSearch, router],

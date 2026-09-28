@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { absoluteUrl } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'אודות',
   description:
     'בונים בית הוא מאגר ידע מקיף לבנייה פרטית בישראל. למדו איך המערכת עובדת ואיך לקבל תשובות מבוססות AI לשאלות בנייה.',
   alternates: {
-    canonical: 'https://bonimbait.com/about',
+    canonical: absoluteUrl('/about'),
   },
 };
 

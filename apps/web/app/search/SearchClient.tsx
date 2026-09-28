@@ -60,13 +60,13 @@ function SearchContent() {
   }, [query, fetchResults, startAnswer]);
 
   const handleSearch = (q: string) => {
-    router.push(`/search?q=${encodeURIComponent(q)}`);
+    router.push(`/search/?q=${encodeURIComponent(q)}`);
   };
 
   const handlePageChange = (page: number) => {
     const sp = new URLSearchParams(searchParams.toString());
     sp.set('page', String(page));
-    router.push(`/search?${sp.toString()}`);
+    router.push(`/search/?${sp.toString()}`);
   };
 
   return (

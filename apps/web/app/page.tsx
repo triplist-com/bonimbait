@@ -8,13 +8,14 @@ import PromoVideo from '@/components/PromoVideo';
 import StructuredData from '@/components/StructuredData';
 import { getVideos, getCategories } from '@/lib/api';
 import type { Video, Category } from '@/lib/types';
+import { absoluteUrl } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'בונים בית - מאגר הידע לבנייה פרטית בישראל',
   description:
     'חפשו בין מאות סרטונים בנושא בנייה פרטית בישראל וקבלו תשובות מבוססות AI. מידע על עלויות, קבלנים, היתרים, שלד, גמרים ועוד.',
   alternates: {
-    canonical: 'https://bonimbait.com',
+    canonical: absoluteUrl(),
   },
 };
 
@@ -90,7 +91,7 @@ export default async function Home() {
           name: 'בונים בית - מאגר הידע לבנייה פרטית בישראל',
           description:
             'מאגר ידע מקיף לבנייה פרטית בישראל עם תשובות AI',
-          url: 'https://bonimbait.com',
+          url: absoluteUrl(),
         }}
       />
 
@@ -202,7 +203,7 @@ export default async function Home() {
                 <p className="text-sm text-gray-500 mt-1">הסרטונים הנצפים ביותר</p>
               </div>
               <Link
-                href="/videos?sort=popular"
+                href="/videos/?sort=popular"
                 className="text-sm text-primary hover:text-primary-700 font-medium transition-colors flex items-center gap-1"
               >
                 הכל
@@ -223,7 +224,7 @@ export default async function Home() {
               <p className="text-sm text-gray-500 mt-1">גלו תוכן לפי תחום</p>
             </div>
             <Link
-              href="/categories"
+              href="/categories/"
               className="text-sm text-primary hover:text-primary-700 font-medium transition-colors flex items-center gap-1"
             >
               כל הקטגוריות
@@ -243,7 +244,7 @@ export default async function Home() {
               <p className="text-sm text-gray-500 mt-1">התוספות החדשות ביותר למאגר</p>
             </div>
             <Link
-              href="/videos?sort=newest"
+              href="/videos/?sort=newest"
               className="text-sm text-primary hover:text-primary-700 font-medium transition-colors flex items-center gap-1"
             >
               כל הסרטונים
@@ -273,11 +274,11 @@ export default async function Home() {
                 <SearchBar />
               </div>
               <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-500">
-                <Link href="/about" className="hover:text-primary transition-colors underline underline-offset-4 decoration-gray-300 hover:decoration-primary">
+                <Link href="/about/" className="hover:text-primary transition-colors underline underline-offset-4 decoration-gray-300 hover:decoration-primary">
                   למדו עוד על בונים בית
                 </Link>
                 <span className="text-gray-300">|</span>
-                <Link href="/contact" className="hover:text-primary transition-colors underline underline-offset-4 decoration-gray-300 hover:decoration-primary">
+                <Link href="/contact/" className="hover:text-primary transition-colors underline underline-offset-4 decoration-gray-300 hover:decoration-primary">
                   צרו קשר
                 </Link>
               </div>

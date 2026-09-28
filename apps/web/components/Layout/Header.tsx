@@ -7,9 +7,9 @@ import SearchBar from '@/components/SearchBar';
 
 const navItems = [
   { label: 'ראשי', href: '/' },
-  { label: 'סרטונים', href: '/videos' },
-  { label: 'קטגוריות', href: '/categories' },
-  { label: 'אודות', href: '/about' },
+  { label: 'סרטונים', href: '/videos/' },
+  { label: 'קטגוריות', href: '/categories/' },
+  { label: 'אודות', href: '/about/' },
 ];
 
 export default function Header() {
@@ -77,7 +77,7 @@ export default function Header() {
                   key={item.href}
                   href={item.href}
                   className={`text-sm font-medium transition-colors ${
-                    pathname === item.href
+                    pathname.replace(/\/$/, '') === item.href.replace(/\/$/, '')
                       ? 'text-primary'
                       : 'text-gray-600 hover:text-primary'
                   }`}
@@ -125,7 +125,7 @@ export default function Header() {
                   key={item.href}
                   href={item.href}
                   className={`py-3 px-4 rounded-lg text-base font-medium transition-colors ${
-                    pathname === item.href
+                    pathname.replace(/\/$/, '') === item.href.replace(/\/$/, '')
                       ? 'bg-primary-50 text-primary'
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
