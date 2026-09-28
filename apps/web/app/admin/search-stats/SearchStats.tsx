@@ -38,7 +38,7 @@ function StatCard({
   );
 }
 
-export default function AdminDashboard() {
+export default function SearchStats() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,7 +77,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="max-w-5xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">לוח בקרה</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">סטטיסטיקות חיפוש</h1>
 
       {/* Today's stats */}
       <section className="mb-8">

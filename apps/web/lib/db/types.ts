@@ -46,7 +46,12 @@ export type LeadType =
   | 'whatsapp_join'
   | 'service_plan'
   | 'claim_business';
-export type LeadStatus = 'new' | 'in_progress' | 'qualified' | 'closed' | 'spam';
+/**
+ * Lead workflow (admin inbox): new -> contacted -> won | lost, or spam.
+ * 'in_progress' | 'qualified' | 'closed' are the Wave 1 names, still accepted
+ * by the DB (migration 20260928130500) and shown as contacted/won/lost.
+ */
+export type LeadStatus = 'new' | 'contacted' | 'won' | 'lost' | 'spam' | 'in_progress' | 'qualified' | 'closed';
 export type LeadNotifyStatus = 'pending' | 'sent' | 'partial' | 'failed' | 'logged';
 export type RedirectCode = 301 | 302 | 307 | 308;
 export type RedirectSource = 'manual' | 'wp_redirection' | 'migration';
@@ -137,6 +142,7 @@ export type PostCategoryRow = {
   seo_title: string | null;
   seo_description: string | null;
   legacy_wp_id: number | null;
+  seo_canonical: string | null;
 } & Timestamps;
 
 export type AuthorRow = {
@@ -166,9 +172,25 @@ export type PostRow = {
   legacy_wp_id: number | null;
   created_by: string | null;
   updated_by: string | null;
+  /** Yoast canonical, root-relative; null = self (migration 20260928130400). */
+  seo_canonical: string | null;
 } & Timestamps;
 
 export type PostCategoryAssignmentRow = { post_id: string; category_id: string; created_at: string };
+
+/** WordPress post tags (/tag/<slug>/, noindex), migration 20260928130400. */
+export type PostTagRow = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  seo_title: string | null;
+  seo_description: string | null;
+  noindex: boolean;
+  legacy_wp_id: number | null;
+} & Timestamps;
+
+export type PostTagAssignmentRow = { post_id: string; tag_id: string; created_at: string };
 
 export type PageRow = {
   id: string;
@@ -189,6 +211,7 @@ export type PageRow = {
   legacy_wp_id: number | null;
   created_by: string | null;
   updated_by: string | null;
+  seo_canonical: string | null;
 } & Timestamps;
 
 /** Existing apps/api table (video categories). Not modified by parity. */
@@ -237,6 +260,7 @@ export type VideoPageRow = {
   status: ContentStatus;
   published_at: string | null;
   legacy_wp_id: number | null;
+  seo_canonical: string | null;
 } & Timestamps;
 
 export type SpecialtyRow = {
@@ -280,6 +304,7 @@ export type BusinessRow = {
   legacy_wp_id: number | null;
   legacy_url: string | null;
   published_at: string | null;
+  seo_canonical: string | null;
 } & Timestamps;
 
 /** Private (owner/staff/service role only). */
@@ -522,6 +547,16 @@ export type Database = {
         [
           FK<'post_category_assignments_post_id_fkey', 'post_id', 'posts'>,
           FK<'post_category_assignments_category_id_fkey', 'category_id', 'post_categories'>,
+        ]
+      >;
+      post_tags: TableDef<PostTagRow, 'slug' | 'name'>;
+      post_tag_assignments: TableDef<
+        PostTagAssignmentRow,
+        'post_id' | 'tag_id',
+        never,
+        [
+          FK<'post_tag_assignments_post_id_fkey', 'post_id', 'posts'>,
+          FK<'post_tag_assignments_tag_id_fkey', 'tag_id', 'post_tags'>,
         ]
       >;
       pages: TableDef<PageRow, 'slug' | 'title'>;

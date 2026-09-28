@@ -7,7 +7,7 @@
  * Slugs are stored decoded; pass decoded slugs (decodeURIComponent(params.slug)).
  */
 import { type DbClient, type Paginated, pageRange, unwrap, unwrapMaybe, check } from './client';
-import type { AuthorRow, PostCategoryRow, PostRow, TablesInsert, TablesUpdate, ContentStatus } from './types';
+import type { AuthorRow, PostCategoryRow, PostRow, PostTagRow, TablesInsert, TablesUpdate, ContentStatus } from './types';
 
 export type PostSummary = Pick<
   PostRow,
@@ -123,22 +123,52 @@ export async function getCategoriesForPost(db: DbClient, postId: string): Promis
 // Admin (staff) — RLS "staff full access"
 // ---------------------------------------------------------------------------
 
+export type AdminPostRow = Pick<
+  PostRow,
+  'id' | 'slug' | 'title' | 'status' | 'published_at' | 'updated_at' | 'primary_category_id' | 'author_id'
+>;
+
+/** Strip PostgREST filter syntax from a free-text search term. */
+function searchTerm(value: string): string {
+  return value.replace(/[%,()*\\]/g, ' ').trim();
+}
+
 export async function listPostsForAdmin(
   db: DbClient,
-  opts: { page?: number; pageSize?: number; status?: ContentStatus; search?: string } = {},
-): Promise<Paginated<Pick<PostRow, 'id' | 'slug' | 'title' | 'status' | 'published_at' | 'updated_at'>>> {
+  opts: {
+    page?: number;
+    pageSize?: number;
+    /** 'scheduled' = published with a future published_at. */
+    status?: ContentStatus | 'scheduled';
+    search?: string;
+    categoryId?: string;
+    authorId?: string;
+  } = {},
+): Promise<Paginated<AdminPostRow>> {
   const page = opts.page ?? 1;
   const pageSize = opts.pageSize ?? 50;
   const { from, to } = pageRange(page, pageSize);
-  let query = db
-    .from('posts')
-    .select('id, slug, title, status, published_at, updated_at', { count: 'exact' })
-    .order('updated_at', { ascending: false })
-    .range(from, to);
-  if (opts.status) query = query.eq('status', opts.status);
-  if (opts.search) query = query.ilike('title', `%${opts.search}%`);
+  const columns = 'id, slug, title, status, published_at, updated_at, primary_category_id, author_id';
+  let query = opts.categoryId
+    ? db
+        .from('posts')
+        .select(`${columns}, post_category_assignments!inner(category_id)`, { count: 'exact' })
+        .eq('post_category_assignments.category_id', opts.categoryId)
+    : db.from('posts').select(columns, { count: 'exact' });
+  query = query.order('updated_at', { ascending: false }).range(from, to);
+  if (opts.status === 'scheduled') query = query.eq('status', 'published').gt('published_at', new Date().toISOString());
+  else if (opts.status) query = query.eq('status', opts.status);
+  if (opts.authorId) query = query.eq('author_id', opts.authorId);
+  const term = opts.search ? searchTerm(opts.search) : '';
+  if (term) query = query.or(`title.ilike.*${term}*,slug.ilike.*${term}*`);
   const result = await query;
-  return { items: unwrap(result), total: result.count ?? 0, page, pageSize };
+  const rows = unwrap(result) as Array<AdminPostRow & { post_category_assignments?: unknown }>;
+  return {
+    items: rows.map(({ post_category_assignments: _ignored, ...post }) => post),
+    total: result.count ?? 0,
+    page,
+    pageSize,
+  };
 }
 
 export async function getPostById(db: DbClient, id: string): Promise<PostRow | null> {
@@ -200,4 +230,75 @@ export async function listRelatedPosts(
 /** All authors (3 on the live site): bylines, archives and the sitemap. */
 export async function listAuthors(db: DbClient): Promise<AuthorRow[]> {
   return unwrap(await db.from('authors').select('*').order('name'));
+}
+
+// Tags, authors, categories (admin) ----------------------------------------------------
+
+export async function listPostTags(db: DbClient): Promise<PostTagRow[]> {
+  const out: PostTagRow[] = [];
+  for (let from = 0; ; from += 1000) {
+    const rows = unwrap(await db.from('post_tags').select('*').order('name').range(from, from + 999));
+    out.push(...rows);
+    if (rows.length < 1000) return out;
+  }
+}
+
+export async function getTagsForPost(db: DbClient, postId: string): Promise<PostTagRow[]> {
+  const rows = unwrap(await db.from('post_tag_assignments').select('post_tags(*)').eq('post_id', postId));
+  return rows.flatMap((r) => (r.post_tags ? [r.post_tags] : []));
+}
+
+/** Replace a post's tag set. */
+export async function setPostTags(db: DbClient, postId: string, tagIds: string[]): Promise<void> {
+  check(await db.from('post_tag_assignments').delete().eq('post_id', postId));
+  if (tagIds.length === 0) return;
+  check(await db.from('post_tag_assignments').insert(tagIds.map((tag_id) => ({ post_id: postId, tag_id }))));
+}
+
+/** Tag ids for names, creating missing tags (slug from the name, like WordPress). */
+export async function ensurePostTags(db: DbClient, names: string[], toSlug: (name: string) => string): Promise<string[]> {
+  const wanted = new Map<string, string>();
+  for (const name of names) {
+    const slug = toSlug(name);
+    if (slug) wanted.set(slug, name.trim());
+  }
+  if (wanted.size === 0) return [];
+  const existing = unwrap(await db.from('post_tags').select('id, slug').in('slug', Array.from(wanted.keys())));
+  const bySlug = new Map(existing.map((t) => [t.slug, t.id]));
+  const missing = Array.from(wanted.entries()).filter(([slug]) => !bySlug.has(slug));
+  if (missing.length) {
+    const created = unwrap(
+      await db
+        .from('post_tags')
+        .insert(missing.map(([slug, name]) => ({ slug, name })))
+        .select('id, slug'),
+    );
+    created.forEach((t) => bySlug.set(t.slug, t.id));
+  }
+  return Array.from(wanted.keys()).flatMap((slug) => {
+    const id = bySlug.get(slug);
+    return id ? [id] : [];
+  });
+}
+
+export async function isPostSlugTaken(db: DbClient, slug: string, exceptId?: string): Promise<boolean> {
+  let query = db.from('posts').select('id').eq('slug', slug).limit(1);
+  if (exceptId) query = query.neq('id', exceptId);
+  return unwrap(await query).length > 0;
+}
+
+export async function saveAuthor(db: DbClient, input: TablesInsert<'authors'> & { id?: string }): Promise<AuthorRow> {
+  return unwrap(await db.from('authors').upsert(input).select('*').single());
+}
+
+export async function deletePostCategory(db: DbClient, id: string): Promise<void> {
+  check(await db.from('post_categories').delete().eq('id', id));
+}
+
+export async function savePostTag(db: DbClient, input: TablesInsert<'post_tags'> & { id?: string }): Promise<PostTagRow> {
+  return unwrap(await db.from('post_tags').upsert(input).select('*').single());
+}
+
+export async function deletePostTag(db: DbClient, id: string): Promise<void> {
+  check(await db.from('post_tags').delete().eq('id', id));
 }

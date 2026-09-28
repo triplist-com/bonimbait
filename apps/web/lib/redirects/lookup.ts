@@ -65,9 +65,18 @@ async function refresh(): Promise<void> {
   }
 }
 
-/** Find a redirect for a request path, or null. */
-export async function findRedirect(pathname: string): Promise<RedirectTarget | null> {
+/**
+ * Find a redirect for a request path, or null.
+ * `forceRefresh` reloads the map first (admin "test redirect" button, see
+ * middleware.ts); it only refreshes the isolate that serves that request, so
+ * other isolates still pick up changes within REDIRECT_CACHE_TTL_SECONDS.
+ */
+export async function findRedirect(pathname: string, opts: { forceRefresh?: boolean } = {}): Promise<RedirectTarget | null> {
   if (!isSupabaseConfigured()) return null;
+  if (opts.forceRefresh) {
+    await (inflight ?? refresh());
+    return cache?.get(normalizeRedirectPath(pathname)) ?? null;
+  }
   if (!cache || Date.now() > expiresAt) {
     inflight = inflight ?? refresh().finally(() => {
       inflight = null;

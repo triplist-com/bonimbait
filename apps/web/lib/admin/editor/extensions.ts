@@ -180,6 +180,17 @@ const Details = Node.create({
   renderHTML({ HTMLAttributes }) {
     return ['details', HTMLAttributes, 0];
   },
+  // In the editor, show the block always expanded (a real <details> would
+  // hide the answer and toggle on every click into the question).
+  addNodeView() {
+    if (typeof document === 'undefined') return null;
+    return () => {
+      const dom = document.createElement('div');
+      dom.className = 'bb-details';
+      dom.setAttribute('data-label', 'שאלה ותשובה (FAQ)');
+      return { dom, contentDOM: dom };
+    };
+  },
 });
 
 const DetailsSummary = Node.create({
@@ -191,6 +202,14 @@ const DetailsSummary = Node.create({
   },
   renderHTML({ HTMLAttributes }) {
     return ['summary', HTMLAttributes, 0];
+  },
+  addNodeView() {
+    if (typeof document === 'undefined') return null;
+    return () => {
+      const dom = document.createElement('div');
+      dom.className = 'bb-summary';
+      return { dom, contentDOM: dom };
+    };
   },
 });
 

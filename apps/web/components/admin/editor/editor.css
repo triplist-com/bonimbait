@@ -1,0 +1,66 @@
+/* Admin rich-text editor (TipTap). Mirrors the article look closely enough
+   for editing; the public page applies its own article styles. */
+
+.bb-editor {
+  font-size: 1rem;
+  line-height: 1.75;
+  color: #1f2937;
+  text-align: start;
+}
+.bb-editor > * + * {
+  margin-top: 0.75em;
+}
+.bb-editor h1 { font-size: 1.75rem; font-weight: 700; margin-top: 1.25em; }
+.bb-editor h2 { font-size: 1.5rem; font-weight: 700; margin-top: 1.25em; }
+.bb-editor h3 { font-size: 1.25rem; font-weight: 700; margin-top: 1em; }
+.bb-editor h4, .bb-editor h5, .bb-editor h6 { font-size: 1.1rem; font-weight: 600; }
+.bb-editor ul { list-style: disc; padding-inline-start: 1.5rem; }
+.bb-editor ol { list-style: decimal; padding-inline-start: 1.5rem; }
+.bb-editor li > p { margin: 0; }
+.bb-editor a { color: #2563eb; text-decoration: underline; }
+.bb-editor blockquote { border-inline-start: 4px solid #e5e7eb; padding-inline-start: 1rem; color: #4b5563; }
+.bb-editor hr { border: 0; border-top: 2px solid #e5e7eb; margin: 1.5rem 0; }
+.bb-editor img { max-width: 100%; height: auto; display: inline-block; }
+.bb-editor img.ProseMirror-selectednode { outline: 3px solid #93c5fd; }
+.bb-editor table { border-collapse: collapse; width: 100%; table-layout: auto; margin: 1rem 0; }
+.bb-editor td, .bb-editor th { border: 1px solid #d1d5db; padding: 0.35rem 0.5rem; vertical-align: top; min-width: 3rem; position: relative; }
+.bb-editor th { background: #f3f4f6; font-weight: 600; }
+.bb-editor .selectedCell::after { content: ''; position: absolute; inset: 0; background: rgb(37 99 235 / 0.12); pointer-events: none; }
+.bb-editor .tableWrapper { overflow-x: auto; }
+.bb-editor div:not([class]) { border-inline-start: 2px dotted #e5e7eb; padding-inline-start: 0.5rem; }
+.bb-editor p:empty::before, .bb-editor p > br.ProseMirror-trailingBreak:only-child { content: ''; }
+
+/* FAQ blocks, always expanded while editing */
+.bb-editor .bb-details {
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+}
+.bb-editor .bb-details::before {
+  content: attr(data-label);
+  display: block;
+  font-size: 0.7rem;
+  color: #92400e;
+}
+.bb-editor .bb-summary { font-weight: 600; }
+
+/* Raw HTML atoms (kept verbatim) */
+.bb-editor .bb-raw {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px dashed #9ca3af;
+  background: #f9fafb;
+  color: #374151;
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  user-select: none;
+}
+.bb-editor .bb-raw-inline { display: inline-flex; padding: 0 0.35rem; margin: 0 0.1rem; vertical-align: middle; }
+.bb-editor .bb-raw-label::before { content: '⧉ '; color: #6b7280; }
+.bb-editor .bb-raw-thumb { width: 120px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 0.35rem; }
+.bb-editor .ProseMirror-selectednode.bb-raw { outline: 3px solid #93c5fd; background: #eff6ff; }
+.bb-editor .ProseMirror-gapcursor::after { border-top-color: #2563eb; }
