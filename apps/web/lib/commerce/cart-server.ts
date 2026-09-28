@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { cookies } from 'next/headers';
+import { SITE_URL } from '@/lib/site';
 import { CART_COOKIE, CART_MAX_AGE_SECONDS, type Cart, EMPTY_CART, parseCart, serializeCart } from './cart';
 
 /** Current request's cart (Server Components, Server Actions, Route Handlers). */
@@ -18,7 +19,8 @@ export function writeCart(cart: Cart): void {
     path: '/',
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    // Secure whenever the site is served over https (not on http://localhost).
+    secure: SITE_URL.startsWith('https://'),
     maxAge: CART_MAX_AGE_SECONDS,
   });
 }
