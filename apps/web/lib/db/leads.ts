@@ -211,12 +211,16 @@ export async function getLeadById(db: DbClient, id: string): Promise<LeadRow | n
   return unwrapMaybe(await db.from('leads').select('*').eq('id', id).maybeSingle());
 }
 
-/** Counts per status (for admin tabs/badges). */
+/** Admin inbox workflow (the legacy in_progress/qualified/closed map to contacted/won/lost). */
+export const LEAD_WORKFLOW_STATUSES = ['new', 'contacted', 'won', 'lost', 'spam'] as const;
+export type LeadWorkflowStatus = (typeof LEAD_WORKFLOW_STATUSES)[number];
+
+/** Counts per workflow status (for admin tabs/badges). */
 export async function countLeadsByStatus(
   db: DbClient,
   opts: { type?: LeadType } = {},
-): Promise<Record<LeadStatus, number>> {
-  const statuses: LeadStatus[] = ['new', 'in_progress', 'qualified', 'closed', 'spam'];
+): Promise<Record<LeadWorkflowStatus, number>> {
+  const statuses = LEAD_WORKFLOW_STATUSES;
   const counts = await Promise.all(
     statuses.map(async (status) => {
       let q = db.from('leads').select('id', { count: 'exact', head: true }).eq('status', status);
@@ -226,7 +230,7 @@ export async function countLeadsByStatus(
       return [status, r.count ?? 0] as const;
     }),
   );
-  return Object.fromEntries(counts) as Record<LeadStatus, number>;
+  return Object.fromEntries(counts) as Record<LeadWorkflowStatus, number>;
 }
 
 export async function updateLeadStatus(db: DbClient, id: string, status: LeadStatus): Promise<LeadRow> {

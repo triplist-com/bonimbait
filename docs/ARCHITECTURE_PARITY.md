@@ -230,7 +230,14 @@ the gated reveals.
   and on the first `getProfile()`, their `profiles.role` is promoted to `admin` with the service
   role, so RLS also sees them as staff. Removing an email from the list does **not** demote the
   user; change `profiles.role` for that.
-- **Admin:** `app/admin/layout.tsx` calls `requireRole('admin')`, and the middleware also bounces
+- **Admin (Wave 3):** `app/admin/layout.tsx` calls `requireRole('editor')`; admin-only screens
+  (members, search stats) call `requireRole('admin')`. Every write is a server action wrapped in
+  `adminAction(role, …)` (`lib/admin/guard.ts`), which re-checks the role and then uses the
+  caller's own session, so RLS "staff full access" is a second check. Admin-only actions: approving
+  or rejecting business claims / join requests (they grant `pro`), deleting regions, manual order
+  status, role changes. `tests/admin/role-guards.test.ts` calls every exported action as
+  signed-out, member, pro and editor. See §9 for the editor, revalidation and redirect cache.
+- **Admin (Wave 1, superseded):** `app/admin/layout.tsx` called `requireRole('admin')`, and the middleware also bounces
   signed-out visitors from `/admin` to `/login/`. `/api/admin/stats` uses `checkRole('admin')`.
 
 Supabase dashboard setup (owner/orchestrator):
@@ -377,7 +384,43 @@ No longer used and removable from Vercel: `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `GO
 
 ---
 
-## 9. Open questions (owner)
+## 9. Admin CMS (`/admin/`, Wave 3)
+
+- **Code:** pages in `app/admin/`, actions in `lib/admin/actions/*` (one `'use server'` file per
+  area), shared UI in `components/admin/` (`DataTable`, `FormField`, `ConfirmDialog`,
+  `StatusBadge`, `ActionForm`, `AdminPagination`, media picker, rich-text editor).
+- **Rich-text editor:** TipTap (`components/admin/editor/`). `lib/admin/editor/codec.ts` makes
+  load/save lossless for migrated `content_html`: HTML the schema can't express (SVG, nav,
+  iframes other than editable ones, `data-bb-embed` placeholders, lead-popup links) becomes an
+  opaque "raw" atom that is written back verbatim; inline text sitting directly in `<li>`, `<td>`,
+  `<div>` or at the top level is wrapped in a marked paragraph that is unwrapped on save;
+  `<thead>`/`<tfoot>`/`<colgroup>` are restored. All 1,026 migrated posts, pages and video pages
+  round-trip to rendering-equivalent HTML, and a second save is a no-op
+  (`tests/admin/editor-roundtrip-corpus.test.ts`, opt-in; fixtures run in `npm test`).
+- **Slugs:** an unchanged slug is saved byte-for-byte (some migrated slugs contain emoji or `_`).
+  Renaming a published post/page/video/business/product offers a 301 (default on):
+  old → new, rules pointing at the old URL are re-pointed (no chains), and rules *from* the new
+  URL are deleted (they would shadow it). Logic: `lib/admin/slug.ts`, tested.
+- **Revalidation:** saves call `revalidatePath` for the item (decoded and encoded), its listings
+  (blog, category and author archives, `/recommended/`, shop pages), the home page and
+  `/sitemap.xml`. Scheduled posts are `published` with a future `published_at`; public pages pick
+  them up on the next ISR refresh after that time (≤ 1 h).
+- **Redirect cache:** the middleware keeps the redirect map per isolate for
+  `REDIRECT_CACHE_TTL_SECONDS` (300). The admin "test" button sends `x-bb-redirect-refresh:
+  $REDIRECT_REFRESH_SECRET`, which reloads the map on the isolate that answers. Other isolates pick
+  changes up within the TTL. Leave the secret unset to disable forced refreshes.
+- **Media:** uploads go to Storage `media/uploads/YYYY/MM/` (Israel time) with the editor's own
+  session (Storage RLS "media staff write").
+- **Lead workflow:** `new → contacted → won | lost`, plus `spam` (migration
+  `20260928130500_admin_lead_workflow.sql`; the Wave 1 names stay valid and display as their new
+  equivalents).
+- **RLS check (2026-09-28):** as an editor JWT, every admin table (content, taxonomy, directory incl.
+  `business_contacts`, reviews, commerce incl. orders/payments, leads, redirects, profiles,
+  `whatsapp_groups`) is readable and updatable, and `media` uploads succeed; role changes are
+  refused by `profiles_guard_role`. As a member, none of those updates succeed. No new policies
+  were needed.
+
+## 10. Open questions (owner)
 
 1. **Supabase project:** the URL in `.env` doesn't resolve (the project is paused or deleted?).
    Should parity use a new project or the restored old one?

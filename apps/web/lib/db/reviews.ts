@@ -104,7 +104,7 @@ export async function listMyReviews(db: DbClient, userId: string): Promise<Revie
 
 export async function listReviewsForModeration(
   db: DbClient,
-  opts: { status?: ReviewStatus; businessId?: string; page?: number; pageSize?: number } = {},
+  opts: { status?: ReviewStatus | 'all'; businessId?: string; page?: number; pageSize?: number } = {},
 ): Promise<Paginated<ReviewRow>> {
   const page = opts.page ?? 1;
   const pageSize = opts.pageSize ?? 50;
@@ -114,7 +114,7 @@ export async function listReviewsForModeration(
     .select('*', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(from, to);
-  query = query.eq('status', opts.status ?? 'pending');
+  if (opts.status !== 'all') query = query.eq('status', opts.status ?? 'pending');
   if (opts.businessId) query = query.eq('business_id', opts.businessId);
   const result = await query;
   return { items: unwrap(result), total: result.count ?? 0, page, pageSize };

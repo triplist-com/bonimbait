@@ -21,7 +21,10 @@ export async function middleware(request: NextRequest) {
 
   // 1. Legacy redirects (never for API routes or the admin/auth area).
   if (!isApi && !pathname.startsWith('/admin') && !pathname.startsWith('/auth')) {
-    const hit = await findRedirect(pathname);
+    // The admin redirect tester asks for a fresh map (shared secret header).
+    const refreshSecret = process.env.REDIRECT_REFRESH_SECRET;
+    const forceRefresh = Boolean(refreshSecret) && request.headers.get('x-bb-redirect-refresh') === refreshSecret;
+    const hit = await findRedirect(pathname, { forceRefresh });
     if (hit) {
       const target = new URL(hit.to, request.url);
       if (!target.search && search) target.search = search;

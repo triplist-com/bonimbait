@@ -66,3 +66,26 @@ export async function bulkUpsertRedirects(db: DbClient, inputs: RedirectInput[])
 export async function deleteRedirect(db: DbClient, id: string): Promise<void> {
   check(await db.from('redirects').delete().eq('id', id));
 }
+
+/** Every rule, minimal columns (admin redirect planning). */
+export async function listAllRedirectsLite(
+  db: DbClient,
+): Promise<Array<Pick<RedirectRow, 'id' | 'from_path' | 'to_path' | 'is_active'>>> {
+  const out: Array<Pick<RedirectRow, 'id' | 'from_path' | 'to_path' | 'is_active'>> = [];
+  for (let from = 0; ; from += 1000) {
+    const rows = unwrap(
+      await db.from('redirects').select('id, from_path, to_path, is_active').order('from_path').range(from, from + 999),
+    );
+    out.push(...rows);
+    if (rows.length < 1000) return out;
+  }
+}
+
+export async function updateRedirectTarget(db: DbClient, id: string, toPath: string): Promise<void> {
+  check(await db.from('redirects').update({ to_path: toPath }).eq('id', id));
+}
+
+/** Update a rule in place (its from_path may change). */
+export async function updateRedirect(db: DbClient, id: string, input: RedirectInput): Promise<RedirectRow> {
+  return unwrap(await db.from('redirects').update(toRow(input)).eq('id', id).select('*').single());
+}
