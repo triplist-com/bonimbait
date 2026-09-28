@@ -22,13 +22,13 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     title: name,
     description,
     alternates: {
-      canonical: absoluteUrl(`/category/${params.slug}`),
+      canonical: absoluteUrl(`/category/${params.slug}/`),
     },
     openGraph: {
       title: `${name} - בונים בית`,
       description,
       type: 'website',
-      url: absoluteUrl(`/category/${params.slug}`),
+      url: absoluteUrl(`/category/${params.slug}/`),
     },
   };
 }

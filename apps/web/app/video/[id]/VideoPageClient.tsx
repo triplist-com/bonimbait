@@ -95,7 +95,7 @@ function VideoContent() {
           </Link>
           <span className="text-gray-300" aria-hidden="true">/</span>
           <Link
-            href={`/category/${video.category_slug}`}
+            href={`/category/${video.category_slug}/`}
             className="hover:text-primary transition-colors"
           >
             {video.category_name}
@@ -116,7 +116,7 @@ function VideoContent() {
           <div className="flex items-start justify-between gap-4 mb-3">
             <h1 className="text-2xl font-bold text-gray-900">{video.title}</h1>
             <Link
-              href={`/category/${video.category_slug}`}
+              href={`/category/${video.category_slug}/`}
               className="inline-block text-sm bg-primary-50 text-primary-700 font-medium px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-primary-100 transition-colors flex-shrink-0"
             >
               {video.category_name}

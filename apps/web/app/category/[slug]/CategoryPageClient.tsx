@@ -73,7 +73,7 @@ export default function CategoryPageClient() {
           '@type': 'CollectionPage',
           name: `${categoryName} - בונים בית`,
           description: categoryDesc,
-          url: absoluteUrl(`/category/${slug}`),
+          url: absoluteUrl(`/category/${slug}/`),
         }}
       />
 
@@ -83,7 +83,7 @@ export default function CategoryPageClient() {
           דף הבית
         </Link>
         <span className="text-gray-300" aria-hidden="true">/</span>
-        <Link href="/categories" className="hover:text-primary transition-colors">
+        <Link href="/categories/" className="hover:text-primary transition-colors">
           קטגוריות
         </Link>
         <span className="text-gray-300" aria-hidden="true">/</span>

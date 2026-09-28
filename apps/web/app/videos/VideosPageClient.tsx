@@ -67,7 +67,7 @@ function VideosContent() {
       sp.delete('page');
     }
     const qs = sp.toString();
-    router.push(`/videos${qs ? `?${qs}` : ''}`);
+    router.push(`/videos/${qs ? `?${qs}` : ''}`);
   };
 
   return (

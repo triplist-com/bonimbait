@@ -35,6 +35,8 @@ export function wantsTrailingSlash(pathname: string): boolean {
   if (pathname.startsWith('/api/') || pathname === '/api') return false;
   if (pathname.startsWith('/_next/')) return false;
   const lastSegment = pathname.slice(pathname.lastIndexOf('/') + 1);
+  // Next.js metadata image routes (opengraph-image, icon, ...) are files.
+  if (/^(opengraph-image|twitter-image|icon|apple-icon)(-[\w-]+)?$/.test(lastSegment)) return false;
   return !lastSegment.includes('.');
 }
 

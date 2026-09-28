@@ -17,7 +17,7 @@ export default function PopularQuestions() {
       {questions.map((q) => (
         <Link
           key={q.text}
-          href={`/search?q=${encodeURIComponent(q.text)}`}
+          href={`/search/?q=${encodeURIComponent(q.text)}`}
           className="group bg-white border border-gray-200 rounded-xl p-4 hover:border-primary hover:shadow-sm transition-all duration-200"
         >
           <div className="flex items-start gap-2">
