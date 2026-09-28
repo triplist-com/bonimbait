@@ -27,7 +27,7 @@ export default function Footer() {
               const inner = (
                 <>
                   <span className="block text-xs uppercase tracking-wider text-gray-500">{s.network}</span>
-                  <span className="block text-2xl font-bold text-white mt-1">{s.value}</span>
+                  <span dir="ltr" className="block text-2xl font-bold text-white mt-1">{s.value}</span>
                   <span className="block text-sm text-gray-400">{s.label}</span>
                 </>
               );

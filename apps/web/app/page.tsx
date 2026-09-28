@@ -108,7 +108,7 @@ export default async function Home() {
           <ul className="mt-12 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4" aria-label="הקהילה במספרים">
             {COMMUNITY_STATS.map((s) => (
               <li key={s.network} className="rounded-2xl bg-white border border-gray-100 shadow-card px-4 py-5 text-center">
-                <span className="block text-2xl sm:text-3xl font-bold text-gray-900">{s.value}</span>
+                <span dir="ltr" className="block text-2xl sm:text-3xl font-bold text-gray-900">{s.value}</span>
                 <span className="block text-sm text-gray-500 mt-0.5">
                   {s.label} ב-{s.network}
                 </span>
