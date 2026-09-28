@@ -210,6 +210,11 @@ def sanitize_html(
             href = el["href"].strip()
             if href.lower().startswith("javascript:"):
                 del el["href"]
+            elif href.startswith("#elementor-action"):
+                # Elementor popup trigger (lead popup on the live site).
+                del el["href"]
+                el["data-bb-action"] = "lead-popup"
+                bump("popup_links")
             elif UPLOADS_RE.match(href):
                 el["href"] = rw(href)
             else:
@@ -227,6 +232,12 @@ def sanitize_html(
             src = el["src"].strip()
             if src.startswith("//"):
                 src = "https:" + src
+            if LIVE_HOST_RE.match(src):
+                # WordPress oEmbed of our own post (/embed/#?secret=...): the
+                # <blockquote class="wp-embedded-content"> link next to it stays.
+                el.decompose()
+                bump("wp_oembed_iframes")
+                continue
             el["src"] = src
 
     # 7. Shortcodes in text nodes.

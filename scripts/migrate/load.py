@@ -347,8 +347,11 @@ def load_video_pages(ctx: Ctx) -> None:
         cats = v.get("categories") or []
         kind = "podcast" if any(nfc_slug(c.get("slug")) == "פודקאסט" for c in cats) else "video"
         body = ctx.clean(v.get("body_html"))
+        redirected = bool(v.get("redirected_to"))
         upsert(conn, "video_pages", {
-            "legacy_wp_id": v["id"], "legacy_slug": nfc_slug(v["legacy_slug"]),
+            # A redirected page's crawled id is its redirect TARGET's id (two pages 301 to
+            # the same post), so it can't be a key: those rows are keyed by legacy_slug.
+            "legacy_wp_id": None if redirected else v["id"], "legacy_slug": nfc_slug(v["legacy_slug"]),
             "title": html_to_text(v["title"]), "body_html": body,
             "excerpt": text_excerpt(v.get("body_text") or body, 300),
             "featured_image": ctx.rw.maybe(v.get("thumbnail_url")),
@@ -360,9 +363,9 @@ def load_video_pages(ctx: Ctx) -> None:
             "seo_canonical": canonical_path(seo.get("canonical")),
             "noindex": robots_noindex(seo.get("robots")),
             # 3 pages 301 on the live site (redirects table has them): keep data, hide the row.
-            "status": "archived" if v.get("redirected_to") else "published",
+            "status": "archived" if redirected else "published",
             "published_at": utc(v.get("date_published") or v.get("date")),
-        }, "legacy_wp_id")
+        }, "legacy_slug" if redirected else "legacy_wp_id")
     ctx.count("video_pages", len(vids))
     ctx.report["video_pages_linked_to_videos"] = linked
 
