@@ -55,7 +55,16 @@ def expected() -> dict[str, int]:
         "reviews": sum(len(b.get("reviews") or []) for b in biz),
         "product_categories": len(prods.get("product_categories") or []) + len(cp),
         "products": len(prods["products"]),
+        "product_category_assignments": product_memberships(),
     }
+
+
+def product_memberships() -> int:
+    """Crawled archive memberships (crawl_product_terms.py) across both product taxonomies."""
+    p = migration_dir() / "product_terms.json"
+    if not p.exists():
+        return len(j("products")["products"])  # fallback: every product in the one product_cat
+    return sum(len(set(t.get("product_slugs") or [])) for t in json.loads(p.read_text(encoding="utf-8"))["terms"])
 
 
 LEGACY_FILTER = {  # only count migrated rows (other agents may add zz-test- rows)
@@ -85,6 +94,8 @@ def db_counts(conn) -> dict[str, int]:
             where = "slug not like 'zz-test-%'"
         elif t == "product_categories":
             where = "slug not like 'zz-test-%'"
+        elif t == "product_category_assignments":
+            where = "product_id in (select id from public.products where legacy_wp_id is not null)"
         sql = f"select count(*) from public.{t}" + (f" where {where}" if where else "")
         out[t] = conn.execute(sql).fetchone()[0]
     return out
@@ -103,12 +114,16 @@ DB_ORPHAN_QUERIES = {
     "businesses_without_phone": "select b.slug from public.businesses b left join public.business_contacts c on c.business_id = b.id "
                                 "where b.legacy_wp_id is not null and c.phone is null",
     "video_pages_not_linked_to_videos": "select legacy_slug from public.video_pages where video_id is null and status = 'published'",
+    "products_with_old_host_images": "select slug from public.products where coalesce(featured_image,'') || images::text "
+                                     "like '%bonimbayit.co.il/wp-content/%'",
+    "product_category_names_vs_seo": "select slug from public.product_categories where seo_title is not null "
+                                     "and position(name in seo_title) = 0",
     "specialties_unused": "select name from public.specialties s where not exists "
                           "(select 1 from public.business_specialties x where x.specialty_id = s.id)",
 }
 # Orphan kinds that mean data was dropped (fail the run). The rest are informational.
 # businesses_without_region is informational: 1 crawled business has no regions at all.
-HARD_ORPHANS = {"posts_without_category"}
+HARD_ORPHANS = {"posts_without_category", "products_with_old_host_images"}
 
 
 def main() -> int:
@@ -124,7 +139,9 @@ def main() -> int:
             "select (select count(*) from public.posts where content_html ~ 'bonimbayit\\.co\\.il/wp-content/uploads/') +"
             "(select count(*) from public.posts where featured_image like '%bonimbayit.co.il/wp-content/%') +"
             "(select count(*) from public.businesses where coalesce(logo_url,'') || coalesce(cover_image_url,'') || gallery::text "
-            "  like '%bonimbayit.co.il/wp-content/%')").fetchone()[0]
+            "  like '%bonimbayit.co.il/wp-content/%') +"
+            "(select count(*) from public.products where coalesce(featured_image,'') || images::text || "
+            "  coalesce(description_html,'') like '%bonimbayit.co.il/wp-content/uploads/%')").fetchone()[0]
 
     manifest = media.load_manifest()
     by_status: dict[str, int] = {}
