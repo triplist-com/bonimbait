@@ -148,3 +148,5 @@ Owner actions are marked **(owner)**.
 - Professional-listing prices (what pros pay to be in "נבחרת המומלצים"). Service-plan prices are public and already captured.
 - Should the 3 service plans be bought online via UPay, or stay "book a consultation"? (₪133k checkout online is unusual.)
 - Email sender (e.g. Resend) and WhatsApp number for lead notifications.
+- Originals of 41 files that are already dead on the live site. `verify_load.py` lists them. They're mostly 2018–2019 images, plus the plasterer contract (`/tich/`) and the smart-home cheat sheet (`/מילון-מושגים-בית-חכם-להורדה/`). Their links were dropped during migration.
+- Nice-to-have: Hebrew-named PDFs download as hashed ASCII names. Serve them with `?download=<original name>` so users get a readable file name.
