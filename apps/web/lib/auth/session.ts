@@ -36,6 +36,7 @@ function fallbackProfile(user: User): Profile {
     construction_stage: null,
     region_id: null,
     whatsapp_opt_in: false,
+    newsletter_opt_in: false,
     avatar_url: null,
     created_at: now,
     updated_at: now,

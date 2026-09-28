@@ -31,6 +31,7 @@ export type LeadRouting = 'site' | 'direct';
 export type ReviewStatus = 'pending' | 'approved' | 'rejected';
 export type ReviewSource = 'migrated' | 'member';
 export type ProductStatus = 'draft' | 'published' | 'archived';
+export type ProductTaxonomy = 'product_cat' | 'category_product';
 export type OrderStatus = 'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded';
 export type PaymentProviderName = 'mock' | 'upay';
 export type PaymentStatus = 'pending' | 'succeeded' | 'failed' | 'cancelled' | 'refunded';
@@ -119,6 +120,8 @@ export type ProfileRow = {
   construction_stage: ConstructionStage | null;
   region_id: string | null;
   whatsapp_opt_in: boolean;
+  /** "Tips & updates" opt-in (migration 20260928130200). */
+  newsletter_opt_in: boolean;
   avatar_url: string | null;
 } & Timestamps;
 
@@ -338,6 +341,10 @@ export type ServicePlanRow = {
   is_purchasable_online: boolean;
   is_active: boolean;
   sort_order: number;
+  /** Card CTA text on the live page (migration 20260928130200). */
+  cta_label: string | null;
+  /** Column tag in the comparison table header. */
+  compare_label: string | null;
 } & Timestamps;
 
 export type ServicePlanPriceRow = {
@@ -362,6 +369,8 @@ export type ProductCategoryRow = {
   seo_title: string | null;
   seo_description: string | null;
   legacy_wp_id: number | null;
+  /** product_cat -> /product-category/<slug>/, category_product -> /category-product/<slug>/ */
+  taxonomy: ProductTaxonomy;
 } & Timestamps;
 
 export type ProductRow = {
@@ -384,6 +393,15 @@ export type ProductRow = {
   seo_title: string | null;
   seo_description: string | null;
   legacy_wp_id: number | null;
+  /** Product tag chip shown on cards ("דוד שמש"). */
+  tag_label: string | null;
+  subtitle: string | null;
+  /** Heading of the "leave details" box on the product page. */
+  lead_heading: string | null;
+  /** Show the optional "urgent need" checkbox on the lead form. */
+  lead_urgent_option: boolean;
+  /** Accordion sections: [{ title, html }]. */
+  details: Json;
 } & Timestamps;
 
 export type ProductCategoryAssignmentRow = { product_id: string; category_id: string; created_at: string };
