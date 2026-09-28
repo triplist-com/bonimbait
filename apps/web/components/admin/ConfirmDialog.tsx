@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import { createPortal } from 'react-dom';
 import type { ActionResult } from '@/lib/admin/guard';
 
 /**
@@ -36,6 +37,10 @@ export default function ConfirmDialog({
   const [pending, start] = useTransition();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  // The dialog holds its own <form>: portal it out so it never nests inside
+  // the row/edit form that contains the trigger button.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     const d = dialog.current;
@@ -62,6 +67,8 @@ export default function ConfirmDialog({
       >
         {trigger}
       </button>
+      {mounted &&
+        createPortal(
       <dialog
         ref={dialog}
         onClose={() => setOpen(false)}
@@ -70,7 +77,12 @@ export default function ConfirmDialog({
       >
         <form
           className="p-5"
-          action={(fd) =>
+          onSubmit={(ev) => {
+            // React events bubble through portals: keep this submit away from
+            // any form that contains the trigger.
+            ev.preventDefault();
+            ev.stopPropagation();
+            const fd = new FormData(ev.currentTarget);
             start(async () => {
               const res = await onConfirm(fd);
               if (!res.ok) {
@@ -80,8 +92,8 @@ export default function ConfirmDialog({
               setOpen(false);
               if (redirectTo) router.push(redirectTo);
               router.refresh();
-            })
-          }
+            });
+          }}
         >
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
           {body && <div className="mt-2 text-sm text-gray-600">{body}</div>}
@@ -100,7 +112,9 @@ export default function ConfirmDialog({
             </button>
           </div>
         </form>
-      </dialog>
+      </dialog>,
+          document.body,
+        )}
     </>
   );
 }
