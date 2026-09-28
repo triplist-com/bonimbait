@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useFormStatus } from 'react-dom';
 import { inputClass, labelClass } from '@/components/auth/AuthCard';
 import type { FieldErrors } from '@/lib/commerce/forms';
@@ -99,36 +98,6 @@ export function SelectField({
         ))}
       </select>
       <FieldError errors={errors} name={name} />
-    </div>
-  );
-}
-
-export function PrivacyCheckbox({ errors }: { errors: FieldErrors }) {
-  return (
-    <div>
-      <label className="flex items-start gap-2 text-sm text-gray-700">
-        <input type="checkbox" name="privacy" required className="mt-1 h-4 w-4 rounded border-gray-300" />
-        <span>
-          אני מאשר/ת את{' '}
-          <Link href="/מדיניות-פרטיות/" className="text-primary underline" target="_blank">
-            מדיניות הפרטיות
-          </Link>{' '}
-          של בונים בית
-        </span>
-      </label>
-      <FieldError errors={errors} name="privacy" />
-    </div>
-  );
-}
-
-/** Hidden honeypot field (bots fill it; humans never see it). */
-export function Honeypot() {
-  return (
-    <div aria-hidden="true" className="absolute -start-[10000px] h-0 w-0 overflow-hidden">
-      <label>
-        אתר
-        <input type="text" name="website" tabIndex={-1} autoComplete="off" />
-      </label>
     </div>
   );
 }

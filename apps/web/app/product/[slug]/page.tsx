@@ -119,6 +119,7 @@ export default async function ProductPage({ params }: Props) {
 
           <ProductLeadForm
             productId={product.id}
+            productName={product.name}
             heading={product.lead_heading ?? 'מעוניינים במוצר? השאירו פרטים ונחזור אליכם'}
             urgentOption={product.lead_urgent_option}
           />

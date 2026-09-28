@@ -1,44 +1,33 @@
-'use client';
+import LeadForm from '@/components/leads/LeadForm';
+import { MEMBER_REGION_OPTIONS } from '@/lib/leads/fields';
+import type { LeadField } from '@/lib/leads/types';
+import { servicePlanLeadAction } from '@/lib/commerce/actions';
 
-import { useFormState } from 'react-dom';
-import { labelClass, inputClass } from '@/components/auth/AuthCard';
-import { submitServicePlanLead } from '@/lib/commerce/actions';
-import { INITIAL_FORM_STATE, MEMBER_REGIONS } from '@/lib/commerce/forms';
-import { FormMessage, Honeypot, PrivacyCheckbox, SelectField, SubmitButton, TextField } from './FormBits';
-
-const REGION_OPTIONS = MEMBER_REGIONS.map((r) => ({ value: r.slug, label: r.name }));
-
-/** "Leave details" form on /membership-tiers/ -> `service_plan` lead -> /thank-you/. */
+/** "Leave details" on /membership-tiers/ → `service_plan` lead → /thank-you/. */
 export default function PlanLeadForm({ plans }: { plans: ReadonlyArray<{ slug: string; name: string }> }) {
-  const [state, action] = useFormState(submitServicePlanLead, INITIAL_FORM_STATE);
+  const fields: LeadField[] = [
+    { name: 'full_name', label: 'שם מלא', type: 'text', required: true, width: 'half', autoComplete: 'name' },
+    { name: 'phone', label: 'טלפון', type: 'tel', required: true, width: 'half', autoComplete: 'tel' },
+    { name: 'email', label: 'כתובת דוא״ל', type: 'email', width: 'half', autoComplete: 'email' },
+    { name: 'region', label: 'אזור בנייה', type: 'select', options: MEMBER_REGION_OPTIONS, placeholder: 'בחרו אזור', width: 'half' },
+    {
+      name: 'plan',
+      label: 'מסלול שמעניין אתכם',
+      type: 'select',
+      options: plans.map((p) => ({ value: p.slug, label: p.name })),
+      placeholder: 'עוד לא החלטנו',
+    },
+    { name: 'message', label: 'ספרו לנו על הפרויקט (לא חובה)', type: 'textarea', rows: 3 },
+  ];
   return (
-    <form action={action} className="relative space-y-4" noValidate>
-      <Honeypot />
-      <div className="grid gap-4 sm:grid-cols-3">
-        <TextField name="full_name" label="שם מלא" errors={state.errors} autoComplete="name" />
-        <TextField name="phone" label="טלפון" type="tel" errors={state.errors} autoComplete="tel" dir="ltr" />
-        <TextField name="email" label="אימייל" type="email" errors={state.errors} autoComplete="email" dir="ltr" />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <SelectField name="region" label="אזור בנייה" placeholder="בחרו אזור" options={REGION_OPTIONS} errors={state.errors} />
-        <SelectField
-          name="plan"
-          label="מסלול שמעניין אתכם"
-          placeholder="עוד לא החלטנו"
-          options={plans.map((p) => ({ value: p.slug, label: p.name }))}
-          errors={state.errors}
-          required={false}
-        />
-      </div>
-      <div>
-        <label htmlFor="f-message" className={labelClass}>
-          ספרו לנו על הפרויקט (לא חובה)
-        </label>
-        <textarea id="f-message" name="message" rows={3} className={inputClass} />
-      </div>
-      <PrivacyCheckbox errors={state.errors} />
-      <FormMessage message={state.message} />
-      <SubmitButton>השאירו פרטים ונחזור אליכם</SubmitButton>
-    </form>
+    <LeadForm
+      type="service_plan"
+      fields={fields}
+      submitLabel="השאירו פרטים ונחזור אליכם"
+      successRedirect="/thank-you/"
+      action={servicePlanLeadAction}
+      context={{ form: 'membership-tiers' }}
+      idPrefix="plan-lead"
+    />
   );
 }

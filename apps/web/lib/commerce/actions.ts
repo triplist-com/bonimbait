@@ -1,146 +1,58 @@
 'use server';
 
 /**
- * Server actions for the benefits shop and service plans: lead forms
- * ("השאירו פרטים"), add-to-cart / buy-now and cart edits.
- *
- * Leads are inserted as the visitor (RLS allows public inserts; the
- * leads_guard trigger resets workflow fields). Lead notifications are the
- * Leads workstream's concern (hook on the leads table).
+ * Server actions for the benefits shop and service plans: lead-form adapters
+ * over the shared Leads pipeline, add-to-cart / buy-now and cart edits.
  */
 import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
-import { createLead } from '@/lib/db/leads';
-import { getRegionIdBySlug } from '@/lib/db/account';
 import { getPurchasablePlanPrice } from '@/lib/db/commerce';
 import { unwrapMaybe } from '@/lib/db/client';
+import { submitLeadAction } from '@/lib/leads/actions';
+import type { LeadFormState } from '@/lib/leads/types';
 import { addToCart, isUuid, removeFromCart, setQuantity } from './cart';
 import { readCart, writeCart } from './cart-server';
-import { type FieldErrors, type FormState, asStage, bool, isMemberRegionSlug, str, validateContact } from './forms';
+import { bool, str } from './forms';
 
-/** Where the live site sends product leads (page owned by the Leads workstream). */
-const PRODUCT_LEAD_THANK_YOU = '/תודה-על-השארת-פרטים-מוצר/';
-/** Generic lead thank-you page (/תודה-על-השארת-פרטים/ 301s here on live). */
-const LEAD_THANK_YOU = '/thank-you/';
+// Lead forms (shared pipeline: validation, spam guard, notification) ---------------
 
-const UNAVAILABLE: FormState = {
-  ok: false,
-  message: 'השליחה אינה זמינה כרגע. נסו שוב מאוחר יותר או צרו קשר בטלפון.',
-  errors: {},
-};
-
-function invalid(errors: FieldErrors): FormState {
-  return { ok: false, message: 'נא לתקן את השדות המסומנים.', errors };
+/**
+ * Product "חזרו אליי" form -> `benefit` lead. The live RINNAI form has an
+ * optional "urgent" checkbox the shared benefit schema doesn't know, so it is
+ * carried as context (payload.urgent).
+ */
+export async function productLeadAction(prev: LeadFormState, form: FormData): Promise<LeadFormState> {
+  const fd = new FormData();
+  form.forEach((value, key) => {
+    if (key !== 'urgent') fd.append(key, value);
+  });
+  if (bool(form, 'urgent')) fd.set('_ctx_urgent', 'true');
+  return submitLeadAction(prev, fd);
 }
 
-function sourceUrl(): string | null {
-  return headers().get('referer');
-}
-
-function utmFrom(form: FormData) {
-  const utm: Record<string, string> = {};
-  for (const key of ['utm_source', 'utm_medium', 'utm_campaign']) {
-    const v = str(form, key, 200);
-    if (v) utm[key] = v;
-  }
-  return utm;
-}
-
-/** Honeypot: bots fill the hidden "website" field. Pretend success. */
-function isBot(form: FormData): boolean {
-  return str(form, 'website').length > 0;
-}
-
-// Product lead ("מעוניינים במוצר? השאירו פרטים ונחזור אליכם") --------------------
-
-export async function submitProductLead(_prev: FormState, form: FormData): Promise<FormState> {
-  if (isBot(form)) redirect(encodeURI(PRODUCT_LEAD_THANK_YOU));
-  if (!isSupabaseConfigured()) return UNAVAILABLE;
-
-  const errors: FieldErrors = {};
-  const { fullName, email, phone } = validateContact(form, errors);
-  const region = str(form, 'region', 60);
-  const stage = asStage(str(form, 'stage', 30));
-  const productId = str(form, 'product_id', 60);
-  if (!isMemberRegionSlug(region)) errors.region = 'נא לבחור מיקום פרויקט';
-  if (!stage) errors.stage = 'נא לבחור שלב בניה';
-  if (!bool(form, 'privacy')) errors.privacy = 'יש לאשר את מדיניות הפרטיות';
-  if (!isUuid(productId)) errors.form = 'מוצר לא נמצא';
-  if (Object.keys(errors).length) return invalid(errors);
-
-  const db = createClient();
-  const product = unwrapMaybe(
-    await db.from('products').select('id, name, slug').eq('id', productId).eq('status', 'published').maybeSingle(),
-  );
-  if (!product) return { ok: false, message: 'המוצר אינו זמין עוד.', errors: {} };
-
-  try {
-    await createLead(db, {
-      type: 'benefit',
-      fullName,
-      email,
-      phone,
-      regionId: await getRegionIdBySlug(db, region),
-      constructionStage: stage,
-      productId: product.id,
-      sourceUrl: sourceUrl(),
-      utm: utmFrom(form),
-      payload: {
-        form: 'product',
-        product_name: product.name,
-        product_slug: product.slug,
-        urgent: bool(form, 'urgent'),
-        privacy_consent: true,
-      },
-    });
-  } catch (err) {
-    console.error('[commerce] product lead insert failed', err);
-    return UNAVAILABLE;
-  }
-  redirect(encodeURI(PRODUCT_LEAD_THANK_YOU));
-}
-
-// Service-plan lead (/membership-tiers/ "השאירו פרטים") -------------------------------
-
-export async function submitServicePlanLead(_prev: FormState, form: FormData): Promise<FormState> {
-  if (isBot(form)) redirect(LEAD_THANK_YOU);
-  if (!isSupabaseConfigured()) return UNAVAILABLE;
-
-  const errors: FieldErrors = {};
-  const { fullName, email, phone } = validateContact(form, errors);
-  const region = str(form, 'region', 60);
+/**
+ * /membership-tiers/ "leave details" -> `service_plan` lead. The optional plan
+ * select sends a slug; it is resolved to the plan id (never trusted as an id).
+ */
+export async function servicePlanLeadAction(prev: LeadFormState, form: FormData): Promise<LeadFormState> {
+  const fd = new FormData();
+  form.forEach((value, key) => {
+    if (key !== 'plan' && key !== '_service_plan_id') fd.append(key, value);
+  });
   const planSlug = str(form, 'plan', 60);
-  const message = str(form, 'message', 2000);
-  if (!isMemberRegionSlug(region)) errors.region = 'נא לבחור אזור בנייה';
-  if (!bool(form, 'privacy')) errors.privacy = 'יש לאשר את מדיניות הפרטיות';
-  if (Object.keys(errors).length) return invalid(errors);
-
-  const db = createClient();
-  const plan = planSlug
-    ? unwrapMaybe(await db.from('service_plans').select('id, name').eq('slug', planSlug).maybeSingle())
-    : null;
-
-  try {
-    await createLead(db, {
-      type: 'service_plan',
-      fullName,
-      email,
-      phone,
-      message: message || null,
-      regionId: await getRegionIdBySlug(db, region),
-      servicePlanId: plan?.id ?? null,
-      sourceUrl: sourceUrl(),
-      utm: utmFrom(form),
-      payload: { form: 'membership-tiers', plan_slug: planSlug || null, plan_name: plan?.name ?? null, privacy_consent: true },
-    });
-  } catch (err) {
-    console.error('[commerce] service plan lead insert failed', err);
-    return UNAVAILABLE;
+  if (planSlug && isSupabaseConfigured()) {
+    const plan = unwrapMaybe(
+      await createClient().from('service_plans').select('id, name').eq('slug', planSlug).eq('is_active', true).maybeSingle(),
+    );
+    if (plan) {
+      fd.set('_service_plan_id', plan.id);
+      fd.set('_ctx_plan_name', plan.name);
+    }
   }
-  redirect(LEAD_THANK_YOU);
+  return submitLeadAction(prev, fd);
 }
+
 
 // Cart --------------------------------------------------------------------------------
 

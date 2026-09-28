@@ -21,7 +21,7 @@ import {
   teamPhotoUrl,
   testimonialMedia,
 } from '@/lib/commerce/membership-content';
-import ConsultationLink from '@/components/commerce/ConsultationLink';
+import ConsultationCTA from '@/components/leads/ConsultationCTA';
 import PlanLeadForm from '@/components/commerce/PlanLeadForm';
 import StructuredData from '@/components/StructuredData';
 import { absoluteUrl } from '@/lib/site';
@@ -91,9 +91,7 @@ export default async function MembershipTiersPage() {
             </h1>
             <p className="mt-4 text-lg font-medium tracking-wide text-gray-500">{HERO.eyebrow}</p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <ConsultationLink className={btnPrimary} campaign="hero">
-                {HERO.cta}
-              </ConsultationLink>
+              <ConsultationCTA variant="button" source="membership-tiers" label={HERO.cta} />
               <a href="#plans" className={btnGhost}>
                 לתוכניות הניהול
               </a>
@@ -231,9 +229,7 @@ export default async function MembershipTiersPage() {
             <div className="mt-6 rounded-2xl bg-white p-6 shadow-card">
               <p className="font-bold text-gray-900">לא מצאתם תשובה? דברו איתנו</p>
               <p className="mt-1 text-gray-600">נחזור אליכם עם כל המידע, נמחיש את הצורך, נציג את התוצרים ונשקלל את הערך.</p>
-              <ConsultationLink className={`${btnPrimary} mt-4`} campaign="faq">
-                קביעת ייעוץ חינם
-              </ConsultationLink>
+              <ConsultationCTA variant="button" source="membership-tiers" label="קביעת ייעוץ חינם" className="mt-4" />
             </div>
           </div>
           <div className="space-y-8">
@@ -272,9 +268,7 @@ export default async function MembershipTiersPage() {
             </p>
             <PlanLeadForm plans={plans.map((p) => ({ slug: p.slug, name: p.name }))} />
             <div className="mt-6 border-t border-gray-100 pt-6 text-center">
-              <ConsultationLink className={btnGhost} campaign="footer">
-                קביעת פגישת ייעוץ ביומן
-              </ConsultationLink>
+              <ConsultationCTA variant="button" source="membership-tiers" label="קביעת פגישת ייעוץ ביומן" />
             </div>
           </div>
         </div>
@@ -324,9 +318,7 @@ function PlanCard({ plan }: { plan: ServicePlanWithPrices }) {
         <p className="text-sm text-gray-500">{plan.prices.some((p) => !p.vat_included) ? 'לא כולל מע״מ' : 'כולל מע״מ'}</p>
       </div>
       <div className="mt-6 flex flex-col gap-3 pt-2">
-        <ConsultationLink className={featured ? btnPrimary : btnGhost} campaign={plan.slug}>
-          {plan.cta_label ?? 'קביעת פגישת ייעוץ'}
-        </ConsultationLink>
+        <ConsultationCTA variant="button" source="membership-tiers" label={plan.cta_label ?? 'קביעת פגישת ייעוץ'} />
         <a href="#leave-details" className="text-center text-sm font-medium text-primary underline-offset-4 hover:underline">
           השאירו פרטים ונחזור אליכם
         </a>
@@ -467,12 +459,7 @@ function CtaBand({ title, text }: { title: React.ReactNode; text: string }) {
           <h2 className="text-2xl font-bold sm:text-3xl">{title}</h2>
           <p className="mt-2 text-primary-100">{text}</p>
         </div>
-        <ConsultationLink
-          className="inline-flex items-center justify-center rounded-xl bg-white px-6 py-3 font-semibold text-primary-800 transition hover:bg-primary-50"
-          campaign="cta-band"
-        >
-          קביעת פגישת ייעוץ
-        </ConsultationLink>
+        <ConsultationCTA variant="button" source="membership-tiers" label="קביעת פגישת ייעוץ" />
       </div>
     </section>
   );
