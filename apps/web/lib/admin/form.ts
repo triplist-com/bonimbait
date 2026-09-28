@@ -3,9 +3,17 @@
  */
 import { ActionError } from './errors';
 
+/**
+ * Browsers submit form values with CRLF line breaks (HTML form encoding);
+ * store LF, as the migrated content does.
+ */
+function lf(value: string): string {
+  return value.replace(/\r\n?/g, '\n');
+}
+
 export function str(fd: FormData, name: string, max = 10_000): string {
   const v = fd.get(name);
-  return typeof v === 'string' ? v.trim().slice(0, max) : '';
+  return typeof v === 'string' ? lf(v).trim().slice(0, max) : '';
 }
 
 /** Trimmed string or null when empty. */
@@ -17,7 +25,7 @@ export function optStr(fd: FormData, name: string, max = 10_000): string | null 
 /** Raw (untrimmed) HTML field. */
 export function html(fd: FormData, name: string): string {
   const v = fd.get(name);
-  return typeof v === 'string' ? v : '';
+  return typeof v === 'string' ? lf(v) : '';
 }
 
 export function bool(fd: FormData, name: string): boolean {

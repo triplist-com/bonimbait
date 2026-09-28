@@ -58,11 +58,22 @@ export type OwnerContactPatch = Partial<
 
 const SUMMARY_COLUMNS = 'id, slug, name, tagline, logo_url, city, primary_specialty_id, is_featured, sort_order';
 
+/**
+ * Gallery images, flat. Accepts both stored shapes: [{url, alt}] (portal and
+ * admin) and the migrated WordPress albums [{name, images: [url, ...]}].
+ */
 export function parseGallery(value: Json): GalleryImage[] {
   if (!Array.isArray(value)) return [];
-  return value.flatMap((item) => {
-    if (item && typeof item === 'object' && !Array.isArray(item) && typeof item.url === 'string') {
+  return value.flatMap((item): GalleryImage[] => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
+    if (typeof item.url === 'string') {
       return [{ url: item.url, alt: typeof item.alt === 'string' ? item.alt : null }];
+    }
+    if (Array.isArray(item.images)) {
+      const album = typeof item.name === 'string' && item.name ? item.name : null;
+      return item.images.flatMap((img): GalleryImage[] =>
+        typeof img === 'string' ? [{ url: img, alt: album }] : [],
+      );
     }
     return [];
   });

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { getBusinessById, getBusinessContacts, listRegions, listSpecialties, parseGallery } from '@/lib/db/businesses';
+import { getBusinessById, getBusinessContacts, listRegions, listSpecialties } from '@/lib/db/businesses';
 import { saveBusinessAction } from '@/lib/admin/actions/directory';
 import { BUSINESS_STATUS } from '@/lib/admin/labels';
 import PageHeader from '@/components/admin/PageHeader';
@@ -57,7 +57,7 @@ export default async function EditBusinessPage({ params }: { params: { id: strin
           specialtyIds: business?.specialties.map((s) => s.id) ?? [],
           regionIds: business?.regions.map((r) => r.id) ?? [],
           ownerEmail: owner?.email ?? null,
-          gallery: business ? parseGallery(business.gallery) : [],
+          gallery: business?.gallery ?? [],
         }}
       />
     </div>

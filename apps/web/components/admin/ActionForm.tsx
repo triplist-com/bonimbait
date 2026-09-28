@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, useTransition, type FormEvent, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ActionResult } from '@/lib/admin/guard';
 
@@ -32,6 +32,13 @@ export default function ActionForm({
   const [result, setResult] = useState<ActionResult<unknown> | null>(null);
   const router = useRouter();
 
+  // Success toasts fade after a few seconds; errors stay until the next submit.
+  useEffect(() => {
+    if (!result?.ok) return;
+    const t = setTimeout(() => setResult(null), 6000);
+    return () => clearTimeout(t);
+  }, [result]);
+
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
@@ -55,7 +62,8 @@ export default function ActionForm({
       <fieldset disabled={pending} className="contents">
         {children}
       </fieldset>
-      <div aria-live="polite" className="mt-3 empty:hidden">
+      {/* Fixed toast: long edit forms put the submit button far from the form's end. */}
+      <div aria-live="polite" className="pointer-events-none fixed bottom-4 end-4 z-50 max-w-md empty:hidden [&>p]:pointer-events-auto [&>p]:shadow-lg">
         {result && !result.ok && (
           <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
             {result.error}

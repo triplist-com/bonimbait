@@ -14,13 +14,27 @@ import { getLeadById, updateLead } from '@/lib/db/leads';
 import type { BusinessStatus, Json, LeadRouting, TablesInsert } from '@/lib/db/types';
 import type { DbClient } from '@/lib/db/client';
 import { ActionError, adminAction } from '../guard';
-import { bool, ids, int, jsonField, list, optStr, requireField, str, uuidOrNull } from '../form';
+import { bool, html, ids, int, jsonField, list, optStr, requireField, str, uuidOrNull } from '../form';
 import { applySlugRedirect, removeRedirectsFrom } from '../redirects';
 import { revalidateBusiness, revalidateDirectory } from '../revalidate';
 import { cleanSlug, publicPath, resolveSlug, slugChangeNeedsRedirect } from '../slug';
 import { youtubeIdFrom } from '../editor/codec';
 
 const BUSINESS_STATUSES: BusinessStatus[] = ['draft', 'pending', 'published', 'suspended'];
+
+/** Gallery JSON from the form: flat [{url, alt}] or migrated groups [{name, images: [url]}]. */
+function cleanGallery(value: unknown): Json {
+  if (!Array.isArray(value)) return [];
+  const url = (u: unknown) => typeof u === 'string' && /^https?:\/\//.test(u);
+  return value.flatMap((item): Json[] => {
+    if (!item || typeof item !== 'object') return [];
+    const g = item as { url?: unknown; alt?: unknown; name?: unknown; images?: unknown };
+    if (Array.isArray(g.images)) {
+      return [{ name: typeof g.name === 'string' ? g.name : '', images: g.images.filter(url) as string[] }];
+    }
+    return url(g.url) ? [{ url: g.url as string, alt: typeof g.alt === 'string' && g.alt ? g.alt : null }] : [];
+  });
+}
 
 function socialLinks(fd: FormData): Json {
   const out: Record<string, string> = {};
@@ -60,7 +74,7 @@ export const saveBusinessAction = adminAction('editor', async ({ db }, fd: FormD
     ownerId = owner.id;
   }
 
-  const gallery = jsonField<Array<{ url: string; alt?: string | null }>>(fd, 'gallery', []).filter((g) => g && typeof g.url === 'string' && g.url);
+  const gallery = cleanGallery(jsonField<unknown>(fd, 'gallery', []));
   const youtube = list(fd, 'youtube_ids').map((v) => youtubeIdFrom(v)).filter((v): v is string => Boolean(v));
   const primarySpecialty = uuidOrNull(optStr(fd, 'primary_specialty_id'));
   const specialties = ids(fd, 'specialty_ids');
@@ -70,14 +84,14 @@ export const saveBusinessAction = adminAction('editor', async ({ db }, fd: FormD
     name,
     slug,
     tagline: optStr(fd, 'tagline', 300),
-    description_html: optStr(fd, 'description_html', 100_000),
+    description_html: html(fd, 'description_html') || null,
     primary_specialty_id: primarySpecialty,
     city: optStr(fd, 'city', 200),
     address: optStr(fd, 'address', 300),
     website: optStr(fd, 'website', 500),
     logo_url: optStr(fd, 'logo_url', 2000),
     cover_image_url: optStr(fd, 'cover_image_url', 2000),
-    gallery: gallery.map((g) => ({ url: g.url, alt: g.alt ?? null })) as Json,
+    gallery,
     social_links: socialLinks(fd),
     extra_links: list(fd, 'extra_links') as Json,
     youtube_ids: youtube,

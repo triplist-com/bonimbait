@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { EditorContent, useEditor, useEditorState, type Editor } from '@tiptap/react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import { buildExtensions, isAllowedHref } from '@/lib/admin/editor/extensions';
 import {
   EMBED_PLACEHOLDERS,
@@ -106,7 +106,9 @@ export default function RichTextEditor({
   minHeight?: number;
   label?: string;
 }) {
-  const hidden = useRef<HTMLInputElement>(null);
+  // Controlled: for type="hidden", React re-applies defaultValue on every
+  // render, which would clobber a value written through a ref.
+  const [stored, setStored] = useState(defaultValue ?? '');
   const [mode, setMode] = useState<'visual' | 'html'>('visual');
   const [source, setSource] = useState(defaultValue ?? '');
   const [picker, setPicker] = useState(false);
@@ -114,13 +116,14 @@ export default function RichTextEditor({
 
   const sync = (editor: Editor) => {
     const html = fromEditorHtml(editor.getHTML(), document);
-    if (hidden.current) hidden.current.value = html;
+    setStored(html);
     return html;
   };
 
   const editor = useEditor({
     extensions,
     immediatelyRender: false,
+    shouldRerenderOnTransaction: true,
     // Initial content (not setContent in onCreate): loading must not be undoable.
     content: typeof document === 'undefined' ? '' : toEditorHtml(defaultValue ?? '', document),
     editorProps: {
@@ -138,9 +141,9 @@ export default function RichTextEditor({
     },
   });
 
-  const state = useEditorState({
-    editor,
-    selector: ({ editor: e }) =>
+  // Re-rendered on every transaction (shouldRerenderOnTransaction), so the
+  // toolbar state is simply derived here.
+  const state = ((e: Editor | null) =>
       e
         ? {
             block: e.isActive('heading', { level: 2 })
@@ -165,13 +168,8 @@ export default function RichTextEditor({
             canUndo: e.can().undo(),
             canRedo: e.can().redo(),
           }
-        : null,
-  });
+        : null)(editor);
 
-  // Keep the hidden input correct even if the form is submitted before any edit.
-  useEffect(() => {
-    if (hidden.current && !editor) hidden.current.value = defaultValue ?? '';
-  }, [editor, defaultValue]);
 
   function switchMode(next: 'visual' | 'html') {
     if (!editor || next === mode) return;
@@ -259,7 +257,7 @@ export default function RichTextEditor({
 
   return (
     <div className="rounded-xl border border-gray-300 bg-white shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary-100">
-      <input ref={hidden} type="hidden" name={name} defaultValue={defaultValue} />
+      <input type="hidden" name={name} value={stored} readOnly />
       <div className="sticky top-0 z-10 flex flex-wrap items-center gap-0.5 rounded-t-xl border-b border-gray-200 bg-gray-50/95 px-2 py-1.5 backdrop-blur" role="toolbar" aria-label="עיצוב טקסט">
         {mode === 'visual' && e && s ? (
           <>
@@ -410,7 +408,7 @@ export default function RichTextEditor({
           value={source}
           onChange={(ev) => {
             setSource(ev.target.value);
-            if (hidden.current) hidden.current.value = ev.target.value;
+            setStored(ev.target.value);
           }}
           className="block w-full rounded-b-xl border-0 p-3 font-mono text-xs leading-5 focus:outline-none"
           style={{ minHeight }}

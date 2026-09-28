@@ -15,7 +15,8 @@ export type BusinessFormData = {
   specialtyIds: string[];
   regionIds: string[];
   ownerEmail: string | null;
-  gallery: Array<{ url: string; alt?: string | null }>;
+  /** Stored gallery JSON (flat or grouped). */
+  gallery: unknown;
 };
 
 function socialToText(value: unknown): string {
