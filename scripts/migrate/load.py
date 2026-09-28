@@ -308,7 +308,9 @@ def load_pages(ctx: Ctx) -> None:
         if p.get("parent") and p["parent"] not in by_id:
             ctx.orphan("page_parent_not_found", {"page": p["id"], "parent": p["parent"]})
         upsert(conn, "pages", {
-            "legacy_wp_id": p["id"], "slug": full_path(p), "title": html_to_text(p["title"]),
+            # Synthetic pages from reconcile_sitemaps.py (e.g. /services/) have no WP id.
+            "legacy_wp_id": p["id"], "slug": full_path(p),
+            "title": html_to_text(p["title"]) or full_path(p),
             "content_html": ctx.clean(p.get("content_html")),
             "excerpt": text_excerpt(p.get("excerpt_html"), 500),
             "featured_image": ctx.rw.maybe(fi.get("url")), "featured_image_alt": none_if_blank(fi.get("alt")),
@@ -320,9 +322,11 @@ def load_pages(ctx: Ctx) -> None:
             "sort_order": p.get("menu_order") or 0,
             "status": "published" if p.get("status") == "publish" else "draft",
             "published_at": utc(p.get("date_gmt") or p.get("date")),
-        }, "legacy_wp_id")
+        }, "legacy_wp_id" if p["id"] is not None else "slug")
     ids = id_map(conn, "pages")
     for p in pages:
+        if p["id"] is None:
+            continue
         conn.execute("update public.pages set parent_id = %s where legacy_wp_id = %s",
                      (ids.get(p.get("parent")) if p.get("parent") else None, p["id"]))
     ctx.count("pages", len(pages))
