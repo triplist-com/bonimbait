@@ -47,8 +47,10 @@ Style it with prose/typography classes. Note:
    - `https://(www.)bonimbayit.co.il/<path>` becomes the root-relative `/<path>`, keeping the query and fragment. The percent-encoding is left as-is, and it resolves the same way.
    - `javascript:` hrefs are removed.
    - Link *text* that shows an old absolute URL is left alone (about 26 posts).
-8. **Images:**
-   - `bonimbayit.co.il/wp-content/uploads/...` in `img src` / `a href` is rewritten to `MEDIA_BASE_URL/<key>` once that file is in Storage (see below).
+8. **Uploaded files (images, PDFs, docs, videos):**
+   - `bonimbayit.co.il/wp-content/uploads/...` in `img`/`video`/`source` `src` or `a href` is rewritten to `MEDIA_BASE_URL/<key>` once that file is in Storage (see below). This covers any file type.
+   - A file that is dead on the live site too (404, or a 301 to the homepage) and has no replacement is dropped: the `<img>`/`<video>` is removed, and an `<a>` is unwrapped so its text stays.
+   - Link text that is just the old upload URL (e.g. a `<video>` fallback link) is replaced by the file name.
    - `http://*.blogspot.com` is upgraded to `https://`.
    - Other external images (blogspot, googleusercontent) stay hot-linked.
 9. **Iframes on our own host** (WordPress oEmbed `/embed/#?secret=`) are removed. The `<blockquote class="wp-embedded-content">` link next to each one stays.
@@ -86,8 +88,14 @@ Style it with prose/typography classes. Note:
   - Membership deletes are scoped to the taxonomies the loader has data for. Without `product_terms.json`, it only manages `product_cat` links and never removes stage links.
   - The loader rewrites product images to Storage. The Commerce seed still has old-host image URLs, so on a fresh DB they persist until `load.py` runs. `verify_load.py` fails while any remain.
 - **Media referenced from app code** (e.g. the `/membership-tiers/` team photos and testimonial videos) is listed in `static_media.json`. It's migrated with `--only images --images static` (also included in `all`), and the app builds its URLs with `mediaUrl()` from `apps/web/lib/media.ts`.
-- **Images:**
-  - Only `wp-content/uploads` images are migrated. Downloads run at concurrency 3 with retries and are cached under `data/migration/raw/images/`. They're uploaded to the Storage bucket `media` at `uploads/YYYY/MM/<file>`.
+- **Files (images and documents):**
+  - Every `wp-content/uploads` file linked from content is migrated, whatever its type: images, pdf, doc(x), xls(x), zip, mp4 and so on. Downloads run at concurrency 3 with retries and are cached under `data/migration/raw/images/`. They're uploaded to the Storage bucket `media` at `uploads/YYYY/MM/<file>`, with the content type taken from the extension.
   - Storage only accepts ASCII keys, so a non-ASCII filename becomes `<sha1-10>-<ascii remnant>.<ext>`.
-  - `raw/images/manifest.json` maps each live URL to its key and status. Only `uploaded` entries are rewritten, so you can re-run the loader at any time.
+  - The bucket has no MIME or size restriction of its own. The local stack's global limit is 50 MiB (`supabase/config.toml`); the largest migrated file is about 2.9 MB.
+  - Redirects are never followed. The live site answers a deleted upload with a 301 to the homepage, and following it used to store homepage HTML under an image or PDF key.
+    - Such files are marked `gone`.
+    - Cached files that turn out to be HTML are re-checked, and their bad Storage objects are deleted.
+  - For a dead file, the loader looks in the WP media library (`media.json`) for a re-upload with the same name, ignoring the folder and `-N` / `-WxH` suffixes. If one exists, it's used (`replaced`); e.g. `2018/06/gant-bonimbayit.pdf` → `2023/11/gant-bonimbayit-1.pdf`.
+  - `raw/images/manifest.json` maps each live URL to its key and status (`uploaded` / `replaced` / `404` / `gone` / `error`). Only `uploaded` and `replaced` entries are rewritten, and dead ones are dropped, so you can re-run the loader at any time.
+  - `verify_load.py` fails if any text/json column of a content table still contains `bonimbayit.co.il/wp-content`. It also lists the files that are dead on the live site.
   - For production, set `MEDIA_BASE_URL=https://<ref>.supabase.co/storage/v1/object/public/media`, run `--only images --images all` against the prod Storage, then run `load.py` again.

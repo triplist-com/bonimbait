@@ -428,10 +428,10 @@ def load_businesses(ctx: Ctx) -> None:
             for node in (block.get("@graph") or []) if isinstance(block, dict) else []:
                 if node.get("@type") == "WebPage" and node.get("datePublished"):
                     published = utc(node["datePublished"])
-        gallery = [{"name": g.get("name") or "", "images": [ctx.rw(u) for u in g.get("images") or []]}
+        gallery = [{"name": g.get("name") or "", "images": ctx.rw.many(g.get("images"))}
                    for g in b.get("galleries") or []]
         if not gallery and b.get("gallery_image_urls"):
-            gallery = [{"name": "", "images": [ctx.rw(u) for u in b["gallery_image_urls"]]}]
+            gallery = [{"name": "", "images": ctx.rw.many(b["gallery_image_urls"])}]
         social = b.get("social_links") or {}
         if isinstance(social, list):
             social = {f"link{i + 1}": u for i, u in enumerate(social)}
@@ -494,7 +494,7 @@ def load_businesses(ctx: Ctx) -> None:
                 "rating": conv(r.get("rating")) if r.get("rating") is not None else 0,
                 **subs,
                 "body": none_if_blank(r.get("text")),
-                "images": [ctx.rw(u) for u in r.get("images") or []],
+                "images": ctx.rw.many(r.get("images")),
                 "status": "approved", "source": "migrated",
                 "published_at": utc(r.get("date")),
                 "created_at": utc(r.get("date")) or datetime.now(timezone.utc),
@@ -564,7 +564,7 @@ def load_products(ctx: Ctx) -> None:
     n_links = 0
 
     for i, p in enumerate(data["products"]):
-        imgs = [{"url": ctx.rw(im["url"]), "alt": im.get("alt") or ""} for im in p.get("images") or []]
+        imgs = [{"url": u, "alt": im.get("alt") or ""} for im in p.get("images") or [] for u in [ctx.rw(im["url"])] if u]
         price = p.get("regular_price") or p.get("price") or 0
         sale = p.get("sale_price") if p.get("on_sale") else None
         pid = upsert(conn, "products", {
@@ -604,7 +604,7 @@ def load_products(ctx: Ctx) -> None:
 # images
 # ---------------------------------------------------------------------------
 def collect_image_urls(ctx: Ctx, scopes: set[str]) -> list[str]:
-    """Ordered: featured (posts) -> logos -> everything else."""
+    """Uploads to migrate, ordered: featured (posts) -> logos -> everything else (incl. documents)."""
     from sanitize import UPLOADS_RE  # noqa: F401
     out: list[str] = []
     posts = ctx.data("posts")
@@ -641,7 +641,8 @@ def collect_image_urls(ctx: Ctx, scopes: set[str]) -> list[str]:
             cleaned = sanitize_html(h)  # identity rewriter: leaves live URLs
             for m in re.finditer(r'(?:src|href)="([^"]+)"', cleaned):
                 u = m.group(1).replace("&amp;", "&")
-                if media.is_upload(u) and re.search(r"\.(?:jpe?g|png|gif|webp|avif|svg)$", urlsplit(u).path, re.I):
+                # Any uploaded FILE (images, pdf, doc(x), xls(x), zip, mp4, ...): they all die at cutover.
+                if media.is_upload(u) and re.search(r"\.[A-Za-z0-9]{2,5}$", urlsplit(u).path):
                     out.append(u)
     return [u for u in out if u and media.is_upload(u)]
 
@@ -707,6 +708,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     rep = ctx.report
     rep["sanitize"] = ctx.sanitize_stats
     rep["image_urls"] = {"rewritten_to_storage": ctx.rw.rewritten, "still_live": ctx.rw.pending,
+                         "dropped_dead_on_live": ctx.rw.dropped,
                          "unique_seen": len(ctx.rw.seen)}
     rep["entities"] = wanted
     rep["dry_run"] = args.dry_run

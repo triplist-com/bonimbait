@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import re
 from typing import Callable, Optional
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import unquote, urlsplit, urlunsplit
 
 from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 
@@ -70,7 +70,7 @@ SVG_TAGS = {"svg", "path", "g", "circle", "rect", "line", "polyline", "polygon",
             "defs", "use", "clippath", "lineargradient", "radialgradient", "stop", "pattern",
             "mask", "symbol", "text", "tspan", "image", "title", "desc"}
 
-UrlRewriter = Callable[[str], str]
+UrlRewriter = Callable[[str], Optional[str]]  # None = file is dead: drop the reference
 
 
 def rewrite_internal_link(url: str) -> str:
@@ -184,6 +184,8 @@ def sanitize_html(
 
     # 6. Attribute whitelist + URL rewrites.
     for el in soup.find_all(True):
+        if getattr(el, "decomposed", False):  # inside an element removed earlier in this pass
+            continue
         name = el.name.lower()
         if name in SVG_TAGS and (name == "svg" or el.find_parent("svg") is not None):
             for a in list(el.attrs):
@@ -216,7 +218,17 @@ def sanitize_html(
                 el["data-bb-action"] = "lead-popup"
                 bump("popup_links")
             elif UPLOADS_RE.match(href):
-                el["href"] = rw(href)
+                text = el.get_text().strip()
+                if text and unquote(text) == unquote(href):
+                    # Bare-URL link text (e.g. a <video> fallback): show the file name
+                    # instead of the old host, which dies at cutover.
+                    el.string = unquote(urlsplit(href).path).rsplit("/", 1)[-1]
+                new = rw(href)
+                if new is None:  # dead on the live site too: keep the link text only
+                    el.unwrap()
+                    bump("dead_file_links")
+                    continue
+                el["href"] = new
             else:
                 new = rewrite_internal_link(href)
                 if new != href:
@@ -225,7 +237,12 @@ def sanitize_html(
         elif name in ("img", "video", "source", "audio") and el.get("src"):
             src = el["src"].strip()
             if UPLOADS_RE.match(src):
-                el["src"] = rw(src)
+                new = rw(src)
+                if new is None:  # dead on the live site too (renders broken there)
+                    el.decompose()
+                    bump("dead_media")
+                    continue
+                el["src"] = new
             elif src.startswith("http://") and "blogspot.com" in src:
                 el["src"] = "https://" + src[len("http://"):]
         elif name == "iframe" and el.get("src"):

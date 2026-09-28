@@ -101,6 +101,34 @@ def db_counts(conn) -> dict[str, int]:
     return out
 
 
+# Every table holding migrated/seeded content. Each text/varchar/jsonb/array
+# column is scanned for the old host's wp-content (uploads, plugins, themes).
+CONTENT_TABLES = [
+    "authors", "post_categories", "post_tags", "posts", "pages", "video_pages",
+    "specialties", "businesses", "business_contacts", "reviews",
+    "product_categories", "products", "service_plans", "service_plan_prices",
+    "redirects", "whatsapp_groups", "regions",
+]
+OLD_HOST_PATTERN = "%bonimbayit.co.il/wp-content%"
+
+
+def old_host_references(conn) -> dict[str, int]:
+    """{'table.column': rows} for every content column still pointing at the old host's wp-content."""
+    cols = conn.execute(
+        "select table_name, column_name, data_type from information_schema.columns "
+        "where table_schema = 'public' and table_name = any(%s) "
+        "and data_type in ('text', 'character varying', 'jsonb', 'json', 'ARRAY')",
+        (CONTENT_TABLES,)).fetchall()
+    out = {}
+    for table, col, dtype in cols:
+        expr = f'"{col}"::text' if dtype in ("jsonb", "json", "ARRAY") else f'"{col}"'
+        n = conn.execute(f'select count(*) from public."{table}" where {expr} like %s',
+                         (OLD_HOST_PATTERN,)).fetchone()[0]
+        if n:
+            out[f"{table}.{col}"] = n
+    return out
+
+
 DB_ORPHAN_QUERIES = {
     "posts_without_category": "select slug from public.posts where legacy_wp_id is not null and not exists "
                               "(select 1 from public.post_category_assignments a where a.post_id = posts.id)",
@@ -135,21 +163,19 @@ def main() -> int:
     with psycopg.connect(database_url()) as conn:
         got = db_counts(conn)
         db_orphans = {k: [r[0] for r in conn.execute(q)] for k, q in DB_ORPHAN_QUERIES.items()}
-        live_urls_left = conn.execute(
-            "select (select count(*) from public.posts where content_html ~ 'bonimbayit\\.co\\.il/wp-content/uploads/') +"
-            "(select count(*) from public.posts where featured_image like '%bonimbayit.co.il/wp-content/%') +"
-            "(select count(*) from public.businesses where coalesce(logo_url,'') || coalesce(cover_image_url,'') || gallery::text "
-            "  like '%bonimbayit.co.il/wp-content/%') +"
-            "(select count(*) from public.products where coalesce(featured_image,'') || images::text || "
-            "  coalesce(description_html,'') like '%bonimbayit.co.il/wp-content/uploads/%')").fetchone()[0]
+        old_host_refs = old_host_references(conn)
+        live_urls_left = sum(old_host_refs.values())
 
     manifest = media.load_manifest()
     by_status: dict[str, int] = {}
     for e in manifest.values():
-        k = e["status"] if e["status"] in ("uploaded", "404") else "error"
+        st = e["status"]
+        k = st if st in ("uploaded", "replaced", "404", "gone") else "error"
         by_status[k] = by_status.get(k, 0) + 1
-    img_404 = sorted(u for u, e in manifest.items() if e["status"] == "404")
-    img_err = sorted(u for u, e in manifest.items() if e["status"] not in ("uploaded", "404"))
+    # Dead on the live site (404, or a redirect to the homepage) with no replacement:
+    # the loader drops these references; listed so an editor can re-supply the files.
+    img_404 = sorted(u for u, e in manifest.items() if e["status"] in ("404", "gone"))
+    img_err = sorted(u for u, e in manifest.items() if e["status"] not in ("uploaded", "replaced", "404", "gone"))
 
     rep_path = migration_dir() / "load_report.json"
     loader = json.loads(rep_path.read_text(encoding="utf-8")) if rep_path.exists() else {}
@@ -160,8 +186,9 @@ def main() -> int:
         "all_counts_match": all(v["ok"] for v in entities.values()),
         "loader_orphans": loader.get("orphans", {}),
         "db_orphans": {k: {"count": len(v), "sample": v[:10]} for k, v in db_orphans.items()},
-        "images": {"manifest": by_status, "404_on_live": img_404, "errors": img_err[:20],
+        "images": {"manifest": by_status, "dead_on_live": img_404, "errors": img_err[:20],
                    "rows_still_pointing_at_live_uploads": live_urls_left,
+                   "old_host_references": old_host_refs,
                    "loader_rewrite": loader.get("image_urls")},
         "sanitize": loader.get("sanitize"),
     }
@@ -177,11 +204,13 @@ def main() -> int:
         print("\ndb checks:")
         for k, v in result["db_orphans"].items():
             print(f"  {k}: {v['count']}" + (f"  e.g. {v['sample'][:5]}" if v["count"] else ""))
-        print("\nimages:", by_status, f"| 404 on live: {len(img_404)} | errors: {len(img_err)}"
-              f" | rows still pointing at live uploads: {live_urls_left}")
-        for u in img_404[:20]:
-            print("  404", u)
-    bad = not result["all_counts_match"] or any(db_orphans[k] for k in HARD_ORPHANS)
+        print("\nfiles:", by_status, f"| dead on live (dropped): {len(img_404)} | errors: {len(img_err)}")
+        for u in img_404:
+            print("  dead", u)
+        print(f"old-host wp-content references in content tables: {live_urls_left}",
+              old_host_refs or "")
+    bad = (not result["all_counts_match"] or any(db_orphans[k] for k in HARD_ORPHANS)
+           or bool(old_host_refs))
     return 1 if bad else 0
 
 
