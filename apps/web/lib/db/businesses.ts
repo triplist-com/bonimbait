@@ -292,3 +292,157 @@ export async function saveSpecialty(
 ): Promise<SpecialtyRow> {
   return unwrap(await db.from('specialties').upsert(input).select('*').single());
 }
+
+// Directory listing (Wave 2) ------------------------------------------------------
+
+/** One business as used by the /recommended/ listing (filtering happens in memory). */
+export type DirectoryEntry = Pick<
+  BusinessRow,
+  | 'id'
+  | 'slug'
+  | 'name'
+  | 'tagline'
+  | 'description_html'
+  | 'logo_url'
+  | 'cover_image_url'
+  | 'city'
+  | 'primary_specialty_id'
+  | 'is_featured'
+  | 'sort_order'
+  | 'owner_member_id'
+> & {
+  specialtyIds: string[];
+  regionIds: string[];
+};
+
+const DIRECTORY_COLUMNS =
+  'id, slug, name, tagline, description_html, logo_url, cover_image_url, city, primary_specialty_id, is_featured, sort_order, owner_member_id';
+
+/** PostgREST caps responses (max_rows, 1000 by default): page through join tables. */
+async function selectAllPages<T>(
+  fetchPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+  pageSize = 1000,
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const rows = unwrap(await fetchPage(from, from + pageSize - 1));
+    out.push(...rows);
+    if (rows.length < pageSize) return out;
+  }
+}
+
+/**
+ * Every published business with its specialty and region ids. The directory
+ * has ~160 listings, so the listing filters and sorts in memory. That keeps
+ * multi-filter + rating sort simple, with one round trip per table.
+ */
+export async function listDirectoryEntries(db: DbClient): Promise<DirectoryEntry[]> {
+  const [businesses, specialtyLinks, regionLinks] = await Promise.all([
+    selectAllPages((from, to) =>
+      db.from('businesses').select(DIRECTORY_COLUMNS).eq('status', 'published').order('sort_order').range(from, to),
+    ),
+    selectAllPages((from, to) =>
+      db
+        .from('business_specialties')
+        .select('business_id, specialty_id')
+        .order('business_id')
+        .order('specialty_id')
+        .range(from, to),
+    ),
+    selectAllPages((from, to) =>
+      db.from('business_regions').select('business_id, region_id').order('business_id').order('region_id').range(from, to),
+    ),
+  ]);
+  const specialtiesBy = new Map<string, string[]>();
+  specialtyLinks.forEach((link) => {
+    specialtiesBy.set(link.business_id, [...(specialtiesBy.get(link.business_id) ?? []), link.specialty_id]);
+  });
+  const regionsBy = new Map<string, string[]>();
+  regionLinks.forEach((link) => {
+    regionsBy.set(link.business_id, [...(regionsBy.get(link.business_id) ?? []), link.region_id]);
+  });
+  return businesses.map((b) => ({
+    ...b,
+    specialtyIds: specialtiesBy.get(b.id) ?? [],
+    regionIds: regionsBy.get(b.id) ?? [],
+  }));
+}
+
+export async function listRegions(db: DbClient): Promise<RegionRow[]> {
+  return unwrap(await db.from('regions').select('*').order('sort_order'));
+}
+
+// Business-page leads (Wave 2, SERVICE ROLE) -------------------------------------------
+
+/**
+ * Recent business_contact leads from one hashed IP, overall and for one
+ * business. Rate-limits the phone reveal so numbers can't be scraped.
+ */
+export async function countRecentContactLeads(
+  adminDb: DbClient,
+  ipHash: string,
+  businessId: string,
+  sinceIso: string,
+): Promise<{ total: number; forBusiness: number }> {
+  const base = () =>
+    adminDb
+      .from('leads')
+      .select('id', { count: 'exact', head: true })
+      .eq('type', 'business_contact')
+      .eq('payload->>ip_hash', ipHash)
+      .gte('created_at', sinceIso);
+  const [total, forBusiness] = await Promise.all([base(), base().eq('business_id', businessId)]);
+  check(total);
+  check(forBusiness);
+  return { total: total.count ?? 0, forBusiness: forBusiness.count ?? 0 };
+}
+
+/**
+ * Insert a lead with the service role (trusted writer), so the fields that
+ * leads_guard resets for the public (member_id, forwarded_to) are kept.
+ */
+export async function insertTrustedLead(adminDb: DbClient, row: TablesInsert<'leads'>): Promise<string> {
+  const inserted = unwrap(await adminDb.from('leads').insert(row).select('id').single());
+  return inserted.id;
+}
+
+/** Published business plus its private contact row (SERVICE ROLE). */
+export async function getBusinessForLead(
+  adminDb: DbClient,
+  businessId: string,
+): Promise<{
+  business: Pick<BusinessRow, 'id' | 'slug' | 'name' | 'lead_routing'>;
+  contact: BusinessContactRow | null;
+} | null> {
+  const business = unwrapMaybe(
+    await adminDb
+      .from('businesses')
+      .select('id, slug, name, lead_routing')
+      .eq('id', businessId)
+      .eq('status', 'published')
+      .maybeSingle(),
+  );
+  if (!business) return null;
+  const contact = unwrapMaybe(
+    await adminDb.from('business_contacts').select('*').eq('business_id', businessId).maybeSingle(),
+  );
+  return { business, contact };
+}
+
+/** Is this slug used by any business, whatever its status? (SERVICE ROLE) */
+export async function isBusinessSlugTaken(adminDb: DbClient, slug: string): Promise<boolean> {
+  return unwrapMaybe(await adminDb.from('businesses').select('id').eq('slug', slug).maybeSingle()) !== null;
+}
+
+/** Recent anonymous (no member) pending reviews of a business: throttles anonymous review spam. */
+export async function countRecentAnonymousReviews(adminDb: DbClient, businessId: string, sinceIso: string): Promise<number> {
+  const res = await adminDb
+    .from('reviews')
+    .select('id', { count: 'exact', head: true })
+    .eq('business_id', businessId)
+    .is('member_id', null)
+    .eq('source', 'member')
+    .gte('created_at', sinceIso);
+  check(res);
+  return res.count ?? 0;
+}
