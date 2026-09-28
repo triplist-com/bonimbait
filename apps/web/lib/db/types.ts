@@ -43,7 +43,8 @@ export type LeadType =
   | 'business_contact'
   | 'benefit'
   | 'whatsapp_join'
-  | 'service_plan';
+  | 'service_plan'
+  | 'claim_business';
 export type LeadStatus = 'new' | 'in_progress' | 'qualified' | 'closed' | 'spam';
 export type RedirectCode = 301 | 302 | 307 | 308;
 export type RedirectSource = 'manual' | 'wp_redirection' | 'migration';
