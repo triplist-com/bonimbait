@@ -12,7 +12,9 @@ import ProfileForm from './ProfileForm';
 
 export const dynamic = 'force-dynamic';
 
-export function generateMetadata(): Metadata {
+export async function generateMetadata(): Promise<Metadata> {
+  // Auth guard before streaming -> real redirect to /login/.
+  await requireRole('member', '/account/');
   return commerceMetadata({ title: 'החשבון שלי - בונים בית', path: '/account/', noindex: true });
 }
 

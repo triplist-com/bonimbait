@@ -31,7 +31,8 @@ const loadProduct = cache(async (slug: string) => {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const product = await loadProduct(params.slug);
-  if (!product) return { title: 'המוצר לא נמצא', robots: { index: false } };
+  // notFound() here (before streaming) yields a real 404 status.
+  if (!product) notFound();
   return commerceMetadata({
     title: product.seo_title ?? `${product.name} - בונים בית`,
     description: product.seo_description ?? htmlToText(product.description_html, 300),

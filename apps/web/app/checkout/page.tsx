@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { getProfile } from '@/lib/auth/session';
@@ -12,9 +13,26 @@ import CheckoutForm from './CheckoutForm';
 
 export const dynamic = 'force-dynamic';
 
-export function generateMetadata(): Metadata {
+/**
+ * Guards run in generateMetadata on purpose: metadata resolves before the
+ * response starts streaming (the root loading.tsx wraps pages in Suspense),
+ * so redirect() here is a real HTTP redirect instead of a client-side one.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  await checkoutGuard();
   return commerceMetadata({ title: 'תשלום - בונים בית', path: '/checkout/', noindex: true });
 }
+
+/** Memoized per request (shared by generateMetadata and the page). */
+const checkoutGuard = cache(async () => {
+  const cart = readCart();
+  if (cart.items.length === 0 || !isSupabaseConfigured()) redirect('/cart/');
+  const priced = await priceCart(createClient(), cart);
+  if (priced.lines.length === 0) redirect('/cart/');
+  const profile = await getProfile();
+  if (!profile) redirect(`/login/?next=${encodeURIComponent('/checkout/')}`);
+  return { priced, profile };
+});
 
 /**
  * /checkout/: redirects to /cart/ when the cart is empty (as WooCommerce does:
@@ -22,14 +40,7 @@ export function generateMetadata(): Metadata {
  * /login/ when signed out. Totals are re-priced from the DB on every render.
  */
 export default async function CheckoutPage() {
-  const cart = readCart();
-  if (cart.items.length === 0 || !isSupabaseConfigured()) redirect('/cart/');
-
-  const priced = await priceCart(createClient(), cart);
-  if (priced.lines.length === 0) redirect('/cart/');
-
-  const profile = await getProfile();
-  if (!profile) redirect(`/login/?next=${encodeURIComponent('/checkout/')}`);
+  const { priced, profile } = await checkoutGuard();
 
   const hasExVat = priced.lines.some((l) => !l.vatIncluded);
 

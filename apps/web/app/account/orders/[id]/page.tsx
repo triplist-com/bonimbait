@@ -11,7 +11,11 @@ import { ORDER_STATUS_LABELS } from '@/lib/commerce/order-status';
 
 export const dynamic = 'force-dynamic';
 
-export function generateMetadata({ params }: { params: { id: string } }): Metadata {
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const profile = await requireRole('member', `/account/orders/${params.id}/`);
+  if (!isUuid(params.id)) notFound();
+  const order = await getOrderWithItems(createClient(), params.id);
+  if (!order || order.member_id !== profile.id) notFound();
   return commerceMetadata({ title: 'פרטי הזמנה - בונים בית', path: `/account/orders/${params.id}/`, noindex: true });
 }
 

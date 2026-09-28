@@ -20,7 +20,7 @@ const loadCategory = cache(async (slug: string) => {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const cat = await loadCategory(params.slug);
-  if (!cat) return { title: 'הקטגוריה לא נמצאה', robots: { index: false } };
+  if (!cat) notFound(); // before streaming -> real 404
   return commerceMetadata({
     title: cat.seo_title ?? `ארכיון ${cat.name} - בונים בית`,
     description: cat.seo_description ?? `הטבות לחברי קהילת בונים בית לפי שלבי הבניה: ${cat.name}`,
