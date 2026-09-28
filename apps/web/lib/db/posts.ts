@@ -174,3 +174,30 @@ export async function savePostCategory(
 ): Promise<PostCategoryRow> {
   return unwrap(await db.from('post_categories').upsert(input).select('*').single());
 }
+
+// ---------------------------------------------------------------------------
+// Public reads used by the content pages (Wave 2)
+// ---------------------------------------------------------------------------
+
+/** Latest published posts in a category, excluding one post (related posts). */
+export async function listRelatedPosts(
+  db: DbClient,
+  opts: { categoryId: string; excludeId: string; limit?: number },
+): Promise<PostSummary[]> {
+  const rows = unwrap(
+    await db
+      .from('posts')
+      .select(`${SUMMARY_COLUMNS}, post_category_assignments!inner(category_id)`)
+      .eq('status', 'published')
+      .eq('post_category_assignments.category_id', opts.categoryId)
+      .neq('id', opts.excludeId)
+      .order('published_at', { ascending: false })
+      .limit(opts.limit ?? 3),
+  );
+  return rows.map(({ post_category_assignments: _ignored, ...post }) => post);
+}
+
+/** All authors (3 on the live site): bylines, archives and the sitemap. */
+export async function listAuthors(db: DbClient): Promise<AuthorRow[]> {
+  return unwrap(await db.from('authors').select('*').order('name'));
+}

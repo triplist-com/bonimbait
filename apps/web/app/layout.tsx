@@ -5,6 +5,7 @@ import Header from '@/components/Layout/Header';
 import Footer from '@/components/Layout/Footer';
 import StructuredData from '@/components/StructuredData';
 import Analytics from '@/components/Analytics';
+import ConsultationCTA from '@/components/leads/ConsultationCTA';
 import { SITE_URL, absoluteUrl } from '@/lib/site';
 
 const heebo = Heebo({
@@ -85,6 +86,8 @@ export default function RootLayout({
           </main>
           <Footer />
         </div>
+        {/* Site-wide floating consultation + WhatsApp buttons (Leads workstream). */}
+        <ConsultationCTA variant="floating" source="site" />
         <StructuredData
           data={{
             '@context': 'https://schema.org',
