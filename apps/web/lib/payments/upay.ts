@@ -20,6 +20,32 @@ import {
  *   UPAY_MERCHANT_ID    merchant / terminal identifier
  *   UPAY_API_KEY        API key or password for server calls
  *   UPAY_WEBHOOK_SECRET shared secret (if UPay signs IPN callbacks)
+ *
+ * What we need from UPay before implementing (Wave 2 checklist):
+ *  1. Credentials: sandbox + production merchant/terminal id, API user/key,
+ *     and whether calls are authenticated by key, username+password or HMAC.
+ *  2. "Create payment page" endpoint: URL, method, request format (JSON / form),
+ *     and the exact field names for amount (ILS or agorot? decimals?),
+ *     currency, our order reference (we send orders.id + order_number),
+ *     description, customer name/email/phone, language (he), max
+ *     installments, and success / cancel(failure) / IPN(notify) URLs.
+ *     Response: the hosted page URL and UPay's transaction/session id
+ *     (stored as payments.provider_ref).
+ *  3. Return-URL contract: which params UPay appends to success/cancel URLs
+ *     (transaction id, status code, amount, our reference, signature?) and
+ *     whether it is a GET redirect or an auto-submitted POST form.
+ *  4. IPN/webhook contract: payload format, retry policy and timeouts,
+ *     expected response (200 + body?), and HOW TO AUTHENTICATE it:
+ *     signature algorithm + which fields/order are signed + where the
+ *     signature is sent (header vs field) — or, if unsigned, a "get
+ *     transaction status by id" endpoint we can call server-side instead.
+ *  5. Status codes: the full list of transaction statuses / error codes and
+ *     their meaning (approved, declined, cancelled by user, pending/3DS,
+ *     refunded, chargeback) so we can map them to PaymentStatus.
+ *  6. Refunds: full / partial refund endpoint and fields.
+ *  7. Invoices/receipts: does UPay issue the tax invoice (חשבונית מס/קבלה)
+ *     itself, or must we integrate an invoicing service? VAT fields needed?
+ *  8. Allowed IPs / domains to whitelist for callbacks, and test cards.
  */
 export class UpayProvider implements PaymentProvider {
   readonly name = 'upay' as const;

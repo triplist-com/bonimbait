@@ -28,8 +28,10 @@ const nextConfig = {
       ...(process.env.NEXT_PUBLIC_SUPABASE_URL
         ? [
             {
-              protocol: "https",
+              // http for the local stack (http://127.0.0.1:54321), https in production.
+              protocol: new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).protocol.replace(":", ""),
               hostname: new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname,
+              port: new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).port,
               pathname: "/storage/v1/object/public/**",
             },
           ]
