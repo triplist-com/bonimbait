@@ -1,5 +1,5 @@
 import type { ContentStatus } from '@/lib/db/types';
-import { ActionError } from './guard';
+import { ActionError } from './errors';
 
 export type StatusChoice = 'draft' | 'pending' | 'published' | 'scheduled' | 'archived';
 

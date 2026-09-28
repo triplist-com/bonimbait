@@ -5,6 +5,9 @@ import { hasRole } from '@/lib/auth/roles';
 import { createClient } from '@/lib/supabase/server';
 import type { DbClient } from '@/lib/db/client';
 import type { Role } from '@/lib/db/types';
+import { ActionError } from './errors';
+
+export { ActionError };
 
 /**
  * Server-action guard for the admin. Every admin write goes through
@@ -20,15 +23,6 @@ export type ActionResult<T = undefined> =
 
 export const FORBIDDEN_MESSAGE = 'אין לכם הרשאה לבצע פעולה זו.';
 export const SIGNED_OUT_MESSAGE = 'יש להתחבר מחדש.';
-
-export class ActionError extends Error {
-  constructor(
-    message: string,
-    public fieldErrors?: Record<string, string>,
-  ) {
-    super(message);
-  }
-}
 
 export type AdminContext = { profile: Profile; db: DbClient };
 
