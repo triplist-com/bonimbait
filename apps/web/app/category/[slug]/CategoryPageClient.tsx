@@ -11,6 +11,7 @@ import Pagination from '@/components/Pagination';
 import StructuredData from '@/components/StructuredData';
 import { getCategories, getVideos } from '@/lib/api';
 import type { Video, Category, VideoListParams } from '@/lib/types';
+import { absoluteUrl } from '@/lib/site';
 
 const SORT_OPTIONS = [
   { value: 'newest', label: 'חדש ביותר' },
@@ -72,7 +73,7 @@ export default function CategoryPageClient() {
           '@type': 'CollectionPage',
           name: `${categoryName} - בונים בית`,
           description: categoryDesc,
-          url: `https://bonimbait.com/category/${slug}`,
+          url: absoluteUrl(`/category/${slug}`),
         }}
       />
 

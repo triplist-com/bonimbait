@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { CONTACT_EMAIL, absoluteUrl } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'מדיניות פרטיות',
   description: 'מדיניות הפרטיות של אתר בונים בית.',
   alternates: {
-    canonical: 'https://bonimbait.com/privacy',
+    canonical: absoluteUrl('/privacy'),
   },
 };
 
@@ -82,7 +83,7 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-bold text-gray-900 mb-3">8. יצירת קשר</h2>
             <p>
               לשאלות בנושא פרטיות, ניתן לפנות אלינו בכתובת{' '}
-              <a href="mailto:info@bonimbait.com" className="text-primary hover:underline">info@bonimbait.com</a>.
+              <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary hover:underline">{CONTACT_EMAIL}</a>.
             </p>
           </div>
         </section>

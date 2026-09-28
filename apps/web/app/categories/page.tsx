@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getCategories } from '@/lib/api';
+import { absoluteUrl } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'קטגוריות',
   description:
     'עיינו בכל הקטגוריות של סרטונים בנושא בנייה פרטית בישראל - תכנון, עלויות, שלד, חשמל, גמרים ועוד.',
   alternates: {
-    canonical: 'https://bonimbait.com/categories',
+    canonical: absoluteUrl('/categories'),
   },
 };
 

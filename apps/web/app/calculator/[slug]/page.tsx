@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { SCENARIOS, getScenarioBySlug, getRelatedScenarios } from '../../../lib/calculator-scenarios';
 import { calculateCost, formatNIS, getSqm } from '../../../lib/calculator';
 import ScenarioResult from './ScenarioResult';
+import { absoluteUrl } from '@/lib/site';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -24,12 +25,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: scenario.title,
     description: scenario.description,
     alternates: {
-      canonical: `https://bonimbait.com/calculator/${scenario.slug}`,
+      canonical: absoluteUrl(`/calculator/${scenario.slug}`),
     },
     openGraph: {
       title: scenario.title,
       description: scenario.description,
-      url: `https://bonimbait.com/calculator/${scenario.slug}`,
+      url: absoluteUrl(`/calculator/${scenario.slug}`),
       siteName: 'בונים בית',
       locale: 'he_IL',
       type: 'website',

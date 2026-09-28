@@ -8,13 +8,14 @@ import PromoVideo from '@/components/PromoVideo';
 import StructuredData from '@/components/StructuredData';
 import { getVideos, getCategories } from '@/lib/api';
 import type { Video, Category } from '@/lib/types';
+import { absoluteUrl } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'בונים בית - מאגר הידע לבנייה פרטית בישראל',
   description:
     'חפשו בין מאות סרטונים בנושא בנייה פרטית בישראל וקבלו תשובות מבוססות AI. מידע על עלויות, קבלנים, היתרים, שלד, גמרים ועוד.',
   alternates: {
-    canonical: 'https://bonimbait.com',
+    canonical: absoluteUrl(),
   },
 };
 
@@ -90,7 +91,7 @@ export default async function Home() {
           name: 'בונים בית - מאגר הידע לבנייה פרטית בישראל',
           description:
             'מאגר ידע מקיף לבנייה פרטית בישראל עם תשובות AI',
-          url: 'https://bonimbait.com',
+          url: absoluteUrl(),
         }}
       />
 

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getCategories } from '@/lib/api';
 import CategoryPageClient from './CategoryPageClient';
+import { absoluteUrl } from '@/lib/site';
 
 interface CategoryPageProps {
   params: { slug: string };
@@ -21,13 +22,13 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     title: name,
     description,
     alternates: {
-      canonical: `https://bonimbait.com/category/${params.slug}`,
+      canonical: absoluteUrl(`/category/${params.slug}`),
     },
     openGraph: {
       title: `${name} - בונים בית`,
       description,
       type: 'website',
-      url: `https://bonimbait.com/category/${params.slug}`,
+      url: absoluteUrl(`/category/${params.slug}`),
     },
   };
 }

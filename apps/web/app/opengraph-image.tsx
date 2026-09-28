@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og';
+import { SITE_HOST } from '@/lib/site';
 
 export const runtime = 'edge';
 
@@ -90,7 +91,7 @@ export default async function Image() {
           <span style={{ color: 'rgba(255,255,255,0.3)' }}>|</span>
           <span>תשובות AI</span>
           <span style={{ color: 'rgba(255,255,255,0.3)' }}>|</span>
-          <span>bonimbait.com</span>
+          <span>{SITE_HOST}</span>
         </div>
       </div>
     ),

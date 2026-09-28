@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { CONTACT_EMAIL, absoluteUrl } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'צור קשר',
   description: 'צרו קשר עם צוות בונים בית לשאלות, הצעות, או שיתופי פעולה.',
   alternates: {
-    canonical: 'https://bonimbait.com/contact',
+    canonical: absoluteUrl('/contact'),
   },
 };
 
@@ -32,10 +33,10 @@ export default function ContactPage() {
             </div>
             <h2 className="text-lg font-bold text-gray-900 mb-2">אימייל</h2>
             <a
-              href="mailto:info@bonimbait.com"
+              href={`mailto:${CONTACT_EMAIL}`}
               className="text-primary hover:text-primary-700 font-medium transition-colors"
             >
-              info@bonimbait.com
+              {CONTACT_EMAIL}
             </a>
           </div>
 
