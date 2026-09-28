@@ -45,6 +45,7 @@ export type LeadType =
   | 'whatsapp_join'
   | 'service_plan';
 export type LeadStatus = 'new' | 'in_progress' | 'qualified' | 'closed' | 'spam';
+export type LeadNotifyStatus = 'pending' | 'sent' | 'partial' | 'failed' | 'logged';
 export type RedirectCode = 301 | 302 | 307 | 308;
 export type RedirectSource = 'manual' | 'wp_redirection' | 'migration';
 
@@ -451,6 +452,11 @@ export type LeadRow = {
   assigned_to: string | null;
   forwarded_to: string | null;
   notes: string | null;
+  notify_status: LeadNotifyStatus;
+  notify_channels: Json;
+  notify_error: string | null;
+  notified_at: string | null;
+  ip_hash: string | null;
 } & Timestamps;
 
 export type RedirectRow = {
