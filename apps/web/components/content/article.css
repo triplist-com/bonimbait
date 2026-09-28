@@ -1,0 +1,281 @@
+/*
+ * Long-form Hebrew typography for migrated WordPress content (posts, pages,
+ * legacy video pages). Scoped to .bb-prose; RTL via logical properties.
+ */
+
+.bb-prose {
+  color: #1f2937;
+  font-size: 1.0625rem;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 640px) {
+  .bb-prose {
+    font-size: 1.125rem;
+  }
+}
+
+.bb-prose > :first-child {
+  margin-block-start: 0;
+}
+
+.bb-prose p {
+  margin-block: 0 1.15em;
+  line-height: 1.9;
+}
+
+.bb-prose h2,
+.bb-prose h3,
+.bb-prose h4,
+.bb-prose h5,
+.bb-prose h6 {
+  color: #111827;
+  font-weight: 700;
+  line-height: 1.4;
+  scroll-margin-top: 5.5rem;
+}
+
+.bb-prose h2 {
+  font-size: 1.5rem;
+  margin-block: 2.2em 0.8em;
+  padding-block-end: 0.35em;
+  border-block-end: 1px solid #e5e7eb;
+}
+
+.bb-prose h3 {
+  font-size: 1.25rem;
+  margin-block: 1.8em 0.6em;
+}
+
+.bb-prose h4,
+.bb-prose h5,
+.bb-prose h6 {
+  font-size: 1.075rem;
+  margin-block: 1.5em 0.5em;
+}
+
+.bb-prose a {
+  color: #1d4ed8;
+  text-decoration: underline;
+  text-decoration-color: #93c5fd;
+  text-underline-offset: 3px;
+  transition: color 0.2s, text-decoration-color 0.2s;
+}
+
+.bb-prose a:hover {
+  color: #1e40af;
+  text-decoration-color: currentColor;
+}
+
+.bb-prose strong,
+.bb-prose b {
+  font-weight: 700;
+  color: #111827;
+}
+
+.bb-prose ul,
+.bb-prose ol {
+  margin-block: 0 1.2em;
+  padding-inline-start: 1.5em;
+}
+
+.bb-prose ul {
+  list-style: disc;
+}
+
+.bb-prose ol {
+  list-style: decimal;
+}
+
+.bb-prose li {
+  margin-block: 0.35em;
+  padding-inline-start: 0.25em;
+}
+
+.bb-prose li::marker {
+  color: #2563eb;
+}
+
+.bb-prose blockquote {
+  margin-block: 1.5em;
+  margin-inline: 0;
+  padding: 1em 1.25em;
+  border-inline-start: 4px solid #f59e0b;
+  background: #fffbeb;
+  border-radius: 0.75rem;
+  color: #374151;
+}
+
+.bb-prose blockquote p:last-child {
+  margin-block-end: 0;
+}
+
+.bb-prose hr {
+  margin-block: 2.5em;
+  border: 0;
+  border-block-start: 1px solid #e5e7eb;
+}
+
+.bb-prose img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-block: 1.5em;
+  margin-inline: auto;
+  border-radius: 0.75rem;
+}
+
+.bb-prose figure {
+  margin-block: 1.75em;
+  margin-inline: 0;
+}
+
+.bb-prose figcaption {
+  margin-block-start: 0.5em;
+  font-size: 0.875rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* Responsive embeds (YouTube etc.) */
+.bb-prose .bb-embed {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-block: 1.75em;
+  border-radius: 0.875rem;
+  overflow: hidden;
+  background: #0f172a;
+  box-shadow: 0 4px 20px -4px rgb(0 0 0 / 0.15);
+}
+
+.bb-prose .bb-embed iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.bb-prose .bb-embed-audio {
+  aspect-ratio: auto;
+  height: 180px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.bb-prose video,
+.bb-prose audio {
+  width: 100%;
+  margin-block: 1.5em;
+  border-radius: 0.75rem;
+}
+
+/* Tables: scroll horizontally on small screens */
+.bb-prose .bb-table {
+  width: 100%;
+  overflow-x: auto;
+  margin-block: 1.75em;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bb-prose table {
+  width: 100%;
+  min-width: 32rem;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.bb-prose th,
+.bb-prose td {
+  padding: 0.65em 0.9em;
+  text-align: start;
+  vertical-align: top;
+  border-block-end: 1px solid #e5e7eb;
+}
+
+.bb-prose thead th,
+.bb-prose thead td,
+.bb-prose tr:first-child th {
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-weight: 700;
+}
+
+.bb-prose tbody tr:nth-child(even) {
+  background: #f9fafb;
+}
+
+.bb-prose tbody tr:last-child td {
+  border-block-end: 0;
+}
+
+/* FAQ accordions (<details>) */
+.bb-prose details {
+  margin-block: 0.75em;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: #fff;
+  overflow: hidden;
+}
+
+.bb-prose summary {
+  cursor: pointer;
+  padding: 0.9em 1.1em;
+  font-weight: 600;
+  color: #111827;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+}
+
+.bb-prose summary::-webkit-details-marker {
+  display: none;
+}
+
+.bb-prose summary::after {
+  content: '+';
+  color: #2563eb;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.bb-prose details[open] summary::after {
+  content: '−';
+}
+
+.bb-prose details > :not(summary) {
+  padding-inline: 1.1em;
+}
+
+.bb-prose details[open] {
+  padding-block-end: 0.5em;
+}
+
+.bb-prose code {
+  font-size: 0.9em;
+  background: #f3f4f6;
+  padding: 0.1em 0.35em;
+  border-radius: 0.3em;
+}
+
+.bb-prose pre {
+  overflow-x: auto;
+  direction: ltr;
+  padding: 1em;
+  background: #f3f4f6;
+  border-radius: 0.75rem;
+}
+
+/* Legacy WordPress/Elementor wrappers carry no layout of their own */
+.bb-prose div,
+.bb-prose section,
+.bb-prose article,
+.bb-prose aside {
+  max-width: 100%;
+}
