@@ -3,13 +3,12 @@
  * 2026-09-28): hero, team, "why us", testimonials and FAQ. Plans, prices and
  * the comparison table come from the DB (service_plans / service_plan_prices).
  *
- * Media still points at the live WordPress uploads folder. The Migration
- * workstream moves wp-content media to Supabase Storage before cutover;
- * update LEGACY_UPLOADS (or these paths) then.
+ * Media was migrated from wp-content/uploads to Supabase Storage (same
+ * uploads/... path; list in scripts/migrate/static_media.json), so URLs are
+ * built with mediaUrl() and follow NEXT_PUBLIC_MEDIA_BASE_URL at cutover.
  */
 
-// TODO(migration): replace with the Storage base URL once wp-content/uploads/mp-v6 is migrated.
-export const LEGACY_UPLOADS = 'https://bonimbayit.co.il/wp-content/uploads';
+import { mediaUrl } from '@/lib/media';
 
 export const MEMBERSHIP_SEO = {
   title: 'תכניות הניהול פרוייקטים של בונים בית - בונים בית',
@@ -23,7 +22,7 @@ export const HERO = {
   eyebrow: 'ניהול · הנדסה · בקרה · פיקוח',
   cta: 'מעוניינים לתאם פגישת ייעוץ חינמית',
   youtubeId: 'TmZp6uXGMwY',
-  poster: `${LEGACY_UPLOADS}/2026/02/Group-1000004803.jpg`,
+  poster: mediaUrl('uploads/2026/02/Group-1000004803.jpg'),
 };
 
 export type TeamMember = { name: string; role: string; role2?: string; quote: string; bio?: string; photo: string };
@@ -42,7 +41,7 @@ export const TEAM: TeamMember[] = [
 ];
 
 export function teamPhotoUrl(file: string): string {
-  return `${LEGACY_UPLOADS}/mp-v6/team/${file}`;
+  return mediaUrl(`uploads/mp-v6/team/${file}`);
 }
 
 export const WHY: Array<{ title: string; text: string }> = [
@@ -62,7 +61,7 @@ export const TESTIMONIALS: Array<{ id: string; label: string }> = [
 ];
 
 export function testimonialMedia(id: string) {
-  return { video: `${LEGACY_UPLOADS}/mp-v6/videos/${id}.mp4`, poster: `${LEGACY_UPLOADS}/mp-v6/videos/${id}.webp` };
+  return { video: mediaUrl(`uploads/mp-v6/videos/${id}.mp4`), poster: mediaUrl(`uploads/mp-v6/videos/${id}.webp`) };
 }
 
 export const FAQ: Array<{ group: string; items: Array<{ q: string; a: string }> }> = [

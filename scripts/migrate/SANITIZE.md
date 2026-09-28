@@ -81,8 +81,11 @@ Style it with prose/typography classes. Note:
   - Sub-scores are mapped by their Hebrew labels.
 - **Products:**
   - Prices are converted to agorot.
-  - The single WooCommerce category ("כללי") is assigned to all 3 products, since its count is 3. The crawl's per-product categories are empty.
-  - The 8 `/category-product/<slug>/` terms are created as `product_categories` named after the matching post category. The crawl has no product assignments for them.
+  - Product terms and memberships come from `crawl_product_terms.py`, which reads the live `/product-category/` and `/category-product/` archive pages. Neither REST API exposes the `category_product` taxonomy. It writes `product_terms.json` (9 terms, 22 memberships). Term names come from the archive headings (e.g. "שלב רכישה"), and the `taxonomy` column is set.
+  - These values equal the Commerce seed in `20260928130200_commerce_catalog.sql`, so the loader and that migration converge in either order.
+  - Membership deletes are scoped to the taxonomies the loader has data for. Without `product_terms.json`, it only manages `product_cat` links and never removes stage links.
+  - The loader rewrites product images to Storage. The Commerce seed still has old-host image URLs, so on a fresh DB they persist until `load.py` runs. `verify_load.py` fails while any remain.
+- **Media referenced from app code** (e.g. the `/membership-tiers/` team photos and testimonial videos) is listed in `static_media.json`. It's migrated with `--only images --images static` (also included in `all`), and the app builds its URLs with `mediaUrl()` from `apps/web/lib/media.ts`.
 - **Images:**
   - Only `wp-content/uploads` images are migrated. Downloads run at concurrency 3 with retries and are cached under `data/migration/raw/images/`. They're uploaded to the Storage bucket `media` at `uploads/YYYY/MM/<file>`.
   - Storage only accepts ASCII keys, so a non-ASCII filename becomes `<sha1-10>-<ascii remnant>.<ext>`.

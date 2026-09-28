@@ -1,0 +1,22 @@
+{
+ "_comment": "wp-content/uploads files referenced from app code (not from crawled content). Migrated by `load.py --only images --images static` (also part of `all`). The app builds their URLs with mediaUrl('uploads/...') from apps/web/lib/media.ts.",
+ "apps/web/lib/commerce/membership-content.ts": [
+  "https://bonimbayit.co.il/wp-content/uploads/2026/02/Group-1000004803.jpg",
+  "https://bonimbayit.co.il/wp-content/uploads/mp-v6/team/tomer-white.webp",
+  "https://bonimbayit.co.il/wp-content/uploads/mp-v6/team/zuri-white.webp",
+  "https://bonimbayit.co.il/wp-content/uploads/mp-v6/team/shani-levi-white.webp",
+  "https://bonimbayit.co.il/wp-content/uploads/mp-v6/team/moran-white.webp",
+  "https://bonimbayit.co.il/wp-content/uploads/mp-v6/team/maor-white.webp",
+  "https://bonimbayit.co.il/wp-content/uploads/mp-v6/team/oren-white.webp",
+  "https://bonimbayit.co.il/wp-content/uploads/mp-v6/team/or-shnaor-white.webp",
+  "https://bonimbayit.co.il/wp-content/uploads/mp-v6/team/elior-white.webp",
+  "https://bonimbayit.co.il/wp-content/uploads/mp-v6/team/tamir-white.webp",
+  "https://bonimbayit.co.il/wp-content/uploads/mp-v6/team/itamar-shani-white.webp",
+  "https://bonimbayit.co.il/wp-content/uploads/mp-v6/videos/testi-eyal.mp4",
+  "https://bonimbayit.co.il/wp-content/uploads/mp-v6/videos/testi-eyal.webp",
+  "https://bonimbayit.co.il/wp-content/uploads/mp-v6/videos/testi-alex-amir.mp4",
+  "https://bonimbayit.co.il/wp-content/uploads/mp-v6/videos/testi-alex-amir.webp",
+  "https://bonimbayit.co.il/wp-content/uploads/mp-v6/videos/testi-guy.mp4",
+  "https://bonimbayit.co.il/wp-content/uploads/mp-v6/videos/testi-guy.webp"
+ ]
+}

@@ -25,6 +25,7 @@ cutover is safe. Env:
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import re
 import sys
@@ -172,10 +173,15 @@ def upsert(conn: psycopg.Connection, table: str, row: dict, conflict: str,
 
 
 def replace_links(conn: psycopg.Connection, table: str, parent_col: str, parent_id: Any,
-                  child_col: str, child_ids: Iterable[Any]) -> int:
+                  child_col: str, child_ids: Iterable[Any],
+                  scope_sql: str = "", scope_params: tuple = ()) -> int:
+    """Make the parent's links equal child_ids. `scope_sql` (a condition on
+    {child_col}) limits deletion to links this loader owns, so links it has no
+    data for (e.g. another taxonomy) are never removed."""
     ids = list(dict.fromkeys(i for i in child_ids if i))
-    conn.execute(f"delete from public.{table} where {parent_col} = %s and not ({child_col} = any(%s))",
-                 (parent_id, ids))
+    conn.execute(f"delete from public.{table} where {parent_col} = %s and not ({child_col} = any(%s))"
+                 + (f" and {scope_sql}" if scope_sql else ""),
+                 (parent_id, ids, *scope_params))
     for cid in ids:
         conn.execute(f"insert into public.{table} ({parent_col}, {child_col}) values (%s, %s) "
                      f"on conflict do nothing", (parent_id, cid))
@@ -505,27 +511,58 @@ def load_businesses(ctx: Ctx) -> None:
 # 7. products + product categories
 # ---------------------------------------------------------------------------
 def load_products(ctx: Ctx) -> None:
+    """Products + both product taxonomies.
+
+    Terms and memberships come from product_terms.json (crawl_product_terms.py:
+    the live /product-category/ and /category-product/ archive pages), because
+    neither REST API exposes the category_product taxonomy. Values match the
+    Commerce seed (20260928130200_commerce_catalog.sql), so loader and
+    migration converge in either order. Membership deletes are scoped to the
+    taxonomies this run has data for.
+    """
     conn = ctx.conn
     data = ctx.data("products")
-    for i, c in enumerate(data.get("product_categories") or []):
-        upsert(conn, "product_categories", {
-            "legacy_wp_id": c["id"], "slug": nfc_slug(c["slug"]), "name": c["name"],
-            "description": none_if_blank(html_to_text(c.get("description"))), "sort_order": i,
-        }, "legacy_wp_id")
-    # /category-product/<slug>/ (8 live URLs): a second product taxonomy the crawl
-    # has no terms for. Its slugs equal post-category slugs, so names come from there.
-    live = ctx.data("live_urls")
-    urls = live.get("urls") if isinstance(live, dict) else live
-    cp_slugs = sorted({nfc_slug(m.group(1)) for u in urls
-                       for m in [re.search(r"/category-product/([^/]+)/", u if isinstance(u, str) else u.get("url", ""))] if m})
-    post_cat_names = {nfc_slug(c["slug"]): c["name"] for c in ctx.data("categories")}
-    for i, s in enumerate(cp_slugs):
-        conn.execute(
-            "insert into public.product_categories (slug, name, sort_order) values (%s, %s, %s) "
-            "on conflict (slug) do update set name = excluded.name",
-            (s, post_cat_names.get(s, s.replace("-", " ")), 100 + i))
+    has_taxonomy = conn.execute(
+        "select 1 from information_schema.columns where table_schema = 'public' "
+        "and table_name = 'product_categories' and column_name = 'taxonomy'").fetchone() is not None
+    terms_path = migration_dir() / "product_terms.json"
+    crawled = json.loads(terms_path.read_text(encoding="utf-8"))["terms"] if terms_path.exists() else []
+    if not crawled:
+        ctx.orphan("product_terms_missing", "run crawl_product_terms.py; only product_cat links managed")
+
+    # product_cat terms: Store API (has the WP id) merged with the archive crawl (by slug).
+    by_slug = {t["slug"]: t for t in crawled}
+    terms: list[dict] = []
+    for c in data.get("product_categories") or []:
+        slug = nfc_slug(c["slug"])
+        t = by_slug.pop(slug, {})
+        terms.append({**t, "id": c["id"], "taxonomy": "product_cat", "slug": slug,
+                      "name": t.get("name") or html.unescape(c["name"]), "sort_order": t.get("sort_order", 0),
+                      "description": none_if_blank(html_to_text(c.get("description")))})
+    terms += [t for t in by_slug.values() if t.get("id") is not None]
+    for t in by_slug.values():
+        if t.get("id") is None:
+            ctx.orphan("product_term_without_id", t["slug"])
+
+    for t in terms:
+        row = {"legacy_wp_id": t["id"], "slug": nfc_slug(t["slug"]), "name": t["name"],
+               "sort_order": t.get("sort_order", 0), "seo_title": t.get("seo_title"),
+               "seo_description": t.get("seo_description")}
+        if t.get("description") is not None:
+            row["description"] = t["description"]
+        if has_taxonomy:
+            row["taxonomy"] = t["taxonomy"]
+        upsert(conn, "product_categories", row, "legacy_wp_id")
     cat_ids = id_map(conn, "product_categories")
-    default_cat = next(iter(cat_ids.values()), None) if len(data.get("product_categories") or []) == 1 else None
+    members: dict[str, list] = {}
+    for t in terms:
+        for s in t.get("product_slugs") or []:
+            members.setdefault(nfc_slug(s), []).append(cat_ids.get(t["id"]))
+    managed = sorted({t["taxonomy"] for t in terms}) if crawled else ["product_cat"]
+    single_cat = cat_ids.get(data["product_categories"][0]["id"]) \
+        if len(data.get("product_categories") or []) == 1 else None
+    n_links = 0
+
     for i, p in enumerate(data["products"]):
         imgs = [{"url": ctx.rw(im["url"]), "alt": im.get("alt") or ""} for im in p.get("images") or []]
         price = p.get("regular_price") or p.get("price") or 0
@@ -544,10 +581,22 @@ def load_products(ctx: Ctx) -> None:
             "seo_canonical": canonical_path(p.get("permalink")),
         }, "legacy_wp_id")
         cats = [cat_ids.get(c["id"]) for c in p.get("categories") or [] if isinstance(c, dict)]
-        if not any(cats) and default_cat:
-            cats = [default_cat]  # the only WC category ("כללי") has count=3 = all products
-        replace_links(conn, "product_category_assignments", "product_id", pid, "category_id", cats)
-    ctx.count("product_categories", len(data.get("product_categories") or []) + len(cp_slugs))
+        cats += members.get(nfc_slug(p["slug"]), [])
+        if not any(cats) and single_cat and not crawled:
+            cats = [single_cat]  # the only WC category ("כללי") has count=3 = all products
+        if has_taxonomy:
+            n_links += replace_links(
+                conn, "product_category_assignments", "product_id", pid, "category_id", cats,
+                "category_id in (select id from public.product_categories where taxonomy = any(%s))",
+                (managed,))
+        else:
+            n_links += replace_links(conn, "product_category_assignments", "product_id", pid, "category_id", cats)
+    known_products = {nfc_slug(p["slug"]) for p in data["products"]}
+    for s in members:
+        if s not in known_products:
+            ctx.orphan("product_term_member_unknown_product", s)
+    ctx.count("product_categories", len(terms))
+    ctx.count("product_category_assignments", n_links)
     ctx.count("products", len(data["products"]))
 
 
@@ -564,6 +613,10 @@ def collect_image_urls(ctx: Ctx, scopes: set[str]) -> list[str]:
         out += [(p.get("featured_image") or {}).get("url") for p in posts]
     if scopes & {"logos", "all"}:
         out += [b.get("logo_url") for b in bizs]
+    if scopes & {"static", "all"}:
+        # Files referenced from app code (e.g. /membership-tiers/ team photos, videos).
+        static = json.loads((Path(__file__).resolve().parent / "static_media.json").read_text(encoding="utf-8"))
+        out += [u for k, v in static.items() if not k.startswith("_") for u in v]
     if "all" in scopes:
         vids = ctx.data("videos")["videos"]
         pages = ctx.data("pages")
@@ -684,6 +737,8 @@ def _orphan_owner(kind: str) -> str:
         return "pages"
     if kind.startswith("specialty_"):
         return "specialties"
+    if kind.startswith("product_"):
+        return "products"
     if kind.startswith(("business_", "review_")):
         return "businesses"
     return ""
