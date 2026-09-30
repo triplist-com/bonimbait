@@ -14,10 +14,9 @@ import type { ProsCta } from '@/lib/types';
  * question is about, then list a few published businesses in it.
  */
 
-const CLASSIFIER_MODEL = 'claude-opus-5-5';
+const CLASSIFIER_MODEL = 'claude-haiku-4-5';
 const SPECIALTY_TTL_MS = 10 * 60 * 1000;
 const MAX_PROS = 3;
-const NONE = 'none';
 
 interface SpecialtyOption {
   id: string;
@@ -49,26 +48,34 @@ async function listActiveSpecialties(): Promise<SpecialtyOption[]> {
   return rows;
 }
 
-const SYSTEM_PROMPT = `You route questions from people building a private home in Israel to a directory of professionals.
-Given a Hebrew question and a list of directory specialties, choose the one specialty whose professionals the asker would most likely want to hire or consult next about this exact topic.
-Answer "${NONE}" when the question is general (timelines, overall process, legal or tax questions with no matching specialty) or no specialty is a clear fit. A wrong match is worse than none.`;
+// Tuned on Haiku 4.5 with ~15 sample questions. Numbered options instead of
+// slugs, a topic-first field and temperature 0 made the pick stable; a prompt
+// that dwelt on when to answer "none" made Haiku answer it far too often.
+const SYSTEM_PROMPT = `A person building a private home in Israel asked a question. Pick the professional from the numbered list who could help them with it: the one they would hire, buy from or consult about the question's topic.
+Examples: choosing an architect -> architects; windows -> aluminium contractors; plaster -> plaster contractors; skeleton cost -> skeleton contractors; mortgage -> mortgage advisor.
+Cost and price questions count too: pick whoever does or sells that work. When both a contractor and a consultant fit, prefer the contractor unless the question asks for advice, planning or testing.
+Reply 0 only if the question is about something no listed professional handles, such as overall timelines or the general order of stages.
+First write the question's main topic in a few English words in "topic", then give the number.`;
 
-async function classifySpecialty(query: string, options: SpecialtyOption[]): Promise<string | null> {
-  const slugs = options.map((o) => o.slug);
-  const schema = z.object({ specialty: z.enum([NONE, ...slugs] as [string, ...string[]]) });
-  const list = options.map((o) => `- ${o.slug}: ${o.name}`).join('\n');
+const ClassifierOutput = z.object({
+  topic: z.string(),
+  specialty: z.number().int().describe('number from the list, or 0 for none'),
+});
 
+async function classifySpecialty(query: string, options: SpecialtyOption[]): Promise<SpecialtyOption | null> {
+  const list = options.map((o, i) => `${i + 1}. ${o.name}`).join('\n');
   const client = new Anthropic({ timeout: 20_000, maxRetries: 1 });
   const response = await client.messages.parse({
     model: CLASSIFIER_MODEL,
-    max_tokens: 2000,
-    output_config: { effort: 'low', format: zodOutputFormat(schema) },
+    max_tokens: 256,
+    temperature: 0,
+    output_config: { format: zodOutputFormat(ClassifierOutput) },
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: `Specialties:\n${list}\n\nQuestion: ${query}` }],
   });
   if (response.stop_reason === 'refusal') return null;
-  const picked = response.parsed_output?.specialty;
-  return picked && picked !== NONE ? picked : null;
+  const picked = response.parsed_output?.specialty ?? 0;
+  return options[picked - 1] ?? null;
 }
 
 /**
@@ -81,8 +88,7 @@ export async function matchPros(query: string): Promise<ProsCta | null> {
     if (!db || !process.env.ANTHROPIC_API_KEY) return null;
     const options = await listActiveSpecialties();
     if (options.length === 0) return null;
-    const slug = await classifySpecialty(query, options);
-    const specialty = options.find((o) => o.slug === slug);
+    const specialty = await classifySpecialty(query, options);
     if (!specialty) return null;
 
     const { items } = await listPublishedBusinesses(db, { specialtyId: specialty.id, pageSize: MAX_PROS });
