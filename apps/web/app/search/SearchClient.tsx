@@ -29,6 +29,7 @@ function SearchContent() {
   const {
     answer,
     sources,
+    pros,
     confidence,
     isStreaming,
     error: answerError,
@@ -92,6 +93,7 @@ function SearchContent() {
                 <AiAnswer
                   answer={answer}
                   sources={sources}
+                  pros={pros}
                   confidence={confidence}
                   isStreaming={isStreaming}
                   error={answerError}

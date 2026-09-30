@@ -2,11 +2,12 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { streamAnswer, getAnswer, getPregeneratedAnswer } from '@/lib/api';
-import type { AnswerSource } from '@/lib/types';
+import type { AnswerCitation, AnswerSource, ProsCta } from '@/lib/types';
 
 interface StreamingAnswerState {
   answer: string;
-  sources: AnswerSource[];
+  sources: AnswerCitation[];
+  pros: ProsCta | null;
   confidence: 'high' | 'medium' | 'low' | null;
   isStreaming: boolean;
   error: string | null;
@@ -30,22 +31,28 @@ export function useStreamingAnswer() {
   const [state, setState] = useState<StreamingAnswerState>({
     answer: '',
     sources: [],
+    pros: null,
     confidence: null,
     isStreaming: false,
     error: null,
     isCostRelated: false,
   });
   const controllerRef = useRef<AbortController | null>(null);
+  // Bumped on every start(); a lookup that resolves after a newer start() must
+  // not open its own stream (it would interleave chunks into the new answer).
+  const requestIdRef = useRef(0);
 
   const start = useCallback((query: string) => {
     // Cancel any in-flight stream
     controllerRef.current?.abort();
+    const requestId = ++requestIdRef.current;
 
     const isCostRelated = checkCostRelated(query);
 
     setState({
       answer: '',
       sources: [],
+      pros: null,
       confidence: null,
       isStreaming: true,
       error: null,
@@ -55,6 +62,7 @@ export function useStreamingAnswer() {
     // Try pre-generated answer first for instant response
     getPregeneratedAnswer(query)
       .then((pregenerated) => {
+        if (requestId !== requestIdRef.current) return;
         if (pregenerated) {
           // Instant match — no streaming needed
           const sources: AnswerSource[] = (pregenerated.sources || []).map((s) => ({
@@ -72,6 +80,7 @@ export function useStreamingAnswer() {
           setState({
             answer: pregenerated.answer,
             sources,
+            pros: null,
             confidence,
             isStreaming: false,
             error: null,
@@ -86,10 +95,11 @@ export function useStreamingAnswer() {
           (text) => {
             setState((prev) => ({ ...prev, answer: prev.answer + text }));
           },
-          (sources, confidence) => {
+          (sources, confidence, pros) => {
             setState((prev) => ({
               ...prev,
               sources,
+              pros,
               confidence,
               isStreaming: false,
             }));
@@ -101,6 +111,7 @@ export function useStreamingAnswer() {
                 setState({
                   answer: data.answer,
                   sources: data.sources,
+                  pros: null,
                   confidence: data.confidence,
                   isStreaming: false,
                   error: null,
@@ -121,16 +132,18 @@ export function useStreamingAnswer() {
         controllerRef.current = controller;
       })
       .catch(() => {
+        if (requestId !== requestIdRef.current) return;
         // Pre-generated lookup failed — fall through to streaming
         const controller = streamAnswer(
           query,
           (text) => {
             setState((prev) => ({ ...prev, answer: prev.answer + text }));
           },
-          (sources, confidence) => {
+          (sources, confidence, pros) => {
             setState((prev) => ({
               ...prev,
               sources,
+              pros,
               confidence,
               isStreaming: false,
             }));
@@ -141,6 +154,7 @@ export function useStreamingAnswer() {
                 setState({
                   answer: data.answer,
                   sources: data.sources,
+                  pros: null,
                   confidence: data.confidence,
                   isStreaming: false,
                   error: null,
@@ -163,6 +177,7 @@ export function useStreamingAnswer() {
   }, []);
 
   const cancel = useCallback(() => {
+    requestIdRef.current += 1;
     controllerRef.current?.abort();
     setState((prev) => ({ ...prev, isStreaming: false }));
   }, []);
