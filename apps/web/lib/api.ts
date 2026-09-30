@@ -5,6 +5,8 @@ import type {
   SearchResponse,
   AnswerResponse,
   AnswerSource,
+  AnswerCitation,
+  ProsCta,
   PaginatedVideos,
   PregeneratedAnswer,
   VideoListParams,
@@ -248,7 +250,11 @@ export async function getAnswer(query: string): Promise<AnswerResponse> {
 export function streamAnswer(
   query: string,
   onChunk: (text: string) => void,
-  onDone: (sources: AnswerSource[], confidence: 'high' | 'medium' | 'low') => void,
+  onDone: (
+    sources: AnswerCitation[],
+    confidence: 'high' | 'medium' | 'low',
+    pros: ProsCta | null,
+  ) => void,
   onError?: (err: Error) => void,
 ): AbortController {
   const controller = new AbortController();
@@ -294,26 +300,36 @@ export function streamAnswer(
             const event = JSON.parse(json) as {
               type: string;
               content?: string;
-              sources?: Array<{
-                video_id: string;
-                youtube_id: string;
-                title: string;
-                timestamp: number;
-                relevance_score: number;
-              }>;
+              sources?: Array<
+                | {
+                    kind?: 'video';
+                    video_id: string;
+                    youtube_id: string;
+                    title: string;
+                    timestamp: number;
+                    relevance_score: number;
+                  }
+                | { kind: 'post'; slug: string; title: string; url: string; relevance_score: number }
+              >;
               confidence?: number;
+              pros?: ProsCta | null;
             };
 
             if (event.type === 'chunk' && event.content) {
               onChunk(event.content);
             } else if (event.type === 'done') {
-              const sources: AnswerSource[] = (event.sources || []).map((s) => ({
-                video_id: s.video_id,
-                youtube_id: s.youtube_id,
-                title: s.title,
-                timestamp: s.timestamp,
-              }));
-              onDone(sources, mapConfidence(event.confidence ?? 0));
+              const sources: AnswerCitation[] = (event.sources || []).map((s) =>
+                s.kind === 'post'
+                  ? { kind: 'post', slug: s.slug, title: s.title, url: s.url }
+                  : {
+                      kind: 'video',
+                      video_id: s.video_id,
+                      youtube_id: s.youtube_id,
+                      title: s.title,
+                      timestamp: s.timestamp,
+                    },
+              );
+              onDone(sources, mapConfidence(event.confidence ?? 0), event.pros ?? null);
             }
           } catch {
             // skip malformed JSON

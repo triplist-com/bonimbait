@@ -1,7 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 
+/** A transcript segment of a video (search-index.*). */
 export interface SegmentHit {
+  kind: 'video';
   youtube_id: string;
   segment_index: number;
   start_time: number;
@@ -11,24 +13,33 @@ export interface SegmentHit {
   cos: number; // raw cosine similarity (for display / confidence)
 }
 
-interface SegmentMeta {
-  youtube_id: string;
-  segment_index: number;
-  start_time: number;
-  end_time: number;
+/** A chunk of a blog post (posts-index.*, built by scripts/build_posts_index.py). */
+export interface PostHit {
+  kind: 'post';
+  slug: string;
+  title: string;
+  chunk_index: number;
   text: string;
+  score: number;
+  cos: number;
 }
 
+export type SearchHit = SegmentHit | PostHit;
+export type HitKind = SearchHit['kind'];
+
+type RowMeta = Omit<SegmentHit, 'score' | 'cos'> | Omit<PostHit, 'score' | 'cos'>;
+
 interface Index {
-  meta: SegmentMeta[];
-  matrix: Float32Array; // length = N * DIM
+  meta: RowMeta[];
+  matrix: Float32Array; // length = N * DIM, videos first, then posts
+  norms: Float32Array; // L2 norm per row
   dim: number;
-  normText: string[]; // sofit-normalized text per segment, for keyword search
+  normText: string[]; // sofit-normalized text per row, for keyword search
 }
 
 let _index: Index | null = null;
 
-function resolveDataPath(name: string): string {
+function resolveDataPath(name: string): string | null {
   const candidates = [
     path.join(process.cwd(), 'data', name),
     path.join(process.cwd(), 'apps/web/data', name),
@@ -37,26 +48,49 @@ function resolveDataPath(name: string): string {
   for (const p of candidates) {
     if (fs.existsSync(p)) return p;
   }
-  throw new Error(`Data file not found: ${name} (tried ${candidates.join(', ')})`);
+  return null;
+}
+
+function readPart(name: string, required: boolean): { meta: unknown[]; floats: Float32Array } | null {
+  const metaPath = resolveDataPath(`${name}.json`);
+  const vecPath = resolveDataPath(`${name}.f32`);
+  if (!metaPath || !vecPath) {
+    if (required) throw new Error(`Data file not found: ${name}.json / ${name}.f32`);
+    console.warn(`search index part ${name} not found; skipping`);
+    return null;
+  }
+  const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8')) as unknown[];
+  const buf = fs.readFileSync(vecPath);
+  const floats = new Float32Array(buf.buffer, buf.byteOffset, buf.byteLength / 4);
+  return { meta, floats };
 }
 
 function loadIndex(): Index {
   if (_index) return _index;
-  const metaRaw = fs.readFileSync(resolveDataPath('search-index.json'), 'utf8');
-  const meta = JSON.parse(metaRaw) as SegmentMeta[];
-  const buf = fs.readFileSync(resolveDataPath('search-index.f32'));
-  const floats = buf.byteLength / 4;
-  const matrix = new Float32Array(
-    buf.buffer,
-    buf.byteOffset,
-    floats,
-  );
-  const dim = floats / meta.length;
-  if (!Number.isInteger(dim)) {
-    throw new Error(`Matrix/meta mismatch: floats=${floats}, meta=${meta.length}`);
+  const videos = readPart('search-index', true)!;
+  const posts = readPart('posts-index', false);
+
+  const meta: RowMeta[] = [
+    ...(videos.meta as Array<Omit<SegmentHit, 'score' | 'cos' | 'kind'>>).map((m) => ({ ...m, kind: 'video' as const })),
+    ...((posts?.meta ?? []) as Array<Omit<PostHit, 'score' | 'cos' | 'kind'>>).map((m) => ({ ...m, kind: 'post' as const })),
+  ];
+  const totalFloats = videos.floats.length + (posts?.floats.length ?? 0);
+  const dim = totalFloats / meta.length;
+  if (!Number.isInteger(dim) || videos.floats.length !== videos.meta.length * dim) {
+    throw new Error(`Matrix/meta mismatch: floats=${totalFloats}, meta=${meta.length}`);
+  }
+  const matrix = new Float32Array(totalFloats);
+  matrix.set(videos.floats, 0);
+  if (posts) matrix.set(posts.floats, videos.floats.length);
+
+  const norms = new Float32Array(meta.length);
+  for (let r = 0; r < meta.length; r++) {
+    let n = 0;
+    for (let i = r * dim, end = i + dim; i < end; i++) n += matrix[i] * matrix[i];
+    norms[r] = Math.sqrt(n) || 1;
   }
   const normText = meta.map((m) => m.text.replace(/[ךםןףץ]/g, (c) => SOFIT_MAP[c] || c));
-  _index = { meta, matrix, dim, normText };
+  _index = { meta, matrix, norms, dim, normText };
   return _index;
 }
 
@@ -76,19 +110,11 @@ async function embedQuery(text: string): Promise<Float32Array> {
   return Float32Array.from(data.data[0].embedding);
 }
 
-function cosine(a: Float32Array, matrix: Float32Array, rowStart: number, dim: number): number {
+function cosine(a: Float32Array, matrix: Float32Array, rowStart: number, dim: number, norm: number): number {
+  // The query vector is normalized by the caller.
   let dot = 0;
-  let nb = 0;
-  for (let i = 0; i < dim; i++) {
-    const va = a[i];
-    const vb = matrix[rowStart + i];
-    dot += va * vb;
-    nb += vb * vb;
-  }
-  // Query vector is expected to be unit-norm from OpenAI, but normalize anyway.
-  // We only compare scores so na is common; skip.
-  const denom = Math.sqrt(nb) || 1;
-  return dot / denom;
+  for (let i = 0; i < dim; i++) dot += a[i] * matrix[rowStart + i];
+  return dot / norm;
 }
 
 // Hebrew interrogatives / stopwords to drop before keyword fusion.
@@ -155,10 +181,16 @@ function computeIdfWeights(allNormText: string[], terms: string[]): number[] {
   });
 }
 
-export async function semanticSearchSegments(
+/**
+ * Hybrid search over video segments and post chunks: Reciprocal Rank Fusion of
+ * cosine similarity and IDF-weighted keyword overlap. Only rows of the given
+ * kinds are ranked (IDF is computed over those rows too).
+ */
+export async function semanticSearch(
   query: string,
   topK: number = 30,
-): Promise<SegmentHit[]> {
+  kinds: readonly HitKind[] = ['video', 'post'],
+): Promise<SearchHit[]> {
   const idx = loadIndex();
   const qvec = await embedQuery(query);
   let qn = 0;
@@ -166,19 +198,24 @@ export async function semanticSearchSegments(
   qn = Math.sqrt(qn) || 1;
   for (let i = 0; i < qvec.length; i++) qvec[i] /= qn;
 
-  const { matrix, meta, dim, normText } = idx;
+  const { matrix, norms, meta, dim, normText } = idx;
+  const rows: number[] = [];
+  for (let i = 0; i < meta.length; i++) if (kinds.includes(meta[i].kind)) rows.push(i);
   const terms = extractContentTerms(query);
-  const idf = terms.length > 0 ? computeIdfWeights(normText, terms) : [];
+  const idf = terms.length > 0 ? computeIdfWeights(rows.map((i) => normText[i]), terms) : [];
 
   // Reciprocal Rank Fusion between cosine and keyword ranking
-  const cosScores: Array<{ i: number; s: number }> = new Array(meta.length);
-  const kwScores: Array<{ i: number; s: number }> = new Array(meta.length);
-  for (let i = 0; i < meta.length; i++) {
-    cosScores[i] = { i, s: cosine(qvec, matrix, i * dim, dim) };
-    kwScores[i] = { i, s: weightedKeywordScore(normText[i], terms, idf) };
+  const cos = new Float64Array(meta.length);
+  const cosScores: Array<{ i: number; s: number }> = new Array(rows.length);
+  const kwScores: Array<{ i: number; s: number }> = new Array(rows.length);
+  for (let r = 0; r < rows.length; r++) {
+    const i = rows[r];
+    cos[i] = cosine(qvec, matrix, i * dim, dim, norms[i]);
+    cosScores[r] = { i, s: cos[i] };
+    kwScores[r] = { i, s: weightedKeywordScore(normText[i], terms, idf) };
   }
-  const cosRank = [...cosScores].sort((a, b) => b.s - a.s);
-  const kwRank = [...kwScores].sort((a, b) => b.s - a.s);
+  const cosRank = cosScores.sort((a, b) => b.s - a.s);
+  const kwRank = kwScores.sort((a, b) => b.s - a.s);
   const K = 60;
   const KW_WEIGHT = 1.5; // keyword signal is highly diagnostic for niche Hebrew queries
   const rrf = new Float64Array(meta.length);
@@ -187,19 +224,13 @@ export async function semanticSearchSegments(
     if (kwRank[r].s > 0) rrf[kwRank[r].i] += KW_WEIGHT / (K + r + 1);
   }
 
-  const merged: Array<{ i: number; rrf: number; cos: number }> = new Array(meta.length);
-  for (let i = 0; i < meta.length; i++) {
-    merged[i] = { i, rrf: rrf[i], cos: cosScores[i].s };
-  }
-  merged.sort((a, b) => b.rrf - a.rrf);
+  const merged = rows.slice().sort((a, b) => rrf[b] - rrf[a]);
+  return merged.slice(0, topK).map((i) => ({ ...meta[i], score: rrf[i], cos: cos[i] }) as SearchHit);
+}
 
-  const out: SegmentHit[] = [];
-  for (let k = 0; k < Math.min(topK, merged.length); k++) {
-    const { i, cos, rrf: r } = merged[k];
-    const m = meta[i];
-    out.push({ ...m, score: r, cos });
-  }
-  return out;
+/** Video segments only (the /api/search result list). */
+export async function semanticSearchSegments(query: string, topK: number = 30): Promise<SegmentHit[]> {
+  return (await semanticSearch(query, topK, ['video'])) as SegmentHit[];
 }
 
 export function groupByVideo(hits: SegmentHit[]): Map<string, SegmentHit[]> {

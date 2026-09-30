@@ -83,10 +83,36 @@ export interface SearchResponse {
 // --- AI Answer ---
 
 export interface AnswerSource {
+  kind?: 'video';
   video_id: string;
   youtube_id: string;
   title: string;
   timestamp: number;
+}
+
+/** A blog post cited by an AI answer. */
+export interface ArticleSource {
+  kind: 'post';
+  slug: string;
+  title: string;
+  url: string;
+}
+
+export type AnswerCitation = AnswerSource | ArticleSource;
+
+/** Directory pros matched to the question's specialty (shown under an AI answer). */
+export interface MatchedPro {
+  slug: string;
+  name: string;
+  tagline: string | null;
+  city: string | null;
+  logo_url: string | null;
+  href: string;
+}
+
+export interface ProsCta {
+  specialty: { slug: string; name: string; href: string };
+  pros: MatchedPro[];
 }
 
 export interface AnswerResponse {

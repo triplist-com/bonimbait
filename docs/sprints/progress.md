@@ -31,7 +31,7 @@
 |---|---|---|---|
 | 1 | Foundation (schema, auth, payments interface) + live-site crawl | Done | 2026-09-28 |
 | 2 | Content, Directory, Community & Commerce, Leads, data load | Done | 2026-09-28 |
-| 3 | Admin CMS (done); search index for posts, CTA integration, QA (open) | In progress | |
+| 3 | Admin CMS, posts in AI search, answer CTAs (done); QA (open) | In progress | |
 | 4 | Cutover to bonimbayit.co.il | Not started | |
 
 **URL parity after Wave 2:** 1214/1214 pass against a local build (1203 × 200; the rest redirect as live or are listed in `scripts/migrate/parity_exceptions.json`).
@@ -41,3 +41,8 @@
 - `SITE_NOINDEX=true` keeps bonimbait.com out of search until the cutover to bonimbayit.co.il.
 - Mock payments are refused on production, so online purchase stays hidden until UPay is configured.
 - Rollback target, if needed: the previous production deployment `bonimbait-5jtax0zqs`.
+
+**2026-09-30: posts in AI search + answer CTAs** (branch `feature/posts-index-ctas`).
+- `scripts/build_posts_index.py` chunks the 806 published posts (5,233 chunks, ~1.5k chars each) into `apps/web/data/posts-index.*`. Embedding cost $0.14. Re-run it after content edits; unchanged chunks are cached in `data/processed/post_embeddings.json`.
+- AI answers draw on videos and articles (at most 3 of the 5 sources are articles) and cite both.
+- Every answer shows a free-consultation CTA. A classifier (`claude-opus-5-5`, effort low) picks the directory specialty the question is about, and the answer lists up to 3 published pros in it.
