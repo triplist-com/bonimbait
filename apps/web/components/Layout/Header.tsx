@@ -125,7 +125,7 @@ export default function Header() {
             <div className="ms-auto flex items-center gap-2 sm:gap-3">
               {!onAiPage && (
                 <div className="hidden w-[17rem] lg:block xl:w-[14.5rem] min-[1400px]:w-[17rem]">
-                  <AskForm size="md" placeholder="שאלו כל שאלה על בנייה" label={AI_ENTRY.label} />
+                  <AskForm size="md" placeholder={`${AI_ENTRY.label}…`} label={AI_ENTRY.label} />
                 </div>
               )}
 
