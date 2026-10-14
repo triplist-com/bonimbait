@@ -249,10 +249,11 @@ for it and one squad assembles it, so the shape is fixed here and everyone build
 
 ```ts
 // lib/project-file/types.ts — owned by `revenue`; others import the type only.
-// Stages are the owner's 7: purchase | planning | permit | shell | infrastructure | finishes | move_in.
+// Stages are the owner's 7, ids from lib/stages.ts (BuildStage['id']):
+// purchase | planning | permit | frame | infrastructure | finishing | moving-in.
 export interface ProjectFile {
   version: 1;
-  stage?: 'purchase' | 'planning' | 'permit' | 'shell' | 'infrastructure' | 'finishes' | 'move_in';
+  stage?: BuildStage['id'];          // import type { BuildStage } from '@/lib/stages'
   regionSlug?: string;               // regions.slug (14 canonical)
   sizeM2?: number;
   budgetRangeNis?: [number, number]; // whole shekels
