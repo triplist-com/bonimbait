@@ -71,7 +71,7 @@ function VideoContent() {
   const thumb = video.thumbnail_url || getThumbUrl(video.youtube_id);
 
   return (
-    <div className="container-page">
+    <div className="container-page max-w-5xl">
       {/* VideoObject structured data */}
       <StructuredData
         data={{
@@ -109,12 +109,13 @@ function VideoContent() {
           youtubeId={video.youtube_id}
           title={video.title}
           startTime={playerTime}
+          poster={video.thumbnail_url}
         />
 
         {/* Video Info */}
         <div className="mt-6 mb-8">
           <div className="flex items-start justify-between gap-4 mb-3">
-            <h1 className="text-2xl font-bold text-gray-900">{video.title}</h1>
+            <h1 className="text-headline-sm text-ink-900">{video.title}</h1>
             <Link
               href={`/category/${video.category_slug}/`}
               className="inline-block text-sm bg-primary-50 text-primary-700 font-medium px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-primary-100 transition-colors flex-shrink-0"
@@ -154,7 +155,7 @@ function VideoContent() {
 
         {/* Transcript Accordion */}
         {video.segments && video.segments.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-8">
+          <div className="bg-white border border-ink-100 rounded-2xl shadow-card overflow-hidden mb-8">
             <button
               onClick={() => setOpenTranscript(!openTranscript)}
               className="w-full flex items-center justify-between p-6 hover:bg-gray-50 transition-colors"

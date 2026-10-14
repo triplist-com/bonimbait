@@ -1,24 +1,17 @@
+'use client';
+
+import { YouTubeFacade } from '@/components/ui/YouTubeFacade';
+
 interface VideoPlayerProps {
   youtubeId: string;
   title?: string;
+  /** Start second; changing it after load starts playback there. */
   startTime?: number;
+  poster?: string | null;
+  priority?: boolean;
 }
 
-export default function VideoPlayer({ youtubeId, title, startTime }: VideoPlayerProps) {
-  const src = `https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1${
-    startTime ? `&start=${Math.floor(startTime)}` : ''
-  }`;
-
-  return (
-    <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-gray-900 shadow-lg">
-      <iframe
-        src={src}
-        title={title || 'Video player'}
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        allowFullScreen
-        loading="lazy"
-        className="absolute inset-0 w-full h-full"
-      />
-    </div>
-  );
+/** Video player for AI-indexed videos: a facade until played (see YouTubeFacade). */
+export default function VideoPlayer({ youtubeId, title, startTime, poster, priority = true }: VideoPlayerProps) {
+  return <YouTubeFacade youtubeId={youtubeId} title={title || 'סרטון'} start={startTime} poster={poster} priority={priority} />;
 }

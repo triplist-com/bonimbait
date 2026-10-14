@@ -13,6 +13,7 @@ export default async function BlogArchive({ page }: { page: number }) {
   return (
     <PostArchive
       title="מרכז הידע לבניית בית"
+      eyebrow="מדריך הבנייה"
       intro="מדריכים, טיפים ועלויות לכל שלב בבניית הבית הפרטי: מרכישת המגרש ועד קבלת המפתח."
       crumbs={[
         { label: 'ראשי', href: '/' },
@@ -26,7 +27,7 @@ export default async function BlogArchive({ page }: { page: number }) {
         page === 1 ? (
           <>
             <StageNav />
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mt-4 mb-5">חדשים במרכז הידע</h2>
+            <h2 className="mb-1 mt-2 text-headline-sm text-ink-900">חדשים במרכז הידע</h2>
           </>
         ) : null
       }

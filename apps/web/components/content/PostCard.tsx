@@ -1,6 +1,9 @@
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { formatHebrewDate } from '@/lib/content/seo';
 import { htmlToText } from '@/lib/content/sanitize';
+import { stageForCategory } from '@/lib/stages';
+import { Badge } from '@/components/ui/Badge';
 
 export interface PostCardData {
   slug: string;
@@ -10,50 +13,57 @@ export interface PostCardData {
   featured_image_alt: string | null;
   published_at: string | null;
   categoryName?: string | null;
+  /** Primary category slug: posts without an image show their stage icon. */
+  categorySlug?: string | null;
 }
 
 /** Article card for archives, related posts and the homepage. */
 export default function PostCard({ post, priority = false }: { post: PostCardData; priority?: boolean }) {
   const href = `/${post.slug}/`;
   const excerpt = htmlToText(post.excerpt, 140);
+  const stage = post.categorySlug ? stageForCategory(post.categorySlug) : undefined;
   return (
-    <article className="group relative flex flex-col bg-white rounded-2xl border border-gray-100 shadow-card hover:shadow-card-hover transition-shadow overflow-hidden">
-      <div className="aspect-[16/9] bg-gradient-to-br from-primary-50 to-secondary-50 overflow-hidden">
+    <article className="group relative flex flex-col overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-card transition-[box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:shadow-card-hover">
+      <div className="relative aspect-[16/10] overflow-hidden bg-sand-100">
         {post.featured_image ? (
-          // Remote WordPress/blogspot images: plain <img> (hosts are not in next/image remotePatterns).
+          // Storage images through plain <img> (lazy, many hosts); priority cards load eagerly.
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={post.featured_image}
-            alt={post.featured_image_alt || post.title}
+            alt={post.featured_image_alt || ''}
             loading={priority ? 'eager' : 'lazy'}
             decoding="async"
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            {...(priority ? { fetchPriority: 'high' as const } : {})}
+            className="size-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-primary-300" aria-hidden="true">
-            <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1" />
-            </svg>
+          <div className="bg-blueprint flex size-full items-center justify-center" aria-hidden="true">
+            <span className="inline-flex size-24 items-center justify-center rounded-[1.75rem] bg-white shadow-card ring-1 ring-sand-200">
+              {/* eslint-disable-next-line @next/next/no-img-element -- owner's stage icon */}
+              <img src={stage?.icon ?? '/brand/monogram.svg'} alt="" className={stage ? 'h-10 w-14 object-contain' : 'size-12'} />
+            </span>
           </div>
         )}
       </div>
-      <div className="flex flex-col flex-1 p-5">
+      <div className="flex flex-1 flex-col p-5">
         {post.categoryName && (
-          <span className="self-start mb-2 text-xs font-semibold text-primary bg-primary-50 px-2.5 py-1 rounded-full">
+          <Badge tone="brand" size="sm" className="mb-3 self-start">
             {post.categoryName}
-          </span>
+          </Badge>
         )}
-        <h3 className="font-bold text-gray-900 leading-snug mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-          <Link href={href} className="after:absolute after:inset-0">
+        <h3 className="mb-2 line-clamp-2 text-title leading-snug text-ink-900 transition-colors group-hover:text-primary-700">
+          <Link href={href} className="after:absolute after:inset-0 after:content-['']">
             {post.title}
           </Link>
         </h3>
-        {excerpt && <p className="text-sm text-gray-500 leading-relaxed line-clamp-3 mb-3">{excerpt}</p>}
-        {post.published_at && (
-          <time dateTime={post.published_at} className="mt-auto text-xs text-gray-400">
-            {formatHebrewDate(post.published_at)}
-          </time>
-        )}
+        {excerpt && <p className="mb-4 line-clamp-3 text-sm leading-relaxed text-ink-600">{excerpt}</p>}
+        <div className="mt-auto flex items-center justify-between gap-3 text-xs text-ink-500">
+          {post.published_at ? <time dateTime={post.published_at}>{formatHebrewDate(post.published_at)}</time> : <span />}
+          <span className="inline-flex items-center gap-1 font-semibold text-ink-700 transition-colors group-hover:text-primary-700">
+            לקריאה
+            <ArrowLeft aria-hidden="true" className="size-3.5 transition-transform group-hover:-translate-x-0.5 ltr:rotate-180" />
+          </span>
+        </div>
       </div>
     </article>
   );
@@ -61,7 +71,7 @@ export default function PostCard({ post, priority = false }: { post: PostCardDat
 
 export function PostGrid({ posts, priorityCount = 0 }: { posts: PostCardData[]; priorityCount?: number }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {posts.map((p, i) => (
         <PostCard key={p.slug} post={p} priority={i < priorityCount} />
       ))}

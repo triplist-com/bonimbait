@@ -4,6 +4,7 @@ import type { BusinessReviewStatsRow, RegionRow, SpecialtyRow } from '@/lib/db/t
 import { businessHref } from '@/lib/directory/format';
 import { excerpt, htmlToText } from '@/lib/directory/html';
 import { listingHref } from '@/lib/directory/listing';
+import { buttonClasses } from '@/components/ui/Button';
 import BusinessLogo from './BusinessLogo';
 import RatingBadge from './RatingBadge';
 
@@ -34,12 +35,12 @@ export default function BusinessCard({
   const about = excerpt(business.tagline || htmlToText(business.description_html), 150);
 
   return (
-    <article className="flex h-full flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-card transition hover:shadow-card-hover">
+    <article className="flex h-full flex-col rounded-3xl border border-ink-100 bg-white p-5 shadow-card transition-[box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:shadow-card-hover sm:p-6">
       <div className="flex items-start gap-4">
         <BusinessLogo name={business.name} src={business.logo_url || business.cover_image_url} />
         <div className="min-w-0 flex-1">
-          <h2 className="text-lg font-bold text-gray-900">
-            <Link href={href} className="hover:text-primary">
+          <h2 className="text-title text-ink-900">
+            <Link href={href} className="hover:text-primary-700">
               {business.name}
             </Link>
           </h2>
@@ -85,10 +86,7 @@ export default function BusinessCard({
         </p>
       )}
 
-      <Link
-        href={href}
-        className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
-      >
+      <Link href={href} className={buttonClasses({ variant: 'outline', size: 'md', fullWidth: true, className: 'mt-5' })}>
         לעמוד העסקי
       </Link>
     </article>

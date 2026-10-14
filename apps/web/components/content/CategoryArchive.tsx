@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { PostCategoryRow } from '@/lib/db/types';
 import { loadPostsPage, totalPagesOf } from '@/lib/content/archives';
-import { STAGE_CATEGORY_SLUGS } from '@/lib/content/queries';
+import { BUILD_STAGES, stageForCategory } from '@/lib/stages';
 import { htmlToText } from '@/lib/content/sanitize';
 import CommunityCTA from './CommunityCTA';
 import ConsultationCTA from '@/components/leads/ConsultationCTA';
@@ -15,12 +15,23 @@ export default async function CategoryArchive({ category, page }: { category: Po
   if (page > totalPages) notFound();
 
   const slug = category.slug.normalize('NFC');
-  const isStage = (STAGE_CATEGORY_SLUGS as readonly string[]).includes(slug);
+  const stage = stageForCategory(slug);
   const intro = htmlToText(category.description, 600);
 
   return (
     <PostArchive
       title={category.name}
+      eyebrow={
+        stage ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element -- owner's stage icon */}
+            <img src={stage.icon} alt="" width={28} height={20} className="h-5 w-7 object-contain" />
+            שלב {stage.order} מתוך {BUILD_STAGES.length} במסע
+          </>
+        ) : (
+          'מדריך הבנייה'
+        )
+      }
       intro={intro || `כל המדריכים, הטיפים והסרטונים בנושא ${category.name}.`}
       crumbs={[
         { label: 'ראשי', href: '/' },
@@ -31,7 +42,7 @@ export default async function CategoryArchive({ category, page }: { category: Po
       page={page}
       totalPages={totalPages}
       posts={result.items}
-      before={isStage && page === 1 ? <StageNav heading={null} activeSlug={slug} /> : null}
+      before={stage && page === 1 ? <StageNav heading={null} activeSlug={slug} /> : null}
       after={
         <div className="grid gap-8">
           <ConsultationCTA variant="banner" source="category-archive" />

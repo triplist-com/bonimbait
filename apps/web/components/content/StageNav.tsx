@@ -1,41 +1,47 @@
 import Link from 'next/link';
-import { getStageLinks } from '@/lib/content/queries';
+import { cn } from '@/lib/cn';
+import { BUILD_STAGES, stageHref } from '@/lib/stages';
 
-/** "איפה אתם במסע?": navigation by construction stage (post categories). */
-export default async function StageNav({
+/**
+ * "איפה אתם במסע?": the owner's 7 build stages (lib/stages.ts) with their
+ * icons. A swipe row on phones, one row on desktop.
+ */
+export default function StageNav({
   heading = 'איפה אתם במסע?',
   activeSlug,
+  className,
 }: {
   heading?: string | null;
   activeSlug?: string;
+  className?: string;
 }) {
-  const stages = await getStageLinks();
+  const active = activeSlug?.normalize('NFC');
   return (
-    <section aria-label="ניווט לפי שלב בניה" className="py-8">
-      {heading && <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-5">{heading}</h2>}
-      <ol className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {stages.map((s, i) => {
-          const active = activeSlug === s.slug;
+    <section aria-label="ניווט לפי שלב בנייה" className={cn('py-8', className)}>
+      {heading && <h2 className="mb-5 text-headline-sm text-ink-900">{heading}</h2>}
+      <ol className="rail -mx-4 scroll-px-4 px-4 sm:-mx-6 sm:scroll-px-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-7 lg:gap-3 lg:overflow-visible lg:px-0">
+        {BUILD_STAGES.map((s) => {
+          const isActive = active === s.categorySlug.normalize('NFC');
           return (
-            <li key={s.slug}>
+            <li key={s.id} className="w-[7.5rem] sm:w-[8.5rem] lg:w-auto">
               <Link
-                href={s.href}
-                aria-current={active ? 'page' : undefined}
-                className={`group flex items-center gap-3 h-full rounded-2xl border p-3.5 transition-all ${
-                  active
-                    ? 'border-primary bg-primary text-white shadow-md'
-                    : 'border-gray-100 bg-white hover:border-primary-200 hover:shadow-card-hover'
-                }`}
+                href={stageHref(s)}
+                aria-current={isActive ? 'page' : undefined}
+                className={cn(
+                  'group flex h-full flex-col items-center gap-2 rounded-2xl border p-3 text-center transition-[box-shadow,border-color,transform] duration-300',
+                  isActive
+                    ? 'border-ink-900 bg-ink-900 text-white shadow-lift'
+                    : 'border-ink-100 bg-white hover:-translate-y-0.5 hover:border-ink-200 hover:shadow-card-hover',
+                )}
               >
-                <span
-                  className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold ${
-                    active ? 'bg-white/20 text-white' : 'bg-primary-50 text-primary group-hover:bg-primary group-hover:text-white transition-colors'
-                  }`}
-                  aria-hidden="true"
-                >
-                  {i + 1}
+                <span className={cn('relative inline-flex size-14 items-center justify-center rounded-xl', isActive ? 'bg-white' : 'bg-sand-50')}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- owner's small SVG icons */}
+                  <img src={s.icon} alt="" width={40} height={28} className="h-7 w-10 object-contain" />
                 </span>
-                <span className={`text-sm font-semibold leading-snug ${active ? 'text-white' : 'text-gray-800'}`}>{s.name}</span>
+                <span className="flex items-baseline gap-1.5">
+                  <span className={cn('num text-xs font-bold', isActive ? 'text-primary-300' : 'text-ink-400')}>{s.order}</span>
+                  <span className={cn('text-sm font-bold', isActive ? 'text-white' : 'text-ink-900 group-hover:text-primary-700')}>{s.label}</span>
+                </span>
               </Link>
             </li>
           );
