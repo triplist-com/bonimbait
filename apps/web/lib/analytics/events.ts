@@ -137,12 +137,43 @@ export const EVENT_CATALOG = {
     z.object({
       lead_type: leadType,
       lead_id: id.optional(),
+      lead_ref: text(20).optional(), // human-friendly id, e.g. BB-26-000123
       business_id: id.optional(),
       kind: text(40).optional(), // e.g. 'phone_reveal' | 'contact_form'
       cta_source: text(60).optional(),
       region: text(40).optional(),
       stage: text(40).optional(),
+      // 4-hour last-touch attribution (lib/analytics/attribution.ts)
+      touch: z.enum(['partner_click', 'source_clicked', 'page_view']).optional(),
+      touch_medium: text(20).optional(),
+      touch_source: text(200).optional(),
     }),
+  ),
+  quote_request: event(
+    'both',
+    'A builder asked pros for a price quote.',
+    z.object({
+      specialty: text(80),
+      stage: text(40),
+      region: text(40),
+      business_id: id.optional(),
+      lead_id: id.optional(),
+    }),
+  ),
+  shortlist_add: event(
+    'both',
+    "A pro was added to the builder's shortlist.",
+    z.object({ business_id: id, specialty: text(80).optional(), source: text(60).optional() }),
+  ),
+  consult_booking_started: event(
+    'client',
+    'A visitor started booking the free consultation (Calendly: picked a date and time).',
+    z.object({ source: text(60), method: z.enum(['calendly', 'callback']).optional() }),
+  ),
+  consult_booked: event(
+    'both',
+    'The free consultation was booked (Calendly event_scheduled; later also its webhook).',
+    z.object({ source: text(60).optional(), method: z.enum(['calendly', 'callback']).optional() }),
   ),
   phone_reveal: event(
     'server',
@@ -184,9 +215,24 @@ export const EVENT_CATALOG = {
   ),
 
   // --- Growth (P6) ------------------------------------------------------------
+  planner_started: event(
+    'both',
+    'The budget planner was started (first step answered).',
+    z.object({ source: text(60).optional() }),
+  ),
+  planner_completed: event(
+    'both',
+    'The budget planner reached its result (funnel end). The estimate itself is budget_estimate_completed.',
+    z.object({
+      total_ils: count.optional(),
+      size_sqm: z.number().min(0).max(100_000).optional(),
+      region: text(40).optional(),
+      stage: text(40).optional(),
+    }),
+  ),
   budget_estimate_completed: event(
     'both',
-    'The budget planner produced an estimate.',
+    'An estimate with a total was computed (budget planner result or the /calculator wizard).',
     z.object({
       total_ils: count.optional(), // whole shekels
       size_sqm: z.number().min(0).max(100_000).optional(),
@@ -209,8 +255,32 @@ export const EVENT_CATALOG = {
   ),
 
   // --- Partners ---------------------------------------------------------------
-  partner_offer_view: event('client', 'A partner offer was shown.', z.object(partnerOffer)),
-  partner_offer_click: event('client', 'A partner offer was clicked.', z.object(partnerOffer)),
+  // Sponsored partner slots (campaign placements): the billing-grade pair.
+  partner_impression: event(
+    'client',
+    'A sponsored partner slot was VIEWABLY seen: >=50% visible for >=1s while the visitor was active ' +
+      '(input/scroll in the last 60s). Deduped per slot and visitor for 30 minutes. Sent by <ViewableImpression/>.',
+    z.object({
+      slot: text(120),
+      partner_id: text(120),
+      offer_id: text(120).optional(),
+      placement: text(60).optional(),
+      visible_ms: count.optional(),
+    }),
+  ),
+  partner_click: event(
+    'client',
+    'A click inside a sponsored partner slot (<ViewableImpression/> records it).',
+    z.object({
+      slot: text(120).optional(),
+      partner_id: text(120),
+      offer_id: text(120).optional(),
+      placement: text(60).optional(),
+    }),
+  ),
+  // Benefits-shop offers (/הטבות-לקהילה/, product pages): not viewability-checked.
+  partner_offer_view: event('client', 'A benefits-shop partner offer was shown (page or card).', z.object(partnerOffer)),
+  partner_offer_click: event('client', 'A benefits-shop partner offer CTA was clicked.', z.object(partnerOffer)),
 
   // --- Media ------------------------------------------------------------------
   video_play: event(

@@ -33,8 +33,19 @@ describe('event catalog', () => {
       'phone_reveal', 'signup_started', 'signup_completed', 'hub_onboarding_completed', 'hub_item_saved',
       'budget_estimate_completed', 'consultation_clicked', 'pro_profile_view', 'pro_contact_clicked',
       'partner_offer_view', 'partner_offer_click', 'video_play',
+      // Strategy measurement additions (orchestrator, Wave A).
+      'partner_impression', 'partner_click', 'quote_request', 'shortlist_add',
+      'consult_booking_started', 'consult_booked', 'planner_started', 'planner_completed',
     ];
     for (const name of required) expect(isEventName(name), name).toBe(true);
+  });
+
+  it('requires the quote request dimensions and impression ids', () => {
+    expect(validateEvent('quote_request', { specialty: 'אלומיניום', stage: 'frame', region: 'sharon' }).ok).toBe(true);
+    expect(validateEvent('quote_request', { specialty: 'אלומיניום' }).ok).toBe(false);
+    expect(validateEvent('partner_impression', { slot: 'answer-sidebar', partner_id: 'p-42', visible_ms: 1200 }).ok).toBe(true);
+    expect(validateEvent('partner_impression', { partner_id: 'p-42' }).ok).toBe(false);
+    expect(isClientEvent('partner_impression')).toBe(true);
   });
 
   it('uses names the platform_events check constraint accepts', () => {

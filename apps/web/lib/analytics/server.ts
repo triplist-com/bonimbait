@@ -105,6 +105,16 @@ function contextFromNextHeaders(opts: TrackServerOptions): TrackContext {
   return contextFromHeaders(bag, opts);
 }
 
+/**
+ * The current visitor's analytics ids (bb_aid / bb_sid cookies) in a Server
+ * Action or Server Component. Nulls outside a request or before the first
+ * /api/track call.
+ */
+export function currentVisitor(): { anonId: string | null; sessionId: string | null } {
+  const ctx = contextFromNextHeaders({});
+  return { anonId: ctx.anonId, sessionId: ctx.sessionId };
+}
+
 /** One validated event + its context -> a platform_events row. */
 export function buildEventRow(event: ValidatedEvent, ctx: TrackContext, occurredAt?: number | Date): PlatformEventInsert {
   return {

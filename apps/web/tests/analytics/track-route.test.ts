@@ -21,6 +21,7 @@ vi.mock('@/lib/auth/session', () => ({
 
 import { POST } from '@/app/api/track/route';
 import { insertPlatformEvents } from '@/lib/analytics/store';
+import { resetImpressionDedupe } from '@/lib/analytics/impressions';
 import { resetRateLimitMemory } from '@/lib/guard/rateLimit';
 
 const CHROME =
@@ -63,6 +64,7 @@ beforeEach(() => {
   state.insert = null;
   state.userId = null;
   resetRateLimitMemory();
+  resetImpressionDedupe();
   vi.mocked(insertPlatformEvents).mockClear();
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(NOW);
@@ -216,6 +218,17 @@ describe('POST /api/track', () => {
     const res = await POST(req({ events: [pageView('/x/', { props: { q: 'x'.repeat(40_000) } })] }));
     expect(res.headers.get('x-bb-track')).toBe('too_large');
     expect(insertPlatformEvents).not.toHaveBeenCalled();
+  });
+
+  it('counts a partner slot once per visitor per 30 minutes', async () => {
+    const imp = { name: 'partner_impression', props: { slot: 'answer-sidebar', partner_id: 'partner-42' }, path: '/search/' };
+    const cookie = `bb_aid=${AID}`;
+    await POST(req({ events: [imp, imp] }, { cookie, ip: '203.0.113.90' }));
+    await POST(req({ events: [imp] }, { cookie, ip: '203.0.113.90' }));
+    expect(state.rows.filter((r) => r.name === 'partner_impression')).toHaveLength(1);
+    vi.setSystemTime(NOW + 31 * 60_000);
+    await POST(req({ events: [{ ...imp, ts: NOW + 31 * 60_000 }] }, { cookie, ip: '203.0.113.90' }));
+    expect(state.rows.filter((r) => r.name === 'partner_impression')).toHaveLength(2);
   });
 
   it('honours the analytics kill switch', async () => {

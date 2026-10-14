@@ -11,6 +11,7 @@ import {
   SESSION_COOKIE_MAX_AGE,
 } from '@/lib/analytics/constants';
 import { isClientEvent, validateEvent } from '@/lib/analytics/events';
+import { dedupeImpressions } from '@/lib/analytics/impressions';
 import { cleanUtm, isBot, isUuid, sanitizePath } from '@/lib/analytics/sanitize';
 import { buildEventRow, contextFromHeaders } from '@/lib/analytics/server';
 import { insertPlatformEvents } from '@/lib/analytics/store';
@@ -29,7 +30,8 @@ import type { PlatformEventInsert } from '@/lib/platform/types';
  *
  * Steps: kill switch -> bot / cross-site drop -> size check -> per-IP-hash rate
  * limit -> catalog validation per event (unknown, invalid and server-only
- * events are dropped one by one) -> service-role insert. Sets the bb_aid
+ * events are dropped one by one) -> partner_impression dedupe (per visitor
+ * and slot, 30 min) -> service-role insert. Sets the bb_aid
  * visitor cookie when missing and refreshes the 30-minute bb_sid session.
  *
  * Fail-open: every outcome except unparsable JSON is a 204, and any error
@@ -120,8 +122,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const stored = await insertPlatformEvents(rows);
-    const res = reply(rows.length > 0 ? 'stored' : 'empty', stored, events.length - stored);
+    // partner_impression: once per visitor and slot per 30 minutes.
+    const deduped = await dedupeImpressions(rows, { anonId, returning: ctx.anonId !== null });
+    const stored = await insertPlatformEvents(deduped);
+    const res = reply(deduped.length > 0 ? 'stored' : 'empty', stored, events.length - stored);
     const secure = request.nextUrl.protocol === 'https:' || process.env.NODE_ENV === 'production';
     if (!isUuid(request.cookies.get(ANON_COOKIE)?.value)) {
       res.cookies.set(ANON_COOKIE, anonId, { httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: ANON_COOKIE_MAX_AGE });
