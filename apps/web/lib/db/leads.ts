@@ -64,7 +64,8 @@ function toInsert(lead: NewLead): TablesInsert<'leads'> {
     whatsapp_group_id: lead.whatsappGroupId ?? null,
     member_id: lead.memberId ?? null,
     ip_hash: lead.ipHash ?? null,
-    attribution: lead.attribution ?? null,
+    // Only sent when known, so direct-traffic leads never depend on the column.
+    ...(lead.attribution != null ? { attribution: lead.attribution } : {}),
   };
 }
 
