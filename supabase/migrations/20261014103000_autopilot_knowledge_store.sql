@@ -122,6 +122,12 @@ grant all on table public.knowledge_chunks to service_role;
 -- Semantic match over PUBLISHED sources only (cosine similarity, 0..1).
 -- SECURITY INVOKER: the service role (server-side search) bypasses RLS, staff
 -- pass RLS, everyone else gets no rows; anon cannot execute it at all.
+--
+-- HNSW with a filter: a plain index scan yields ~ef_search candidates before
+-- the "published" filter, so matches could come back short. With pgvector
+-- >= 0.8 the function turns on iterative index scans (strict distance order)
+-- for its own transaction; older versions take an exact scan over published
+-- chunks (the runtime store is small: new videos between static rebuilds).
 -- ---------------------------------------------------------------------------
 create or replace function public.match_knowledge_chunks(
   query_embedding vector(1536),
@@ -145,33 +151,54 @@ returns table (
   category_slug text,
   summary_text  text
 )
-language sql
+language plpgsql
 stable
 set search_path = public, extensions
 as $$
-  select
-    c.id,
-    c.source_id,
-    s.kind,
-    s.external_id,
-    c.chunk_index,
-    c.start_s,
-    c.end_s,
-    c.text,
-    1 - (c.embedding <=> query_embedding),
-    s.title,
-    s.thumbnail_url,
-    s.duration_s,
-    s.published_at,
-    s.summary ->> 'category_slug',
-    s.summary ->> 'summary'
-  from public.knowledge_chunks c
-  join public.knowledge_sources s on s.id = c.source_id
-  where s.status = 'published'
-    and c.embedding is not null
-    and 1 - (c.embedding <=> query_embedding) >= coalesce(min_similarity, 0)
-  order by c.embedding <=> query_embedding
-  limit greatest(1, least(coalesce(match_count, 20), 200));
+declare
+  n integer := greatest(1, least(coalesce(match_count, 20), 200));
+  floor_sim double precision := coalesce(min_similarity, 0);
+  iterative boolean := coalesce(
+    (select string_to_array(e.extversion, '.')::int[] >= array[0, 8, 0]
+       from pg_catalog.pg_extension e where e.extname = 'vector'),
+    false);
+begin
+  if iterative then
+    perform set_config('hnsw.iterative_scan', 'strict_order', true);
+    perform set_config('hnsw.ef_search', '100', true);
+    return query
+      select c.id, c.source_id, s.kind, s.external_id, c.chunk_index, c.start_s, c.end_s, c.text,
+             1 - (c.embedding <=> query_embedding),
+             s.title, s.thumbnail_url, s.duration_s, s.published_at,
+             s.summary ->> 'category_slug', s.summary ->> 'summary'
+      from public.knowledge_chunks c
+      join public.knowledge_sources s on s.id = c.source_id
+      where s.status = 'published'
+        and c.embedding is not null
+        and 1 - (c.embedding <=> query_embedding) >= floor_sim
+      order by c.embedding <=> query_embedding
+      limit n;
+  else
+    return query
+      with published as materialized (
+        select c.id, c.source_id, s.kind, s.external_id, c.chunk_index, c.start_s, c.end_s, c.text,
+               c.embedding <=> query_embedding as distance,
+               s.title, s.thumbnail_url, s.duration_s, s.published_at,
+               s.summary ->> 'category_slug' as category_slug, s.summary ->> 'summary' as summary_text
+        from public.knowledge_chunks c
+        join public.knowledge_sources s on s.id = c.source_id
+        where s.status = 'published'
+          and c.embedding is not null
+      )
+      select p.id, p.source_id, p.kind, p.external_id, p.chunk_index, p.start_s, p.end_s, p.text,
+             1 - p.distance,
+             p.title, p.thumbnail_url, p.duration_s, p.published_at, p.category_slug, p.summary_text
+      from published p
+      where 1 - p.distance >= floor_sim
+      order by p.distance
+      limit n;
+  end if;
+end;
 $$;
 
 revoke all on function public.match_knowledge_chunks(vector, integer, double precision) from public;
