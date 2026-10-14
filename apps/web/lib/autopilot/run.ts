@@ -1,25 +1,37 @@
 import 'server-only';
 
-import { autopilotConfig, type AutopilotConfig } from './config';
+import { FUNCTION_BUDGET_MS, SOURCE_MIN_MS, autopilotConfig, type AutopilotConfig } from './config';
 import { runDetection, type DetectionReport } from './detect';
 import { processSource, type PipelineDeps, type ProcessOutcome } from './pipeline';
 import type { SourceStore } from './store';
-import type { DetectedVia, KnowledgeSourceRow } from './types';
+import type { DetectedVia, SourceListRow } from './types';
 
 /** Captions not published yet: worth retrying on later runs (auto-captions arrive within hours). */
 export const MAX_CAPTION_RETRIES = 3;
 
 /**
- * What the cron processes: new videos first (newest first), then YouTube
- * videos parked because their captions weren't ready, a few times each.
+ * What the cron processes, newest first within each group, filtered in SQL:
+ * 1. new YouTube videos (podcast episodes need a transcript from staff);
+ * 2. transcribed sources (a transcript was uploaded, a budget refusal or a
+ *    time-budget handoff stopped them there);
+ * 3. YouTube videos parked because captions weren't ready, a few times each.
  */
-export async function autoProcessQueue(store: SourceStore, limit: number): Promise<KnowledgeSourceRow[]> {
-  const detected = await store.listByStatus('detected', limit);
-  if (detected.length >= limit) return detected;
-  const waiting = (await store.listByStatus('needs_transcript', limit * 4)).filter(
-    (r) => r.kind === 'youtube' && /\[no_captions\]$/.test(r.error ?? '') && r.attempts < MAX_CAPTION_RETRIES,
-  );
-  return [...detected, ...waiting].slice(0, limit);
+export async function autoProcessQueue(store: SourceStore, limit: number): Promise<SourceListRow[]> {
+  const out: SourceListRow[] = [];
+  const add = (rows: SourceListRow[]) => {
+    for (const r of rows) if (out.length < limit && !out.some((o) => o.id === r.id)) out.push(r);
+  };
+  add(await store.listForQueue({ status: 'detected', kind: 'youtube' }, limit));
+  if (out.length < limit) add(await store.listForQueue({ status: 'transcribed' }, limit));
+  if (out.length < limit) {
+    add(
+      await store.listForQueue(
+        { status: 'needs_transcript', kind: 'youtube', errorSuffix: '[no_captions]', maxAttempts: MAX_CAPTION_RETRIES },
+        limit,
+      ),
+    );
+  }
+  return out;
 }
 
 export interface WatchReport extends DetectionReport {
@@ -29,7 +41,7 @@ export interface WatchReport extends DetectionReport {
 /**
  * One watch run (daily cron or "check channel now"): detect new sources, then,
  * when AUTOPILOT_AUTO_PROCESS=true, process up to AUTOPILOT_AUTO_PROCESS_LIMIT
- * detected ones (newest first). Publishing is always left to staff.
+ * queued ones within the request's time budget. Publishing is always left to staff.
  */
 export async function runWatch(
   store: SourceStore,
@@ -38,16 +50,18 @@ export async function runWatch(
     config?: AutopilotConfig;
     detect?: typeof runDetection;
     process?: (id: string, deps: PipelineDeps) => Promise<ProcessOutcome>;
+    deadline?: number;
   },
 ): Promise<WatchReport> {
+  const deadline = opts.deadline ?? Date.now() + FUNCTION_BUDGET_MS;
   const config = opts.config ?? autopilotConfig();
   const report = await (opts.detect ?? runDetection)(store, { via: opts.via, config });
   const processed: WatchReport['autoProcess']['processed'] = [];
   if (config.autoProcess) {
-    const queue = await autoProcessQueue(store, config.autoProcessLimit);
-    for (const src of queue) {
-      // Sequential on purpose: one paid summary at a time, inside the function's time budget.
-      const outcome = await (opts.process ?? processSource)(src.id, { store });
+    for (const src of await autoProcessQueue(store, config.autoProcessLimit)) {
+      // Sequential, one paid summary at a time; the rest waits for the next run.
+      if (deadline - Date.now() < SOURCE_MIN_MS) break;
+      const outcome = await (opts.process ?? processSource)(src.id, { store, deadline });
       processed.push({ id: src.id, external_id: src.external_id, outcome });
     }
   }

@@ -83,9 +83,15 @@ export function memoryStore(initial: KnowledgeSourceRow[] = [], opts: { spent?: 
       }
       return out;
     },
-    async listByStatus(status, limit) {
+    async listForQueue(filter, limit) {
       return Array.from(rows.values())
-        .filter((r) => r.status === status)
+        .filter(
+          (r) =>
+            r.status === filter.status &&
+            (!filter.kind || r.kind === filter.kind) &&
+            (!filter.errorSuffix || (r.error ?? '').endsWith(filter.errorSuffix)) &&
+            (filter.maxAttempts === undefined || r.attempts < filter.maxAttempts),
+        )
         .sort((a, b) => (b.published_at ?? '').localeCompare(a.published_at ?? ''))
         .slice(0, limit)
         .map((r) => ({ ...r }));

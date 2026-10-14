@@ -10,9 +10,20 @@ import {
   type SourceKind,
   type SourceListRow,
   type SourceStatus,
+  type UsageEntry,
 } from './types';
 
 type SourceInsert = AutopilotDatabase['public']['Tables']['knowledge_sources']['Insert'];
+
+/** Queue selection for the cron, filtered in SQL. */
+export interface QueueFilter {
+  status: SourceStatus;
+  kind?: SourceKind;
+  /** knowledge_sources.error ends with this text (e.g. "[no_captions]"). */
+  errorSuffix?: string;
+  /** attempts below this. */
+  maxAttempts?: number;
+}
 export type SourcePatch = Partial<Omit<KnowledgeSourceRow, 'id' | 'status' | 'created_at' | 'updated_at'>>;
 export type ChunkInsert = Pick<KnowledgeChunkRow, 'chunk_index' | 'start_s' | 'end_s' | 'text' | 'embedding' | 'tokens'>;
 
@@ -34,9 +45,18 @@ export interface SourceStore {
   existingExternalIds(kind: SourceKind, externalIds: string[]): Promise<Set<string>>;
   /** Insert new `detected` rows, ignoring ones that already exist. Returns the inserted ids. */
   insertDetected(rows: SourceInsert[]): Promise<Array<{ id: string; external_id: string }>>;
-  listByStatus(status: SourceStatus, limit: number): Promise<KnowledgeSourceRow[]>;
-  /** Sum of cost_usd_micros of sources processed in the last 30 days. */
+  /** Light rows (no transcript payloads), newest first. */
+  listForQueue(filter: QueueFilter, limit: number): Promise<SourceListRow[]>;
+  /** Paid spend of the last 30 days, from the timestamped usage log of every source. */
   spentLast30dMicros(now?: Date): Promise<number>;
+}
+
+/** Micro-USD of usage entries at or after `sinceMs`. */
+export function sumUsageSince(usage: ReadonlyArray<Pick<UsageEntry, 'usd_micros' | 'at'>>, sinceMs: number): number {
+  return usage.reduce((n, u) => {
+    const at = Date.parse(u.at);
+    return Number.isFinite(at) && at >= sinceMs ? n + (Number(u.usd_micros) || 0) : n;
+  }, 0);
 }
 
 function fail(what: string, error: { message: string } | null): never {
@@ -101,27 +121,31 @@ export function supabaseStore(db: AutopilotDb): SourceStore {
       return (data ?? []) as Array<{ id: string; external_id: string }>;
     },
 
-    async listByStatus(status, limit) {
-      const { data, error } = await db
-        .from('knowledge_sources')
-        .select('*')
-        .eq('status', status)
-        .order('published_at', { ascending: false, nullsFirst: false })
-        .limit(limit);
-      if (error) fail('list sources', error);
-      return (data ?? []) as KnowledgeSourceRow[];
+    async listForQueue(filter, limit) {
+      let query = db.from('knowledge_sources').select(SOURCE_LIST_COLUMNS).eq('status', filter.status);
+      if (filter.kind) query = query.eq('kind', filter.kind);
+      // LIKE wildcards in the suffix ("_" in "no_captions") are escaped.
+      if (filter.errorSuffix) query = query.like('error', `%${filter.errorSuffix.replace(/[\\%_]/g, (c) => `\\${c}`)}`);
+      if (filter.maxAttempts !== undefined) query = query.lt('attempts', filter.maxAttempts);
+      const { data, error } = await query.order('published_at', { ascending: false, nullsFirst: false }).limit(limit);
+      if (error) fail('list queue', error);
+      return (data ?? []) as unknown as SourceListRow[];
     },
 
     async spentLast30dMicros(now = new Date()) {
-      const since = new Date(now.getTime() - 30 * 24 * 3600 * 1000).toISOString();
+      const since = now.getTime() - 30 * 24 * 3600 * 1000;
+      // Any spend appends to `usage`, which bumps updated_at: rows untouched since are out.
       const { data, error } = await db
         .from('knowledge_sources')
-        .select('cost_usd_micros')
-        .gte('processed_at', since)
+        .select('usage')
+        .gte('updated_at', new Date(since).toISOString())
         .gt('cost_usd_micros', 0)
-        .limit(5000);
+        .limit(10_000);
       if (error) fail('read spend', error);
-      return (data ?? []).reduce((n, r) => n + Number(r.cost_usd_micros || 0), 0);
+      return sumUsageSince(
+        (data ?? []).flatMap((r) => (Array.isArray(r.usage) ? r.usage : [])),
+        since,
+      );
     },
   };
 }

@@ -69,10 +69,25 @@ export const loadPublishedRuntimeVideo = cache(async (youtubeId: string): Promis
   }
   const video = data ? toRuntimeVideo(data as KnowledgeSourceRow) : null;
   if (video) {
-    rememberRuntimeVideo(toVideoRecord({ ...video, chunk_count: video.chunk_count }));
+    rememberRuntimeVideo(toVideoRecord({ ...video, chunk_count: video.chunk_count }), { complete: true });
   }
   return video;
 });
+
+/** Which of these YouTube ids are published runtime videos (one query). Throws when the store errors. */
+export async function findPublishedRuntimeIds(youtubeIds: string[]): Promise<Set<string>> {
+  const ids = youtubeIds.filter((id) => YOUTUBE_ID_RE.test(id));
+  const db = serviceDb();
+  if (!db || ids.length === 0) return new Set();
+  const { data, error } = await db
+    .from('knowledge_sources')
+    .select('external_id')
+    .eq('kind', 'youtube')
+    .eq('status', 'published')
+    .in('external_id', ids);
+  if (error) throw new Error(`knowledge store unavailable: ${error.message}`);
+  return new Set((data ?? []).map((r) => r.external_id));
+}
 
 /** Published runtime videos for the sitemap (newest first). Never throws. */
 export async function listPublishedRuntimeVideos(limit = 2000): Promise<Array<{ youtube_id: string; updated_at: string; published_at: string | null }>> {

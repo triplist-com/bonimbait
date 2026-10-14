@@ -2,7 +2,7 @@ import 'server-only';
 
 import { cache } from 'react';
 import { getStaticVideo as getIndexedVideo, getVideos as getIndexedVideos } from '@/app/api/_lib/data';
-import { loadPublishedRuntimeVideo } from '@/lib/autopilot/videos';
+import { findPublishedRuntimeIds } from '@/lib/autopilot/videos';
 import type { Video } from '@/lib/types';
 import type { VideoPageRow } from '@/lib/db/types';
 import { getPublishedVideoPageBySlug, listPublishedVideoPages, type VideoPageSummary } from '@/lib/db/videos';
@@ -36,14 +36,12 @@ export function findIndexedYoutubeId(youtubeIds: string[]): string | null {
 export async function findAiPageYoutubeId(youtubeIds: string[]): Promise<string | null> {
   const indexed = findIndexedYoutubeId(youtubeIds);
   if (indexed) return indexed;
-  for (const id of youtubeIds) {
-    try {
-      if (await loadPublishedRuntimeVideo(id)) return id;
-    } catch {
-      return null; // knowledge store unavailable: no link
-    }
+  try {
+    const published = await findPublishedRuntimeIds(youtubeIds);
+    return youtubeIds.find((id) => published.has(id)) ?? null;
+  } catch {
+    return null; // knowledge store unavailable: no link
   }
-  return null;
 }
 
 export function isIndexedYoutubeId(id: string): boolean {
