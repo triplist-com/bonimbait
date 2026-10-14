@@ -3,9 +3,9 @@
 /**
  * The site's single floating action: one round button at the bottom end
  * corner that opens a small sheet (consultation, WhatsApp, ask, call).
- * It hides over the hero, over CTA bands that already offer the same actions
- * and over the footer, so it never covers the content that matters
- * (see lib/ui/floating-action.ts).
+ * Quick return: it shows when the visitor scrolls up and fades out at rest;
+ * it stays hidden over the hero, CTA bands that already offer the same
+ * actions and the footer (see lib/ui/floating-action.ts).
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
@@ -13,7 +13,7 @@ import { ArrowLeft, CalendarCheck, MessageCircleMore, Phone, Sparkles } from 'lu
 import { cn } from '@/lib/cn';
 import { Drawer } from '@/components/ui/Dialog';
 import { AI_ENTRY, aiHref, CONTACT_DETAILS } from '@/lib/nav';
-import { FLOATING_CTA_HIDE_SELECTOR, scrollDirection, shouldShowFloatingAction, type ScrollDirection } from '@/lib/ui/floating-action';
+import { FLOATING_CTA_HIDE_SELECTOR, LINGER_MS, scrollDirection, shouldShowFloatingAction, type ScrollDirection } from '@/lib/ui/floating-action';
 
 function WhatsAppGlyph({ className }: { className?: string }) {
   return (
@@ -99,8 +99,8 @@ export default function FloatingAction({
 
   useEffect(() => {
     let lastY = window.scrollY;
-    let direction: ScrollDirection = 'idle';
-    let idleTimer: ReturnType<typeof setTimeout> | undefined;
+    let direction: ScrollDirection = 'rest';
+    let restTimer: ReturnType<typeof setTimeout> | undefined;
     const update = () =>
       setVisible(
         shouldShowFloatingAction({
@@ -112,18 +112,18 @@ export default function FloatingAction({
       );
     const onScroll = () => {
       const next = scrollDirection(lastY, window.scrollY);
-      if (next !== 'idle') {
+      if (next) {
         direction = next;
         lastY = window.scrollY;
       }
       update();
-      // Back in view shortly after the visitor stops scrolling.
-      clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => {
-        direction = 'idle';
+      // At rest after LINGER_MS: fade out so it never sits over the text being read.
+      clearTimeout(restTimer);
+      restTimer = setTimeout(() => {
+        direction = 'rest';
         lastY = window.scrollY;
         update();
-      }, 700);
+      }, LINGER_MS);
     };
     const io = new IntersectionObserver(
       (entries) => {
@@ -144,7 +144,7 @@ export default function FloatingAction({
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', update);
     return () => {
-      clearTimeout(idleTimer);
+      clearTimeout(restTimer);
       io.disconnect();
       mo.disconnect();
       window.removeEventListener('scroll', onScroll);

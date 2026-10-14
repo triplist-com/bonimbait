@@ -20,7 +20,7 @@ export default function AccountLinks({ variant = 'bar' }: { variant?: 'bar' | 'd
     if (state === 'signed-in') {
       return (
         <div className="grid grid-cols-2 gap-2">
-          <Link href={ACCOUNT_NAV.home.href} className={buttonClasses({ variant: 'secondary', size: 'lg' })}>
+          <Link href={ACCOUNT_NAV.home.href} prefetch={false} className={buttonClasses({ variant: 'secondary', size: 'lg' })}>
             <House aria-hidden="true" />
             {ACCOUNT_NAV.home.label}
           </Link>
@@ -61,7 +61,7 @@ export default function AccountLinks({ variant = 'bar' }: { variant?: 'bar' | 'd
     <div className="flex items-center gap-3">
       {state === 'signed-in' ? (
         <>
-          <Link href={ACCOUNT_NAV.home.href} className={cn(linkCls, 'font-semibold', dark ? '!text-white' : '!text-ink-900')}>
+          <Link href={ACCOUNT_NAV.home.href} prefetch={false} className={cn(linkCls, 'font-semibold', dark ? '!text-white' : '!text-ink-900')}>
             <House aria-hidden="true" />
             {ACCOUNT_NAV.home.label}
           </Link>
@@ -82,14 +82,14 @@ export default function AccountLinks({ variant = 'bar' }: { variant?: 'bar' | 'd
             {ACCOUNT_NAV.signup.label}
           </Link>
           {sep}
-          <Link href={ACCOUNT_NAV.home.href} className={cn(linkCls, 'font-semibold', dark ? '!text-white' : '!text-ink-900')}>
+          <Link href={ACCOUNT_NAV.home.href} prefetch={false} className={cn(linkCls, 'font-semibold', dark ? '!text-white' : '!text-ink-900')}>
             <House aria-hidden="true" />
             {ACCOUNT_NAV.home.label}
           </Link>
         </>
       )}
       {sep}
-      <Link href={ACCOUNT_NAV.cart.href} className={linkCls} aria-label={ACCOUNT_NAV.cart.label}>
+      <Link href={ACCOUNT_NAV.cart.href} prefetch={false} className={linkCls} aria-label={ACCOUNT_NAV.cart.label}>
         <ShoppingBag aria-hidden="true" />
         <span className="sr-only sm:not-sr-only">סל</span>
       </Link>

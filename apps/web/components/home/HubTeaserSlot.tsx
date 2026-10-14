@@ -87,7 +87,7 @@ export default function HubTeaserSlot({
               </li>
             ))}
           </ul>
-          <ButtonLink href={href} size="lg" className="mt-8" iconEnd={<ArrowLeft className="ltr:rotate-180" />}>
+          <ButtonLink href={href} prefetch={false} size="lg" className="mt-8" iconEnd={<ArrowLeft className="ltr:rotate-180" />}>
             {cta}
           </ButtonLink>
         </div>

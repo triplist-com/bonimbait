@@ -71,22 +71,25 @@ describe('focus helpers', () => {
   });
 });
 
-describe('floating action visibility', () => {
-  const base = { scrollY: 900, viewportHeight: 844, blockersInView: 0 };
+describe('floating action visibility (quick return)', () => {
+  const base = { scrollY: 900, viewportHeight: 844, blockersInView: 0, direction: 'up' as const };
   it('stays hidden over the hero', () => {
     expect(shouldShowFloatingAction({ ...base, scrollY: 100 })).toBe(false);
     expect(shouldShowFloatingAction({ ...base, scrollY: 600 })).toBe(true);
   });
-  it('hides over CTA zones and the footer, and while scrolling down', () => {
-    expect(shouldShowFloatingAction({ ...base, blockersInView: 1 })).toBe(false);
+  it('shows only on scroll up: hidden while reading down and at rest', () => {
     expect(shouldShowFloatingAction({ ...base, direction: 'down' })).toBe(false);
+    expect(shouldShowFloatingAction({ ...base, direction: 'rest' })).toBe(false);
     expect(shouldShowFloatingAction({ ...base, direction: 'up' })).toBe(true);
   });
-  it('stays while its own menu is open', () => {
-    expect(shouldShowFloatingAction({ ...base, scrollY: 0, blockersInView: 2, menuOpen: true })).toBe(true);
+  it('hides over CTA zones and the footer', () => {
+    expect(shouldShowFloatingAction({ ...base, blockersInView: 1 })).toBe(false);
+  });
+  it('stays while its own sheet is open', () => {
+    expect(shouldShowFloatingAction({ ...base, scrollY: 0, blockersInView: 2, direction: 'rest', menuOpen: true })).toBe(true);
   });
   it('ignores scroll jitter', () => {
-    expect(scrollDirection(100, 104)).toBe('idle');
+    expect(scrollDirection(100, 104)).toBeNull();
     expect(scrollDirection(100, 130)).toBe('down');
     expect(scrollDirection(130, 100)).toBe('up');
   });

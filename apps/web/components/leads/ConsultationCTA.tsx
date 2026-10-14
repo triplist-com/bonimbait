@@ -34,9 +34,10 @@
  *     'consultation'). With no Calendly URL, only the form is shown.
  * WhatsApp uses NEXT_PUBLIC_WHATSAPP_NUMBER (international digits, live 972584020730).
  *
- * The floating variant is one round button that never covers key content:
- * it hides over the hero, the footer and any `data-floating-cta="hide"` band
- * (banner and card variants carry that marker).
+ * The floating variant is one round button that never sits over content: it
+ * appears when the visitor scrolls up and fades out at rest, and stays hidden
+ * over the hero, the footer and any `data-floating-cta="hide"` band (banner
+ * and card variants carry that marker). See lib/ui/floating-action.ts.
  */
 import { useCallback, useState } from 'react';
 import { CalendarCheck, PhoneCall } from 'lucide-react';
