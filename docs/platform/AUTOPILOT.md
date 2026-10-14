@@ -38,6 +38,17 @@ Every status change is a **compare-and-set** on the status read just before it
 mid-way (function timeout, crash) is shown as failed after 10 minutes and can be retried
 (`status.ts`, `isStale`).
 
+**Time budget.** The routes run for at most 60 s. A run has a 52 s deadline
+(`FUNCTION_BUDGET_MS`), and every step sizes its timeout to what is left:
+
+- Captions use 8 s per request.
+- Embeddings use up to 25 s.
+- Claude gets the rest, up to 45 s, with no retry that wouldn't fit.
+
+Spend is therefore written before the platform can kill the function. If transcription leaves
+less than 30 s, the run stops at `transcribed` and returns `next: 'index'`; the admin UI then
+calls again by itself. The cron starts a source only when 40 s are left.
+
 ### Data model (migration `20261014103000_autopilot_knowledge_store.sql`)
 
 - `knowledge_sources`: one row per video, episode or upload. Holds kind, external id, metadata,
@@ -49,7 +60,12 @@ mid-way (function timeout, crash) is shown as failed after 10 minutes and can be
   (table and RPC privileges are revoked). Search and public pages read server-side with the
   service role.
 - `match_knowledge_chunks(query_embedding, match_count, min_similarity)`: cosine matches over
-  chunks of **published** sources only, with the source fields the routes need.
+  chunks of **published** sources only, with the source fields the routes need. A plain HNSW
+  scan applies the "published" filter after it takes ~ef_search candidates, so results could
+  come back short. With pgvector ≥ 0.8 the function enables **iterative index scans
+  (`strict_order`)** for its own transaction. Older versions take an exact scan over published
+  chunks, which is fine at this store's size. Verified locally: identical to a brute-force
+  top 5.
 - Storage bucket `autopilot-audio` (private, staff only), used only by strategy (c).
 
 ### Search fusion (`app/api/_lib/semantic.ts`)
@@ -100,10 +116,10 @@ page (`findAiPageYoutubeId`).
 | `CRON_SECRET` | none | **Required** for the cron. Vercel sends `Authorization: Bearer $CRON_SECRET`. Without it every cron call gets 401. |
 | `YOUTUBE_CHANNEL_ID` | `UCCehs0A1gUmOUtZIhvkXVJQ` | Channel to watch. |
 | `PODCAST_RSS_URL` | unset | Optional podcast feed to watch. |
-| `AUTOPILOT_AUTO_PROCESS` | `false` | Cron also processes new videos, and retries videos whose captions weren't ready yet (up to 3 attempts). It never publishes. |
+| `AUTOPILOT_AUTO_PROCESS` | `false` | Cron also processes, in this order: new YouTube videos, then `transcribed` sources (budget-refused or handed off), then YouTube videos whose captions weren't ready (up to 3 attempts). Podcast episodes wait for staff. It never publishes. |
 | `AUTOPILOT_AUTO_PROCESS_LIMIT` | `1` | Videos per cron run (1-5). |
 | `AUTOPILOT_MAX_USD_PER_VIDEO` | `0.10` | Budget gate: upper-bound estimate per processing run. |
-| `AUTOPILOT_MONTHLY_BUDGET_USD` | `2` | Budget gate: rolling 30-day spend across sources. |
+| `AUTOPILOT_MONTHLY_BUDGET_USD` | `2` | Budget gate: rolling 30-day spend, summed exactly from every source's timestamped usage log (embeddings, summaries and audio). |
 | `AUTOPILOT_AUDIO_TRANSCRIPTION` | `false` | Enables transcript strategy (c). |
 | `AUTOPILOT_SEARCH` | on | Set to `off` to stop fusion (kill switch). |
 | `AUTOPILOT_SEARCH_TIMEOUT_MS` | `800` | Hard cap on the store query inside search. |
@@ -175,7 +191,7 @@ for prompts up to 100K tokens, and `text-embedding-3-small` at $0.02 per MTok.
 | "חסר תמליל", with "עדיין אין כתוביות" and `[no_captions]` | Auto-captions aren't ready yet (usually hours after upload; the newest test video had them after 28 minutes). | With auto-processing on, the cron retries by itself (up to 3 runs). Otherwise click "ניסיון חוזר" later, or upload a transcript. |
 | `[unplayable]` | The video is private, unlisted or deleted. | Skip it. |
 | "נכשל" with a summary error | Claude refused, or the output was incomplete. Spend is still recorded. | Click "ניסיון חוזר". The transcript is kept, so captions aren't fetched again. |
-| "נכשל" with "עיבוד קודם נקטע באמצע" | The step ran past the function limit or the server crashed. | Click "ניסיון חוזר" (offered automatically after 10 minutes). |
+| "נכשל" with "עיבוד קודם נקטע באמצע" | The step ran past the function limit or the server crashed. That should be rare with the time budget. | Click "ניסיון חוזר" (offered automatically after 10 minutes). |
 | Error "תקציב העיבוד החודשי נוצל" or "גבוהה מהתקרה לסרטון" | The budget gate refused before any paid call. | Raise `AUTOPILOT_MONTHLY_BUDGET_USD` or `AUTOPILOT_MAX_USD_PER_VIDEO`, or wait for the window to roll. |
 | Search fine, but new videos missing from it | The store is unreachable, the RPC is missing, or `AUTOPILOT_SEARCH=off`. | Look for `[autopilot] runtime search skipped (fail-open)` in the logs. Apply the migration and check the service key. Static search keeps working meanwhile. |
 | The cron returns 401 | `CRON_SECRET` isn't set in Vercel, or doesn't match. | Set it. Vercel sends it automatically. |
