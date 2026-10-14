@@ -260,8 +260,19 @@ def priority(row: dict, legacy: set[str]) -> tuple[int, int]:
     return (3, 0 if valuable else 1 if row["id"] in legacy else 2)
 
 
-def build_queue(inventory: dict, status: dict[str, dict], ids: list[str] | None, include_indexed: bool) -> list[str]:
-    """Videos still to fetch, in priority() order, newest first within a group."""
+def build_queue(
+    inventory: dict,
+    status: dict[str, dict],
+    ids: list[str] | None,
+    include_indexed: bool,
+    recheck_none: bool = False,
+) -> list[str]:
+    """Videos still to fetch, in priority() order, newest first within a group.
+
+    recheck_none re-probes videos that had no Hebrew track (e.g. after the owner sets
+    the video language to Hebrew in YouTube Studio, which is what makes YouTube
+    generate automatic captions: every uncaptioned video here has no language set).
+    """
     rows = {r["id"]: r for r in inventory["videos"]}
     if ids:
         return [i for i in ids if i in rows]
@@ -276,7 +287,8 @@ def build_queue(inventory: dict, status: dict[str, dict], ids: list[str] | None,
 
     def wanted(r: dict) -> bool:
         st = status.get(r["id"]) or {}
-        if st.get("status") in FINAL or (st.get("status") == "error" and int(st.get("attempts", 0)) >= MAX_ATTEMPTS):
+        final = FINAL - {"none"} if recheck_none else FINAL
+        if st.get("status") in final or (st.get("status") == "error" and int(st.get("attempts", 0)) >= MAX_ATTEMPTS):
             return False
         if r["indexed"] and not include_indexed:
             return False
@@ -299,6 +311,7 @@ def main() -> int:
     ap.add_argument("--max-sleep", type=float, default=13.0)
     ap.add_argument("--max-blocks", type=int, default=6, help="consecutive blocks before the run stops")
     ap.add_argument("--include-indexed", action="store_true", help="also refresh videos already in the index")
+    ap.add_argument("--recheck-none", action="store_true", help="re-probe videos that had no Hebrew captions")
     args = ap.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", datefmt="%H:%M:%S")
@@ -307,7 +320,7 @@ def main() -> int:
 
     inventory = json.loads(inventory_path().read_text(encoding="utf-8"))
     status = load_status()
-    queue = build_queue(inventory, status, [i for i in args.ids.split(",") if i], args.include_indexed)
+    queue = build_queue(inventory, status, [i for i in args.ids.split(",") if i], args.include_indexed, args.recheck_none)
     if args.limit:
         queue = queue[: args.limit]
     log.info("queue: %d videos (status file has %d entries)", len(queue), len(status))

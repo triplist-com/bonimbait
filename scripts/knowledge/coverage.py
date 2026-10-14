@@ -16,7 +16,7 @@ import json
 import subprocess
 from collections import Counter, defaultdict
 
-from scripts.knowledge.paths import REPO_ROOT, WEB_DATA, captions_status_path, inventory_path, raw_dir
+from scripts.knowledge.paths import REPO_ROOT, WEB_DATA, captions_status_path, inventory_path, metadata_dir, raw_dir
 
 WHISPER_PER_MIN = 0.006  # whisper-1
 MINI_TRANSCRIBE_PER_MIN = 0.003  # gpt-4o-mini-transcribe
@@ -96,6 +96,14 @@ def main() -> int:
     missing_none = [r for r in missing if (status.get(r["id"]) or {}).get("status") == "none"]
     minutes_none = sum(r["duration"] or 0 for r in missing_none) / 60
 
+    # Caption status vs the video's language setting (YouTube makes ASR only for a set language).
+    language_vs_status: Counter = Counter()
+    for vid, st in status.items():
+        meta_path = metadata_dir() / f"{vid}.json"
+        if meta_path.exists():
+            lang = json.loads(meta_path.read_text(encoding="utf-8")).get("language") or "not set"
+            language_vs_status[f"{st.get('status')} / language {lang}"] += 1
+
     pages = legacy_pages()
     published = [p for p in pages if p["status"] == "published"]
 
@@ -127,6 +135,7 @@ def main() -> int:
             "published_covered_after": covered(after_ids, published),
         },
         "by_year": {y: dict(c) for y, c in sorted(by_year.items())},
+        "language_vs_status": dict(language_vs_status.most_common()),
         "gap": {
             "in_scope_not_indexed": len(missing),
             "no_captions": len(missing_none),

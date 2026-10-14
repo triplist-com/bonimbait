@@ -11,6 +11,7 @@ videos.json. The batch runs at 50% of the standard price.
   scripts/.venv/bin/python -m scripts.knowledge.summarize --dry-run    # estimate only
   scripts/.venv/bin/python -m scripts.knowledge.summarize --limit 100 --max-cost 0.40
   scripts/.venv/bin/python -m scripts.knowledge.summarize --collect <batch id>
+  scripts/.venv/bin/python -m scripts.knowledge.summarize --ids <id,id,...>   # explicit top-up
 """
 
 from __future__ import annotations
@@ -233,6 +234,7 @@ def main() -> int:
     ap.add_argument("--max-cost", type=float, default=0.40, help="refuse to submit above this estimate (USD)")
     ap.add_argument("--dry-run", action="store_true", help="select and estimate, submit nothing")
     ap.add_argument("--collect", default="", help="collect the results of an existing batch id")
+    ap.add_argument("--ids", default="", help="comma-separated youtube ids to summarize (instead of the newest/most-viewed pick)")
     args = ap.parse_args()
 
     load_env()
@@ -248,7 +250,11 @@ def main() -> int:
         return 0
 
     have = {p.stem for p in OUT_DIR.glob("*.json")} if OUT_DIR.exists() else set()
-    chosen = select(videos, args.limit, have)
+    if args.ids:
+        wanted = {i for i in args.ids.split(",") if i} - have
+        chosen = [v for v in videos if v["youtube_id"] in wanted and v.get("has_transcript")]
+    else:
+        chosen = select(videos, args.limit, have)
     reqs = build_requests(chosen)
     print(f"selected {len(chosen)} videos, {len(reqs)} with usable transcripts")
     _, cost = estimate(client, reqs)
