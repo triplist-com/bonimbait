@@ -23,7 +23,9 @@ const globalsCss = readFileSync(fileURLToPath(new URL('../../app/globals.css', i
 
 function cssVarsFromGlobals(): Map<string, string> {
   const out = new Map<string, string>();
-  for (const m of globalsCss.matchAll(/(--bb-[a-z0-9-]+):\s*(\d{1,3} \d{1,3} \d{1,3});/g)) out.set(m[1], m[2]);
+  const re = /(--bb-[a-z0-9-]+):\s*(\d{1,3} \d{1,3} \d{1,3});/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(globalsCss))) out.set(m[1], m[2]);
   return out;
 }
 
