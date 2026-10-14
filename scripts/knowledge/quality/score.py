@@ -90,6 +90,34 @@ def score(judgments_path: str, runs: list[str], view: str = "answer") -> None:
     print(json.dumps(rows, ensure_ascii=False, indent=1))
 
 
+def compare(judgments_path: str, before_path: str, after_path: str, view: str = "answer") -> None:
+    """Per-question and per-topic top-5 scores, before vs after."""
+    judged = load(judgments_path)
+    before, after = load(before_path), load(after_path)
+
+    def q_score(r: dict) -> int:
+        got = judged.get(r["id"], {})
+        return sum(got.get(doc["key"], 0) for doc in r[view])
+
+    topics: dict[str, list[int]] = {}
+    rows = []
+    for rb, ra in zip(before["results"], after["results"]):
+        sb, sa = q_score(rb), q_score(ra)
+        t = topics.setdefault(rb["topic"], [0, 0, 0])
+        t[0] += sb
+        t[1] += sa
+        t[2] += 1
+        rows.append({"id": rb["id"], "topic": rb["topic"], "before": sb, "after": sa, "delta": sa - sb, "q": rb["q"]})
+    print(json.dumps({
+        "view": view,
+        "improved": sum(r["delta"] > 0 for r in rows),
+        "same": sum(r["delta"] == 0 for r in rows),
+        "worse": sum(r["delta"] < 0 for r in rows),
+        "by_topic": {k: {"before": round(v[0] / v[2], 2), "after": round(v[1] / v[2], 2), "questions": v[2]} for k, v in topics.items()},
+        "questions": rows,
+    }, ensure_ascii=False, indent=1))
+
+
 def load_index_ids(result: dict) -> list[str]:
     """YouTube ids of the run's index (the before run defines 'new')."""
     root = Path(result["root"]) / "data" / "search-index.json"
@@ -111,5 +139,7 @@ if __name__ == "__main__":
         sheet(rest, view, skip)
     elif cmd == "score":
         score(rest[0], rest[1:], view)
+    elif cmd == "compare":
+        compare(rest[0], rest[1], rest[2], view)
     else:
         raise SystemExit(__doc__)
