@@ -47,31 +47,31 @@ function toRuntimeVideo(row: KnowledgeSourceRow): RuntimeVideo | null {
   };
 }
 
-/** A published runtime video by YouTube id (memoized per request), or null. Never throws. */
+/**
+ * A published runtime video by YouTube id (memoized per request), or null when
+ * there is none (or no store is configured). Throws when the store errors, so
+ * an ISR revalidation during an outage keeps serving the last good page.
+ */
 export const loadPublishedRuntimeVideo = cache(async (youtubeId: string): Promise<RuntimeVideo | null> => {
   if (!YOUTUBE_ID_RE.test(youtubeId)) return null;
   const db = serviceDb();
   if (!db) return null;
-  try {
-    const { data, error } = await db
-      .from('knowledge_sources')
-      .select('*')
-      .eq('kind', 'youtube')
-      .eq('external_id', youtubeId)
-      .eq('status', 'published')
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    const video = data ? toRuntimeVideo(data as KnowledgeSourceRow) : null;
-    if (video) {
-      rememberRuntimeVideo(
-        toVideoRecord({ ...video, category_slug: video.category_slug, summary: video.summary, chunk_count: video.chunk_count }),
-      );
-    }
-    return video;
-  } catch (err) {
-    console.error('[autopilot] video lookup failed:', err instanceof Error ? err.message : err);
-    return null;
+  const { data, error } = await db
+    .from('knowledge_sources')
+    .select('*')
+    .eq('kind', 'youtube')
+    .eq('external_id', youtubeId)
+    .eq('status', 'published')
+    .maybeSingle();
+  if (error) {
+    console.error('[autopilot] video lookup failed:', error.message);
+    throw new Error(`knowledge store unavailable: ${error.message}`);
   }
+  const video = data ? toRuntimeVideo(data as KnowledgeSourceRow) : null;
+  if (video) {
+    rememberRuntimeVideo(toVideoRecord({ ...video, chunk_count: video.chunk_count }));
+  }
+  return video;
 });
 
 /** Published runtime videos for the sitemap (newest first). Never throws. */

@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { listPublishedRuntimeVideos } from '@/lib/autopilot/videos';
 import { SCENARIOS } from '@/lib/calculator-scenarios';
 import { absoluteUrl } from '@/lib/site';
 import { getPublicDb, safeQuery } from '@/lib/content/db';
@@ -93,6 +94,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   } catch {
     // Static index unavailable: skip.
+  }
+  // Videos published at runtime by Content Autopilot (empty if the store is unavailable).
+  for (const v of await listPublishedRuntimeVideos()) {
+    indexed.push(entry(`/video/${v.youtube_id}/`, 0.5, 'monthly', v.updated_at || v.published_at));
   }
 
   const db = getPublicDb();
