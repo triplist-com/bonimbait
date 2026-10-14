@@ -1,84 +1,97 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/browser';
-import { isSupabaseConfigured } from '@/lib/supabase/env';
-import { AUTH_LINKS } from '@/lib/content/navigation';
-
-type State = 'unknown' | 'signed-out' | 'signed-in';
+import { House, LogIn, LogOut, ShoppingBag, UserRoundPlus } from 'lucide-react';
+import { cn } from '@/lib/cn';
+import { ACCOUNT_NAV } from '@/lib/nav';
+import { useAuthState } from '@/lib/hooks/useAuthState';
+import { buttonClasses } from '@/components/ui/Button';
 
 /**
- * Login / signup, or account / sign-out links. Session state is read in the
- * browser so that pages stay static (ISR): a server-side cookie read in the
- * header would make every page dynamic.
+ * Account area from the nav config: login / signup, or "הבית שלי" + sign out.
+ * `bar` sits in the dark utility bar; `drawer` is for the mobile menu.
+ * Session state is read in the browser so pages stay static.
  */
-export default function AccountLinks({ variant = 'desktop' }: { variant?: 'desktop' | 'drawer' }) {
-  const [state, setState] = useState<State>('unknown');
+export default function AccountLinks({ variant = 'bar' }: { variant?: 'bar' | 'drawer' | 'desktop' }) {
+  const state = useAuthState();
 
-  useEffect(() => {
-    if (!isSupabaseConfigured()) {
-      setState('signed-out');
-      return;
+  if (variant === 'drawer') {
+    if (state === 'unknown') return <div className="h-12" aria-hidden="true" />;
+    if (state === 'signed-in') {
+      return (
+        <div className="grid grid-cols-2 gap-2">
+          <Link href={ACCOUNT_NAV.home.href} className={buttonClasses({ variant: 'secondary', size: 'lg' })}>
+            <House aria-hidden="true" />
+            {ACCOUNT_NAV.home.label}
+          </Link>
+          <form action={ACCOUNT_NAV.signOutAction} method="post" className="flex">
+            <button type="submit" className={buttonClasses({ variant: 'outline', size: 'lg', fullWidth: true })}>
+              <LogOut aria-hidden="true" />
+              התנתקות
+            </button>
+          </form>
+        </div>
+      );
     }
-    const supabase = createClient();
-    let active = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (active) setState(data.session ? 'signed-in' : 'signed-out');
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setState(session ? 'signed-in' : 'signed-out');
-    });
-    return () => {
-      active = false;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
-
-  const drawer = variant === 'drawer';
-  const linkCls = drawer
-    ? 'flex-1 text-center py-2.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-700 hover:bg-gray-50'
-    : 'text-sm font-medium text-gray-600 hover:text-primary transition-colors';
-
-  if (state === 'unknown') {
-    return <span className={drawer ? 'block h-10' : 'inline-block w-20'} aria-hidden="true" />;
-  }
-
-  if (state === 'signed-in') {
     return (
-      <div className={drawer ? 'flex gap-2' : 'flex items-center gap-3'}>
-        <Link href={AUTH_LINKS.cart} className={linkCls}>
-          סל קניות
+      <div className="grid grid-cols-2 gap-2">
+        <Link href={ACCOUNT_NAV.signup.href} className={buttonClasses({ variant: 'secondary', size: 'lg' })}>
+          <UserRoundPlus aria-hidden="true" />
+          {ACCOUNT_NAV.signup.label}
         </Link>
-        <Link href={AUTH_LINKS.account} className={linkCls}>
-          החשבון שלי
+        <Link href={ACCOUNT_NAV.login.href} className={buttonClasses({ variant: 'outline', size: 'lg' })}>
+          <LogIn aria-hidden="true" />
+          {ACCOUNT_NAV.login.label}
         </Link>
-        <form action="/auth/signout/" method="post" className={drawer ? 'flex-1 flex' : ''}>
-          <button type="submit" className={drawer ? `${linkCls} w-full` : linkCls}>
-            התנתקות
-          </button>
-        </form>
       </div>
     );
   }
 
+  // Inline links (utility bar on dark, or plain desktop).
+  const dark = variant === 'bar';
+  const linkCls = cn(
+    'inline-flex items-center gap-1.5 rounded-md px-1 py-0.5 transition-colors [&_svg]:size-3.5',
+    dark ? 'text-white/75 hover:text-white' : 'text-ink-600 hover:text-ink-900',
+  );
+  const sep = <span aria-hidden="true" className={cn('h-3 w-px', dark ? 'bg-white/20' : 'bg-ink-200')} />;
+
+  if (state === 'unknown') return <span className="inline-block w-40" aria-hidden="true" />;
+
   return (
-    <div className={drawer ? 'flex gap-2' : 'flex items-center gap-3'}>
-      <Link href={AUTH_LINKS.cart} className={linkCls}>
-        סל קניות
-      </Link>
-      <Link href={AUTH_LINKS.login} className={linkCls}>
-        התחברות
-      </Link>
-      <Link
-        href={AUTH_LINKS.signup}
-        className={
-          drawer
-            ? 'flex-1 text-center py-2.5 rounded-lg text-sm font-semibold bg-gray-900 text-white hover:bg-gray-800'
-            : 'text-sm font-semibold text-gray-900 border border-gray-200 rounded-lg px-3 py-1.5 hover:border-primary hover:text-primary transition-colors'
-        }
-      >
-        הרשמה
+    <div className="flex items-center gap-3">
+      {state === 'signed-in' ? (
+        <>
+          <Link href={ACCOUNT_NAV.home.href} className={cn(linkCls, 'font-semibold', dark ? '!text-white' : '!text-ink-900')}>
+            <House aria-hidden="true" />
+            {ACCOUNT_NAV.home.label}
+          </Link>
+          {sep}
+          <form action={ACCOUNT_NAV.signOutAction} method="post">
+            <button type="submit" className={linkCls}>
+              התנתקות
+            </button>
+          </form>
+        </>
+      ) : (
+        <>
+          <Link href={ACCOUNT_NAV.login.href} className={linkCls}>
+            {ACCOUNT_NAV.login.label}
+          </Link>
+          {sep}
+          <Link href={ACCOUNT_NAV.signup.href} className={linkCls}>
+            {ACCOUNT_NAV.signup.label}
+          </Link>
+          {sep}
+          <Link href={ACCOUNT_NAV.home.href} className={cn(linkCls, 'font-semibold', dark ? '!text-white' : '!text-ink-900')}>
+            <House aria-hidden="true" />
+            {ACCOUNT_NAV.home.label}
+          </Link>
+        </>
+      )}
+      {sep}
+      <Link href={ACCOUNT_NAV.cart.href} className={linkCls} aria-label={ACCOUNT_NAV.cart.label}>
+        <ShoppingBag aria-hidden="true" />
+        <span className="sr-only sm:not-sr-only">סל</span>
       </Link>
     </div>
   );

@@ -10,7 +10,7 @@
  *   <ConsultationCTA />                                 // variant="button" (default)
  *   <ConsultationCTA variant="banner" source="blog-post" />
  *   <ConsultationCTA variant="card" title="..." description="..." />
- *   <ConsultationCTA variant="floating" />              // fixed bottom corner: consult + WhatsApp (mount once, e.g. layout)
+ *   <ConsultationCTA variant="floating" />              // the site's single floating action (mount once, in the layout)
  *   <ConsultationCTA variant="button" label="פגישת ייעוץ" className="..." />
  *   <WhatsAppChatButton message="היי, אשמח לפרטים" />
  *
@@ -22,6 +22,9 @@
  *   title, description   banner/card copy
  *   showWhatsApp render the WhatsApp click-to-chat button next to the CTA
  *                (banner/card/floating; default true when a number is set)
+ *   size         button size: 'sm' | 'md' | 'lg' | 'xl' (design system)
+ *   buttonVariant design-system Button variant (default 'primary'; 'inverse' on magenta)
+ *   fullWidth    stretch the button
  *   className    extra classes on the outer element
  *
  * Every variant opens the same modal:
@@ -30,10 +33,19 @@
  *   - a fallback "leave your number and we'll call you" LeadForm (type
  *     'consultation'). With no Calendly URL, only the form is shown.
  * WhatsApp uses NEXT_PUBLIC_WHATSAPP_NUMBER (international digits, live 972584020730).
+ *
+ * The floating variant is one round button that never covers key content:
+ * it hides over the hero, the footer and any `data-floating-cta="hide"` band
+ * (banner and card variants carry that marker).
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { CalendarCheck, PhoneCall } from 'lucide-react';
 import LeadForm from './LeadForm';
+import FloatingAction from './FloatingAction';
 import { CONSULTATION_FIELDS } from '@/lib/leads/fields';
+import { cn } from '@/lib/cn';
+import { Button, type ButtonSize, type ButtonVariant } from '@/components/ui/Button';
+import { Dialog } from '@/components/ui/Dialog';
 
 export type ConsultationCTAVariant = 'button' | 'banner' | 'card' | 'floating';
 
@@ -44,6 +56,9 @@ export type ConsultationCTAProps = {
   title?: string;
   description?: string;
   showWhatsApp?: boolean;
+  size?: ButtonSize;
+  buttonVariant?: ButtonVariant;
+  fullWidth?: boolean;
   className?: string;
 };
 
@@ -68,7 +83,7 @@ export function calendlyEmbedUrl(source: string, base = CALENDLY_URL): string | 
     const url = new URL(base);
     url.searchParams.set('hide_event_type_details', '1');
     url.searchParams.set('hide_gdpr_banner', '1');
-    url.searchParams.set('primary_color', 'fc3565');
+    url.searchParams.set('primary_color', 'e61559');
     url.searchParams.set('utm_source', source);
     url.searchParams.set('utm_medium', 'website');
     url.searchParams.set('utm_campaign', 'management');
@@ -106,9 +121,12 @@ export function WhatsAppChatButton({
       target="_blank"
       rel="noopener noreferrer"
       aria-label={compact ? label : undefined}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] font-semibold text-white shadow-md transition hover:brightness-95 ${
-        compact ? 'h-14 w-14 rounded-full' : 'px-5 py-3'
-      } ${className}`}
+      className={cn(
+        'inline-flex items-center justify-center gap-2 bg-whatsapp font-semibold text-ink-950 transition hover:brightness-95',
+        'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900',
+        compact ? 'size-14 rounded-full shadow-lift' : 'h-12 rounded-xl px-5',
+        className,
+      )}
     >
       <WhatsAppIcon className={compact ? 'h-7 w-7' : 'h-5 w-5'} />
       {!compact && <span>{label}</span>}
@@ -116,101 +134,61 @@ export function WhatsAppChatButton({
   );
 }
 
-function ConsultationModal({ open, onClose, source }: { open: boolean; onClose: () => void; source: string }) {
-  const ref = useRef<HTMLDialogElement>(null);
-  const calendly = calendlyEmbedUrl(source);
-  const [tab, setTab] = useState<'calendly' | 'callback'>(calendly ? 'calendly' : 'callback');
+type ModalTab = 'calendly' | 'callback';
 
-  useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
-  }, [open]);
+function ConsultationModal({ open, onClose, source }: { open: boolean; onClose: () => void; source: string }) {
+  const calendly = calendlyEmbedUrl(source);
+  const [tab, setTab] = useState<ModalTab>(calendly ? 'calendly' : 'callback');
+  const tabs: Array<[ModalTab, string]> = [
+    ['calendly', 'קביעת פגישה ביומן'],
+    ['callback', 'השאירו מספר ונחזור אליכם'],
+  ];
 
   return (
-    <dialog
-      ref={ref}
+    <Dialog
+      open={open}
       onClose={onClose}
-      onClick={(e) => {
-        if (e.target === ref.current) onClose(); // backdrop click
-      }}
-      aria-labelledby="consultation-title"
-      className="w-[min(100vw-2rem,44rem)] max-h-[92vh] rounded-2xl p-0 shadow-2xl backdrop:bg-black/50"
-      dir="rtl"
+      title={DEFAULT_TITLE}
+      description="בונים בית או משפצים? קבעו פגישת ייעוץ תקציב, ללא עלות וללא התחייבות."
+      className="sm:w-[min(100vw-2rem,46rem)]"
     >
-      {open && (
-        <div className="flex max-h-[92vh] flex-col">
-          <div className="flex items-start justify-between gap-4 border-b border-gray-100 p-5">
-            <div>
-              <h2 id="consultation-title" className="text-xl font-bold text-gray-900">
-                {DEFAULT_TITLE}
-              </h2>
-              <p className="mt-1 text-sm text-gray-600">בונים בית או משפצים? קבעו פגישת ייעוץ תקציב ללא עלות.</p>
-            </div>
+      {calendly && (
+        <div role="tablist" aria-label="דרך יצירת הקשר" className="mb-5 flex w-full gap-1 rounded-2xl bg-ink-100 p-1">
+          {tabs.map(([key, text]) => (
             <button
+              key={key}
               type="button"
-              onClick={onClose}
-              aria-label="סגירה"
-              className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+              role="tab"
+              aria-selected={tab === key}
+              onClick={() => setTab(key)}
+              className={cn(
+                'flex-1 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors',
+                tab === key ? 'bg-white text-ink-900 shadow-xs' : 'text-ink-600 hover:text-ink-900',
+              )}
             >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
-              </svg>
+              {text}
             </button>
-          </div>
-
-          {calendly && (
-            <div role="tablist" className="flex gap-2 px-5 pt-4">
-              {(
-                [
-                  ['calendly', 'קביעת פגישה ביומן'],
-                  ['callback', 'השאירו מספר ונחזור אליכם'],
-                ] as const
-              ).map(([key, text]) => (
-                <button
-                  key={key}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab === key}
-                  onClick={() => setTab(key)}
-                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-                    tab === key ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {text}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="overflow-y-auto p-5">
-            {tab === 'calendly' && calendly ? (
-              <iframe
-                src={calendly}
-                title="קביעת פגישת ייעוץ ב-Calendly"
-                className="h-[640px] w-full rounded-xl border-0"
-                loading="lazy"
-              />
-            ) : (
-              <LeadForm
-                type="consultation"
-                fields={CONSULTATION_FIELDS}
-                submitLabel="חזרו אליי"
-                context={{ cta_source: source }}
-                successTitle="תודה! קיבלנו את הפרטים"
-                successMessage="נציג בונים בית יחזור אליכם בהקדם לתיאום פגישת הייעוץ."
-                footnote="המידע שלכם מאובטח ולא ישותף"
-                idPrefix={`consult-${source}`}
-              />
-            )}
-            <div className="mt-4 flex justify-center">
-              <WhatsAppChatButton />
-            </div>
-          </div>
+          ))}
         </div>
       )}
-    </dialog>
+      {tab === 'calendly' && calendly ? (
+        <iframe src={calendly} title="קביעת פגישת ייעוץ ב-Calendly" className="h-[620px] w-full rounded-2xl border-0" loading="lazy" />
+      ) : (
+        <LeadForm
+          type="consultation"
+          fields={CONSULTATION_FIELDS}
+          submitLabel="חזרו אליי"
+          context={{ cta_source: source }}
+          successTitle="תודה! קיבלנו את הפרטים"
+          successMessage="נציג בונים בית יחזור אליכם בהקדם לתיאום פגישת הייעוץ."
+          footnote="המידע שלכם מאובטח ולא ישותף"
+          idPrefix={`consult-${source}`}
+        />
+      )}
+      <div className="mt-5 flex justify-center">
+        <WhatsAppChatButton />
+      </div>
+    </Dialog>
   );
 }
 
@@ -221,6 +199,9 @@ export default function ConsultationCTA({
   title = DEFAULT_TITLE,
   description = DEFAULT_DESCRIPTION,
   showWhatsApp = true,
+  size = 'lg',
+  buttonVariant = 'primary',
+  fullWidth,
   className = '',
 }: ConsultationCTAProps) {
   const [open, setOpen] = useState(false);
@@ -228,34 +209,24 @@ export default function ConsultationCTA({
   const closeModal = useCallback(() => setOpen(false), []);
   const modal = <ConsultationModal open={open} onClose={closeModal} source={source} />;
 
-  const primaryButton = (extra = '') => (
-    <button
-      type="button"
+  const primaryButton = (extra = '', buttonSize: ButtonSize = size, wide = fullWidth) => (
+    <Button
       onClick={openModal}
       aria-haspopup="dialog"
-      className={`inline-flex items-center justify-center gap-2 rounded-xl bg-secondary px-5 py-3 font-semibold text-gray-900 shadow-md transition hover:bg-secondary-600 ${extra}`}
+      variant={buttonVariant}
+      size={buttonSize}
+      fullWidth={wide}
+      iconStart={<CalendarCheck />}
+      className={extra}
     >
-      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3M4 11h16M5 5h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z" />
-      </svg>
       {label}
-    </button>
+    </Button>
   );
 
   if (variant === 'floating') {
     return (
       <>
-        <div className={`fixed bottom-4 end-4 z-40 flex flex-col items-end gap-3 print:hidden ${className}`}>
-          <button
-            type="button"
-            onClick={openModal}
-            aria-haspopup="dialog"
-            className="rounded-full bg-secondary px-4 py-3 text-sm font-semibold text-gray-900 shadow-lg transition hover:bg-secondary-600"
-          >
-            לייעוץ תקציב בניה ראשוני חינם
-          </button>
-          {showWhatsApp && <WhatsAppChatButton compact label="דברו איתנו ב-WhatsApp" className="shadow-lg" />}
-        </div>
+        <FloatingAction onConsult={openModal} whatsappUrl={showWhatsApp ? whatsappHref('היי, אשמח לקבל פרטים על ייעוץ תקציב בניה') : null} className={className} />
         {modal}
       </>
     );
@@ -265,15 +236,22 @@ export default function ConsultationCTA({
     return (
       <>
         <section
-          className={`rounded-2xl bg-gradient-to-l from-primary-700 to-primary-600 p-6 text-white shadow-card sm:p-8 ${className}`}
+          data-floating-cta="hide"
+          className={cn('relative isolate overflow-hidden rounded-3xl bg-ink-950 p-6 text-white shadow-lift sm:p-10', className)}
         >
-          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <span aria-hidden="true" className="bg-blueprint-dark absolute inset-0 -z-10 opacity-60" />
+          <span aria-hidden="true" className="absolute -end-20 -top-24 -z-10 size-72 rounded-full bg-primary-600/35 blur-3xl" />
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="max-w-2xl">
-              <h2 className="text-xl font-bold sm:text-2xl">{title}</h2>
-              <p className="mt-2 text-primary-100">{description}</p>
+              <p className="mb-2 inline-flex items-center gap-2 text-sm font-bold text-primary-300">
+                <PhoneCall aria-hidden="true" className="size-4" />
+                ייעוץ ללא עלות וללא התחייבות
+              </p>
+              <h2 className="text-headline-sm text-white">{title}</h2>
+              <p className="mt-3 text-body text-white/70">{description}</p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row md:shrink-0">
-              {primaryButton()}
+              {primaryButton('', 'lg', false)}
               {showWhatsApp && <WhatsAppChatButton />}
             </div>
           </div>
@@ -286,12 +264,12 @@ export default function ConsultationCTA({
   if (variant === 'card') {
     return (
       <>
-        <aside className={`rounded-2xl border border-gray-100 bg-white p-6 shadow-card ${className}`}>
-          <p className="text-sm font-semibold text-primary">ייעוץ ללא עלות</p>
-          <h3 className="mt-1 text-lg font-bold text-gray-900">{title}</h3>
-          <p className="mt-2 text-sm text-gray-600">{description}</p>
-          <div className="mt-4 flex flex-col gap-3">
-            {primaryButton('w-full')}
+        <aside data-floating-cta="hide" className={cn('rounded-3xl border border-sand-200 bg-sand-50 p-6 shadow-card', className)}>
+          <p className="text-sm font-bold text-primary-700">ייעוץ ללא עלות</p>
+          <h3 className="mt-1 text-title-lg text-ink-900">{title}</h3>
+          <p className="mt-2 text-body-sm text-ink-600">{description}</p>
+          <div className="mt-5 flex flex-col gap-3">
+            {primaryButton('', 'lg', true)}
             {showWhatsApp && <WhatsAppChatButton className="w-full" />}
           </div>
         </aside>
