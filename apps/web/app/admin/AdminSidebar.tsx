@@ -17,6 +17,7 @@ const GROUPS: Group[] = [
       { href: '/admin/taxonomy/', label: 'קטגוריות, תגיות וכותבים' },
       { href: '/admin/pages/', label: 'עמודים' },
       { href: '/admin/videos/', label: 'עמודי וידאו' },
+      { href: '/admin/autopilot/', label: 'אוטופיילוט תוכן' },
       { href: '/admin/media/', label: 'ספריית מדיה' },
     ],
   },
