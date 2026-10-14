@@ -2,6 +2,8 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // tsconfig keeps "jsx": "preserve" for Next; tests render TSX with the automatic runtime (Vite 8 / Oxc).
+  oxc: { jsx: { runtime: 'automatic' } },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./', import.meta.url)),
@@ -9,7 +11,7 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['tests/**/*.test.ts'],
+    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
     environment: 'node',
     // Editor tests run under happy-dom: never fetch iframes, scripts or styles.
     environmentOptions: {
