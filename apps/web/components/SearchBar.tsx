@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSuggestions } from '@/lib/api';
+import { track } from '@/lib/analytics/track';
 
 interface SearchBarProps {
   defaultValue?: string;
@@ -76,6 +77,7 @@ export default function SearchBar({
       const trimmed = q.trim();
       if (!trimmed) return;
       setShowSuggestions(false);
+      track('search_submitted', { query: trimmed });
       if (onSearch) {
         onSearch(trimmed);
       } else {
