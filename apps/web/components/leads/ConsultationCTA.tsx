@@ -34,6 +34,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import LeadForm from './LeadForm';
 import { CONSULTATION_FIELDS } from '@/lib/leads/fields';
+import { track } from '@/lib/analytics/track';
+import { useCalendlyTracking } from '@/lib/analytics/calendly';
 
 export type ConsultationCTAVariant = 'button' | 'banner' | 'card' | 'floating';
 
@@ -120,6 +122,7 @@ function ConsultationModal({ open, onClose, source }: { open: boolean; onClose: 
   const ref = useRef<HTMLDialogElement>(null);
   const calendly = calendlyEmbedUrl(source);
   const [tab, setTab] = useState<'calendly' | 'callback'>(calendly ? 'calendly' : 'callback');
+  useCalendlyTracking(source, open && tab === 'calendly');
 
   useEffect(() => {
     const dialog = ref.current;
@@ -224,7 +227,10 @@ export default function ConsultationCTA({
   className = '',
 }: ConsultationCTAProps) {
   const [open, setOpen] = useState(false);
-  const openModal = useCallback(() => setOpen(true), []);
+  const openModal = useCallback(() => {
+    track('consultation_clicked', { source, variant });
+    setOpen(true);
+  }, [source, variant]);
   const closeModal = useCallback(() => setOpen(false), []);
   const modal = <ConsultationModal open={open} onClose={closeModal} source={source} />;
 

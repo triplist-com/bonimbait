@@ -5,6 +5,8 @@ import Header from '@/components/Layout/Header';
 import Footer from '@/components/Layout/Footer';
 import StructuredData from '@/components/StructuredData';
 import Analytics from '@/components/Analytics';
+import PageViewTracker from '@/components/analytics/PageViewTracker';
+import SiteChromeGate from '@/components/platform/SiteChromeGate';
 import ConsultationCTA from '@/components/leads/ConsultationCTA';
 import { SITE_URL, absoluteUrl } from '@/lib/site';
 
@@ -80,14 +82,15 @@ export default function RootLayout({
           דלג לתוכן הראשי
         </a>
         <div className="min-h-screen flex flex-col">
-          <Header />
+          {/* SiteChromeGate: /platform/* (pitch site) has its own shell. */}
+          <SiteChromeGate><Header /></SiteChromeGate>
           <main id="main-content" className="flex-1">
             {children}
           </main>
-          <Footer />
+          <SiteChromeGate><Footer /></SiteChromeGate>
         </div>
         {/* Site-wide floating consultation + WhatsApp buttons (Leads workstream). */}
-        <ConsultationCTA variant="floating" source="site" />
+        <SiteChromeGate><ConsultationCTA variant="floating" source="site" /></SiteChromeGate>
         <StructuredData
           data={{
             '@context': 'https://schema.org',
@@ -106,6 +109,7 @@ export default function RootLayout({
           }}
         />
         <Analytics />
+        <PageViewTracker />
       </body>
     </html>
   );

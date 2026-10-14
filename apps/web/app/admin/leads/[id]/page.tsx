@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getLeadById } from '@/lib/db/leads';
+import { attributionLabelHe } from '@/lib/analytics/attribution';
 import type { Json } from '@/lib/db/types';
 import { LEAD_TYPE_LABELS } from '@/lib/leads/constants';
 import { saveLeadNotes, setLeadStatus } from '@/lib/admin/actions/leads';
@@ -47,7 +48,8 @@ export default async function LeadPage({ params }: { params: { id: string } }) {
         title={lead.full_name || lead.email || 'ליד'}
         description={
           <span className="flex flex-wrap items-center gap-2">
-            {LEAD_TYPE_LABELS[lead.type]} · {formatDateTime(lead.created_at)} <StatusBadge info={LEAD_STATUS[lead.status]} />
+            <span dir="ltr" className="font-mono">{lead.ref}</span> · {LEAD_TYPE_LABELS[lead.type]} · {formatDateTime(lead.created_at)}{' '}
+            <StatusBadge info={LEAD_STATUS[lead.status]} />
           </span>
         }
       />
@@ -85,6 +87,7 @@ export default async function LeadPage({ params }: { params: { id: string } }) {
                   </a>
                 )}
               </Row>
+              <Row label="שיוך (4 שעות)">{attributionLabelHe(lead.attribution)}</Row>
             </dl>
           </Section>
           <Section title="כל שדות הטופס">

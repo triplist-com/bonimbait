@@ -99,7 +99,7 @@ export function planNotification(
   const emailEnabled = Boolean(env.RESEND_API_KEY) && recipient.to.length > 0;
   const rows = describeLead(lead, business);
   const typeLabel = LEAD_TYPE_LABELS[lead.type] ?? lead.type;
-  const subject = `ליד חדש: ${typeLabel}${lead.full_name ? ` – ${lead.full_name}` : ''}`;
+  const subject = `ליד חדש${lead.ref ? ` ${lead.ref}` : ''}: ${typeLabel}${lead.full_name ? ` – ${lead.full_name}` : ''}`;
   return {
     recipient,
     email: emailEnabled
@@ -131,6 +131,7 @@ const PAYLOAD_LABELS: Record<string, string> = {
 /** Label/value rows for the email body. */
 export function describeLead(lead: LeadRow, business: LeadRoutingTarget | null): Array<[string, string]> {
   const rows: Array<[string, string]> = [['סוג פנייה', LEAD_TYPE_LABELS[lead.type] ?? lead.type]];
+  if (lead.ref) rows.unshift(['מספר ליד', lead.ref]);
   if (lead.full_name) rows.push(['שם', lead.full_name]);
   if (lead.phone) rows.push(['טלפון', lead.phone]);
   if (lead.email) rows.push(['אימייל', lead.email]);
