@@ -23,13 +23,18 @@ def load(path: str) -> dict:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def sheet(runs: list[str]) -> None:
+def sheet(runs: list[str], view: str = "answer", skip: dict | None = None) -> None:
+    """Every unique (question, document) of the runs' `view` list, minus judged ones."""
     data = [load(p) for p in runs]
     for qi, q in enumerate(data[0]["results"]):
         docs: dict[str, dict] = {}
         for d in data:
-            for doc in d["results"][qi]["answer"]:
+            for doc in d["results"][qi][view]:
+                if skip and doc["key"] in skip.get(q["id"], {}):
+                    continue
                 docs.setdefault(doc["key"], doc)
+        if not docs:
+            continue
         print(f"\n## {q['id']} [{q['topic']}] {q['q']}")
         for key in sorted(docs):  # sorted keys: no hint of which run ranked what
             doc = docs[key]
@@ -37,13 +42,12 @@ def sheet(runs: list[str]) -> None:
             print(f"- {key} | {doc['title'][:90]}\n    {body[:260].replace(chr(10), ' ')}")
 
 
-def score(judgments_path: str, runs: list[str]) -> None:
+def score(judgments_path: str, runs: list[str], view: str = "answer") -> None:
     judged = load(judgments_path)
     base_videos = None
     rows = []
     for path in runs:
         d = load(path)
-        index_ids = None
         total = rel1 = rel2 = n = 0
         video_total = video_n = 0
         new_relevant_q = 0
@@ -51,7 +55,7 @@ def score(judgments_path: str, runs: list[str]) -> None:
         for r in d["results"]:
             got = judged.get(r["id"], {})
             q_new = False
-            for doc in r["answer"]:
+            for doc in r[view]:
                 if doc["key"] not in got:
                     missing += 1
                     continue
@@ -72,6 +76,7 @@ def score(judgments_path: str, runs: list[str]) -> None:
         rows.append(
             {
                 "run": Path(path).stem,
+                "view": view,
                 "index_videos": d.get("index_videos"),
                 "mean_score_top5": round(total / len(d["results"]), 2),
                 "precision_at_5": round(rel1 / max(n, 1), 3),
@@ -95,9 +100,16 @@ def load_index_ids(result: dict) -> list[str]:
 
 if __name__ == "__main__":
     cmd, *rest = sys.argv[1:]
+    view = "answer"
+    if rest and rest[0].startswith("--view="):
+        view, rest = rest[0].split("=", 1)[1], rest[1:]
     if cmd == "sheet":
-        sheet(rest)
+        # sheet [--view=videos] [--skip=judgments.json] run.json ...
+        skip = None
+        if rest and rest[0].startswith("--skip="):
+            skip, rest = load(rest[0].split("=", 1)[1]), rest[1:]
+        sheet(rest, view, skip)
     elif cmd == "score":
-        score(rest[0], rest[1:])
+        score(rest[0], rest[1:], view)
     else:
         raise SystemExit(__doc__)
