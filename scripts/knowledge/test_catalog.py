@@ -83,8 +83,18 @@ class CategoryTests(unittest.TestCase):
 
     def test_title_needs_a_single_category(self) -> None:
         self.assertEqual(title_category("מתחילים ריצוף - מה חשוב בשלב הזה?!"), "finishes-design")
-        self.assertIsNone(title_category("עלויות ריצוף"))  # costs + finishes
         self.assertEqual(title_category("איך בוחרים קבלן שלד?"), None)  # contractors + structure
+
+    def test_cost_words_yield_to_the_topic(self) -> None:
+        self.assertEqual(title_category("מקלחות מעוצבות - כמה עולה מקלחת חדשה?!"), "finishes-design")
+        self.assertEqual(title_category("עלויות בניה בשנת 2026 - וכמה עולה?!"), "costs-pricing")
+        self.assertEqual(title_category("איך כדאי לכסות את בורות החלחול שלכם?"), "electrical-plumbing")
+
+    def test_candidates_are_the_tied_categories(self) -> None:
+        from scripts.knowledge.catalog import CATEGORY_NAMES, candidate_categories
+
+        self.assertEqual(candidate_categories("פתח שירות למיזוג אוויר בהנמכת גבס"), {"electrical-plumbing", "finishes-design"})
+        self.assertEqual(candidate_categories("שיחה פתוחה"), set(CATEGORY_NAMES))
 
     def test_playlist_beats_title(self) -> None:
         self.assertEqual(rule_category("קבלן ריצוף", ["טיח"]), ("finishes-design", "playlist"))

@@ -61,7 +61,7 @@ TITLE_KEYWORDS = {
     "planning-permits": ["היתר", "תב\"ע", "תבע", "ועדה", "רישוי", "אדריכל", "תכנון", "קווי בנין", "זכויות בניה", "מגרש", "טופוגרפיה", "מודד"],
     "structure-construction": ["שלד", "בטון", "יסוד", "יציקה", "יציקת", "ברזל", "כלונס", "תקרה", "בלוק", "ICF", "איטום", "בידוד", "מרתף", "קונסטרוקט", "גג רעפים", "פלדה"],
     "finishes-design": ["ריצוף", "טיח", "שליכט", "צבע", "חיפוי", "גבס", "אריח", "פרקט", "מטבח", "אלומיניום", "חלון", "חלונות", "תריס", "מקלחת", "אסלה", "סניטריה", "דלת", "דלתות", "עיצוב"],
-    "electrical-plumbing": ["חשמל", "אינסטלציה", "צנרת", "מיזוג", "מזגן", "חימום", "תאורה", "דוד שמש", "סולארי", "ביוב", "ניאגרה", "מתח נמוך", "בית חכם"],
+    "electrical-plumbing": ["חשמל", "אינסטלציה", "צנרת", "מיזוג", "מזגן", "חימום", "תאורה", "דוד שמש", "סולארי", "ביוב", "ניאגרה", "מתח נמוך", "בית חכם", "חלחול", "ניקוז"],
     "contractors-labor": ["קבלן", "קבלנים", "פיקוח", "מפקח", "בעלי מקצוע", "בעל מקצוע", "חוזה"],
     "costs-pricing": ["עלות", "עלויות", "מחיר", "כמה עולה", "תקציב", "משכנתא", "חיסכון", "לחסוך"],
     "landscaping-yard": ["גינה", "חצר", "גדר", "פרגולה", "בריכה", "פיתוח שטח", "דשא"],
@@ -180,11 +180,23 @@ def playlist_category(playlists: Iterable[str]) -> str | None:
     return top
 
 
-def title_category(title: str) -> str | None:
-    """The single category whose keywords appear in the title, else None."""
+def title_categories(title: str) -> set[str]:
+    """Categories whose keywords appear in the title.
+
+    Cost words ("כמה עולה", "עלויות") ride along in titles of every topic, so they
+    yield to any other matched category ("מקלחות... כמה עולה מקלחת" is a finishes video).
+    """
     t = normalize(title).lower()
     hits = {slug for slug, kws in TITLE_KEYWORDS.items() if any(normalize(k).lower() in t for k in kws)}
-    return hits.pop() if len(hits) == 1 else None
+    if len(hits) > 1:
+        hits.discard("costs-pricing")
+    return hits
+
+
+def title_category(title: str) -> str | None:
+    """The single category the title points to, else None."""
+    hits = title_categories(title)
+    return next(iter(hits)) if len(hits) == 1 else None
 
 
 def rule_category(title: str, playlists: Iterable[str]) -> tuple[str | None, str]:
@@ -196,3 +208,9 @@ def rule_category(title: str, playlists: Iterable[str]) -> tuple[str | None, str
     if cat:
         return cat, "title"
     return None, ""
+
+
+def candidate_categories(title: str) -> set[str]:
+    """Categories an undecided video may go to: the tied title matches, else all."""
+    hits = title_categories(title)
+    return hits if len(hits) > 1 else set(CATEGORY_NAMES)

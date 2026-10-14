@@ -37,6 +37,7 @@ import numpy as np
 from scripts.knowledge.catalog import (
     CATEGORY_NAMES,
     boilerplate_lines,
+    candidate_categories,
     chapters_from_description,
     clean_description,
     normalize_chapters,
@@ -116,12 +117,15 @@ def assign_categories(candidates: dict[str, dict], all_rows: dict[str, dict], ve
 
     out = {}
     for vid, row in candidates.items():
-        cat, rule = rule_category(row.get("title") or "", row.get("playlists") or [])
+        title = row.get("title") or ""
+        cat, rule = rule_category(title, row.get("playlists") or [])
         cos = None
         if not cat and matrix is not None and vid in vectors:
-            sims = matrix @ vectors[vid]
-            best = int(np.argmax(sims))
-            cos = float(sims[best])
+            # Nearest centroid among the categories the title is torn between (else all).
+            allowed = [i for i, c in enumerate(names) if c in candidate_categories(title)] or list(range(len(names)))
+            sims = matrix[allowed] @ vectors[vid]
+            best = allowed[int(np.argmax(sims))]
+            cos = float(sims.max())
             cat, rule = (names[best], "centroid") if cos >= MIN_CENTROID_COS else ("general-tips", "fallback")
         out[vid] = {"category": cat or "general-tips", "rule": rule or "fallback", "cos": cos}
     return out
