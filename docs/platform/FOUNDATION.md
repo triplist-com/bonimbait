@@ -478,6 +478,20 @@ call writes a row, including 4xx responses. Admins read it in the token screen.
 - An agent can publish a post end to end: upload an image, create a draft, then publish.
 - Sanitizing the content is a no-op on content the admin editor produced.
 
+### 7.5 Open questions (owner), before building
+
+1. **How do the agents publish to WordPress today?** If they use the WP REST API
+   (`/wp-json/wp/v2/posts` and `/media` with Application Passwords), add a thin **compatibility
+   shim**: the same JSON shapes, mapped onto the v1 handlers. Each agent then only needs a new base
+   URL and credentials.
+2. Which content types do they touch? Posts only, or also video pages and pages?
+3. Do they set categories and tags by WordPress id or by name? The import kept `legacy_wp_id`, so
+   both can map.
+
+Estimated build: a migration, the token and audit helpers, the routes, the admin token screen and
+tests. That's roughly a day for one squad, best owned by `autopilot` (content in) or `command`
+(owner tools).
+
 ---
 
 ## 8. Environment
