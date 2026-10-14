@@ -34,6 +34,11 @@ describe('staff operations', () => {
     expect(out).toMatchObject({ status: 'transcribed', transcript_source: 'upload_vtt', transcript_text: 'שלום עולם', duration_s: 10, error: null });
   });
 
+  it('does not take a video length from plain text, whose times are estimates', async () => {
+    const m = memoryStore([sourceRow({ id: 's', status: 'detected', duration_s: null })]);
+    expect((await applyTranscript(m.store, 's', { cues, source: 'upload_txt' })).duration_s).toBeNull();
+  });
+
   it('adds audio-transcription spend to the source', async () => {
     const m = memoryStore([sourceRow({ id: 's', status: 'needs_transcript', cost_usd_micros: 10 })]);
     const usage = { step: 'transcribe_audio' as const, model: 'whisper-1', audio_seconds: 10, usd_micros: 1000, at: 'now' };

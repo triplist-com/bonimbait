@@ -49,7 +49,8 @@ export async function applyTranscript(
 ): Promise<KnowledgeSourceRow> {
   const src = await load(store, id);
   if (t.cues.length === 0) throw new ManageError('לא נמצא טקסט בתמליל.');
-  const lastEnd = t.cues[t.cues.length - 1].end;
+  // Timed transcripts end near the video's end; plain text only has estimated times.
+  const lastEnd = t.source === 'upload_txt' ? 0 : t.cues[t.cues.length - 1].end;
   return move(store, src, 'transcribed', {
     transcript_cues: t.cues,
     transcript_text: cuesToText(t.cues),
