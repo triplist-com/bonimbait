@@ -4,7 +4,7 @@ import type { VideoPageRow } from '@/lib/db/types';
 import { getCategoryMap } from '@/lib/content/queries';
 import { htmlToText, prepareContentHtml } from '@/lib/content/sanitize';
 import { canonicalPath, formatHebrewDate } from '@/lib/content/seo';
-import { findIndexedYoutubeId, legacyCategories, loadVideoPagesForYoutubeIds, videoThumb } from '@/lib/content/videos';
+import { findAiPageYoutubeId, legacyCategories, loadVideoPagesForYoutubeIds, videoThumb } from '@/lib/content/videos';
 import { absoluteUrl } from '@/lib/site';
 import ArticleBody from './ArticleBody';
 import Breadcrumbs from './Breadcrumbs';
@@ -30,7 +30,7 @@ function YouTubeEmbed({ id, title }: { id: string; title: string }) {
 export default async function LegacyVideoPage({ page }: { page: VideoPageRow }) {
   const path = `/video/${page.legacy_slug}/`;
   const { html, jsonLd } = prepareContentHtml(page.body_html);
-  const indexedId = findIndexedYoutubeId(page.youtube_ids ?? []);
+  const indexedId = await findAiPageYoutubeId(page.youtube_ids ?? []);
   const [more, categoryMap] = await Promise.all([
     loadVideoPagesForYoutubeIds(page.related_youtube_ids ?? [], page.id, 6),
     getCategoryMap(),

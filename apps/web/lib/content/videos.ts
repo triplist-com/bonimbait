@@ -1,7 +1,8 @@
 import 'server-only';
 
 import { cache } from 'react';
-import { getVideo as getIndexedVideo, getVideos as getIndexedVideos } from '@/app/api/_lib/data';
+import { getStaticVideo as getIndexedVideo, getVideos as getIndexedVideos } from '@/app/api/_lib/data';
+import { findPublishedRuntimeIds } from '@/lib/autopilot/videos';
 import type { Video } from '@/lib/types';
 import type { VideoPageRow } from '@/lib/db/types';
 import { getPublishedVideoPageBySlug, listPublishedVideoPages, type VideoPageSummary } from '@/lib/db/videos';
@@ -26,6 +27,21 @@ export function findIndexedYoutubeId(youtubeIds: string[]): string | null {
     }
   }
   return null;
+}
+
+/**
+ * First YouTube id of a legacy page that has an AI page at /video/<id>/: the
+ * static index first, else a video published by Content Autopilot.
+ */
+export async function findAiPageYoutubeId(youtubeIds: string[]): Promise<string | null> {
+  const indexed = findIndexedYoutubeId(youtubeIds);
+  if (indexed) return indexed;
+  try {
+    const published = await findPublishedRuntimeIds(youtubeIds);
+    return youtubeIds.find((id) => published.has(id)) ?? null;
+  } catch {
+    return null; // knowledge store unavailable: no link
+  }
 }
 
 export function isIndexedYoutubeId(id: string): boolean {
