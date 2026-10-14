@@ -19,7 +19,11 @@
 -- Idempotent: safe to re-run.
 -- =============================================================================
 
+-- pgvector: installed into `extensions` when missing. Projects set up by the
+-- old pipeline (scripts/setup_db.sql) may already have it in `public`, so the
+-- type is referenced unqualified and resolved through this search_path.
 create extension if not exists vector with schema extensions;
+set search_path = public, extensions;
 
 -- ---------------------------------------------------------------------------
 -- Sources: one row per video / episode / upload
@@ -82,14 +86,14 @@ create table if not exists public.knowledge_chunks (
   start_s     double precision not null default 0 check (start_s >= 0),
   end_s       double precision not null default 0 check (end_s >= 0),
   text        text not null,
-  embedding   extensions.vector(1536),
+  embedding   vector(1536),
   tokens      integer check (tokens is null or tokens >= 0),
   created_at  timestamptz not null default now(),
   constraint knowledge_chunks_source_chunk_key unique (source_id, chunk_index)
 );
 
 create index if not exists knowledge_chunks_embedding_hnsw_idx
-  on public.knowledge_chunks using hnsw (embedding extensions.vector_cosine_ops);
+  on public.knowledge_chunks using hnsw (embedding vector_cosine_ops);
 
 -- ---------------------------------------------------------------------------
 -- RLS: staff read/write; no anon access (search uses the service role)
@@ -120,7 +124,7 @@ grant all on table public.knowledge_chunks to service_role;
 -- pass RLS, everyone else gets no rows; anon cannot execute it at all.
 -- ---------------------------------------------------------------------------
 create or replace function public.match_knowledge_chunks(
-  query_embedding extensions.vector(1536),
+  query_embedding vector(1536),
   match_count integer default 20,
   min_similarity double precision default 0.2
 )
@@ -170,9 +174,9 @@ as $$
   limit greatest(1, least(coalesce(match_count, 20), 200));
 $$;
 
-revoke all on function public.match_knowledge_chunks(extensions.vector, integer, double precision) from public;
-revoke all on function public.match_knowledge_chunks(extensions.vector, integer, double precision) from anon;
-grant execute on function public.match_knowledge_chunks(extensions.vector, integer, double precision)
+revoke all on function public.match_knowledge_chunks(vector, integer, double precision) from public;
+revoke all on function public.match_knowledge_chunks(vector, integer, double precision) from anon;
+grant execute on function public.match_knowledge_chunks(vector, integer, double precision)
   to authenticated, service_role;
 
 -- ---------------------------------------------------------------------------
