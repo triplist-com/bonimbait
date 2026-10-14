@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import VideoPlayer from '@/components/VideoPlayer';
@@ -23,6 +23,14 @@ function VideoContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [openTranscript, setOpenTranscript] = useState(false);
   const [playerTime, setPlayerTime] = useState(startTime);
+  const playerRef = useRef<HTMLDivElement>(null);
+
+  // Jump to a moment (chapter / key point) and bring the player into view.
+  const seek = (seconds: number) => {
+    setPlayerTime(seconds);
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    playerRef.current?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -105,11 +113,13 @@ function VideoContent() {
         </nav>
 
         {/* Video Player */}
-        <VideoPlayer
-          youtubeId={video.youtube_id}
-          title={video.title}
-          startTime={playerTime}
-        />
+        <div ref={playerRef}>
+          <VideoPlayer
+            youtubeId={video.youtube_id}
+            title={video.title}
+            startTime={playerTime}
+          />
+        </div>
 
         {/* Video Info */}
         <div className="mt-6 mb-8">
@@ -149,8 +159,37 @@ function VideoContent() {
           tips={video.tips}
           warnings={video.warnings}
           variant="full"
-          onTimestampClick={(seconds) => setPlayerTime(seconds)}
+          onTimestampClick={seek}
         />
+
+        {/* Chapters from the YouTube description */}
+        {video.chapters && video.chapters.length > 0 && (
+          <section
+            aria-labelledby="chapters-heading"
+            className="bg-white border border-gray-200/80 rounded-xl p-5 mb-5 shadow-sm"
+          >
+            <h2 id="chapters-heading" className="text-base font-bold text-gray-900 mb-3">
+              פרקים בסרטון
+            </h2>
+            <ol className="space-y-1 max-h-96 overflow-y-auto">
+              {video.chapters.map((ch) => (
+                <li key={ch.start_time}>
+                  <button
+                    type="button"
+                    onClick={() => seek(ch.start_time)}
+                    className="w-full flex items-start gap-3 py-2 px-3 rounded-lg hover:bg-primary-50 focus-visible:bg-primary-50 transition-colors text-start"
+                    aria-label={`דלגו לדקה ${formatTimestamp(ch.start_time)}: ${ch.title}`}
+                  >
+                    <span dir="ltr" className="text-xs text-primary font-mono font-medium mt-0.5 flex-shrink-0">
+                      {formatTimestamp(ch.start_time)}
+                    </span>
+                    <span className="text-sm text-gray-700 leading-relaxed">{ch.title}</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
 
         {/* Transcript Accordion */}
         {video.segments && video.segments.length > 0 && (
