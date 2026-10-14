@@ -106,7 +106,8 @@ begin
       -- prev * (1 - f) <= limit - cur - cost.
       v_wait := (1 - (p_limit - v_cur_hits - v_cost)::double precision / v_prev_hits) * v_win - v_elapsed;
     end if;
-    retry_after_seconds := greatest(1, ceil(v_wait))::integer;
+    -- Round to whole ms first so float noise (5.000000000000001) doesn't add a second.
+    retry_after_seconds := greatest(1, ceil(round(v_wait::numeric, 3)))::integer;
   else
     update public.rate_limits r
        set hits = r.hits + v_cost,
