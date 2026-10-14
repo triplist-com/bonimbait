@@ -122,11 +122,15 @@ def assign_categories(candidates: dict[str, dict], all_rows: dict[str, dict], ve
         cos = None
         if not cat and matrix is not None and vid in vectors:
             # Nearest centroid among the categories the title is torn between (else all).
-            allowed = [i for i, c in enumerate(names) if c in candidate_categories(title)] or list(range(len(names)))
+            # With title evidence the best of the tied categories wins outright; without
+            # it, a video far from every centroid is filed under general tips.
+            candidates = candidate_categories(title)
+            tied = candidates != set(CATEGORY_NAMES)
+            allowed = [i for i, c in enumerate(names) if c in candidates] or list(range(len(names)))
             sims = matrix[allowed] @ vectors[vid]
             best = allowed[int(np.argmax(sims))]
             cos = float(sims.max())
-            cat, rule = (names[best], "centroid") if cos >= MIN_CENTROID_COS else ("general-tips", "fallback")
+            cat, rule = (names[best], "centroid") if tied or cos >= MIN_CENTROID_COS else ("general-tips", "fallback")
         out[vid] = {"category": cat or "general-tips", "rule": rule or "fallback", "cos": cos}
     return out
 

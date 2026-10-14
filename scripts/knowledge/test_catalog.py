@@ -102,6 +102,40 @@ class CategoryTests(unittest.TestCase):
         self.assertEqual(rule_category("שיחה פתוחה", []), (None, ""))
 
 
+class AssignCategoryTests(unittest.TestCase):
+    def test_rules_then_centroid_among_tied_categories(self) -> None:
+        import numpy as np
+
+        from scripts.knowledge.build_catalog import assign_categories
+
+        e = np.eye(4, dtype="<f4")
+        vectors = {
+            # rule-labelled seeds (they build the centroids)
+            "s1": e[0], "s2": e[0],  # electrical (playlist)
+            "s3": e[1],  # finishes (playlist)
+            "s4": e[2],  # structure (title)
+            # undecided videos
+            "u1": (e[0] * 0.2 + e[1]) / np.linalg.norm(e[0] * 0.2 + e[1]),  # closest to finishes
+            "u2": e[2],  # closest to structure, but its title ties electrical/finishes
+            "u3": e[3],  # far from every centroid
+        }
+        rows = {
+            "s1": {"title": "שיחה", "playlists": ["חשמל"]},
+            "s2": {"title": "שיחה", "playlists": ["תאורה"]},
+            "s3": {"title": "שיחה", "playlists": ["טיח"]},
+            "s4": {"title": "סיור שלד", "playlists": []},
+            "u1": {"title": "שיחה פתוחה", "playlists": []},
+            "u2": {"title": "פתח שירות למיזוג בהנמכת גבס", "playlists": []},
+            "u3": {"title": "שיחה פתוחה", "playlists": []},
+        }
+        out = assign_categories({k: rows[k] for k in ("s1", "u1", "u2", "u3")}, rows, vectors)
+        self.assertEqual(out["s1"], {"category": "electrical-plumbing", "rule": "playlist", "cos": None})
+        self.assertEqual((out["u1"]["category"], out["u1"]["rule"]), ("finishes-design", "centroid"))
+        # Tied title (electrical vs finishes): never structure, even though it is closest.
+        self.assertIn(out["u2"]["category"], {"electrical-plumbing", "finishes-design"})
+        self.assertEqual((out["u3"]["category"], out["u3"]["rule"]), ("general-tips", "fallback"))
+
+
 class InventoryTests(unittest.TestCase):
     def test_type_precedence(self) -> None:
         self.assertEqual(classify({"videos"}, {"PLJa3K86i-6XenqhecEwRKLvqf5azCGHn-"}), "podcast")
