@@ -100,7 +100,7 @@ page (`findAiPageYoutubeId`).
 | `CRON_SECRET` | none | **Required** for the cron. Vercel sends `Authorization: Bearer $CRON_SECRET`. Without it every cron call gets 401. |
 | `YOUTUBE_CHANNEL_ID` | `UCCehs0A1gUmOUtZIhvkXVJQ` | Channel to watch. |
 | `PODCAST_RSS_URL` | unset | Optional podcast feed to watch. |
-| `AUTOPILOT_AUTO_PROCESS` | `false` | Cron also processes new videos. It never publishes. |
+| `AUTOPILOT_AUTO_PROCESS` | `false` | Cron also processes new videos, and retries videos whose captions weren't ready yet (up to 3 attempts). It never publishes. |
 | `AUTOPILOT_AUTO_PROCESS_LIMIT` | `1` | Videos per cron run (1-5). |
 | `AUTOPILOT_MAX_USD_PER_VIDEO` | `0.10` | Budget gate: upper-bound estimate per processing run. |
 | `AUTOPILOT_MONTHLY_BUDGET_USD` | `2` | Budget gate: rolling 30-day spend across sources. |
@@ -172,7 +172,7 @@ for prompts up to 100K tokens, and `text-embedding-3-small` at $0.02 per MTok.
 | Symptom (admin) | Cause | Fix |
 |---|---|---|
 | "חסר תמליל", with "יוטיוב חסם…" and `[blocked]` or `[empty]` | YouTube refuses datacenter IPs ("confirm you're not a bot") or requires a proof-of-origin token. This is likely on Vercel. | In YouTube Studio go to Subtitles, then ⋮, then Download (.vtt or .srt), and upload the file in the detail view with "להמשיך מיד לעיבוד". Or set `AUTOPILOT_AUDIO_TRANSCRIPTION=true` and upload the audio. Running "עיבוד" from a residential IP (local) also works. |
-| "חסר תמליל", with "עדיין אין כתוביות" and `[no_captions]` | Auto-captions aren't ready yet (usually hours after upload; the newest test video had them after 28 minutes). | Click "ניסיון חוזר" later, or upload a transcript. |
+| "חסר תמליל", with "עדיין אין כתוביות" and `[no_captions]` | Auto-captions aren't ready yet (usually hours after upload; the newest test video had them after 28 minutes). | With auto-processing on, the cron retries by itself (up to 3 runs). Otherwise click "ניסיון חוזר" later, or upload a transcript. |
 | `[unplayable]` | The video is private, unlisted or deleted. | Skip it. |
 | "נכשל" with a summary error | Claude refused, or the output was incomplete. Spend is still recorded. | Click "ניסיון חוזר". The transcript is kept, so captions aren't fetched again. |
 | "נכשל" with "עיבוד קודם נקטע באמצע" | The step ran past the function limit or the server crashed. | Click "ניסיון חוזר" (offered automatically after 10 minutes). |
