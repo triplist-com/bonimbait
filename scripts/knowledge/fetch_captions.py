@@ -13,8 +13,10 @@ AI index yet, this is the API form of
   4. a per-video status in data/raw/captions_status.json, saved after each video.
 
 Statuses: manual_he | auto_he | none (no Hebrew track) | unavailable (private,
-removed, members-only, age-gated) are final; blocked | error are retried on the
-next run, so the script is resumable.
+removed, members-only, age-gated) are final; blocked | blocked_subs | error are
+retried on the next run, so the script is resumable. blocked_subs means only the
+subtitle download was rate-limited (metadata is saved); those downloads are
+retried after a cool-down at the end of the run.
 
 Pacing: a random 9-13 s pause between videos plus 1 s between requests, about
 250 videos an hour, under YouTube's guest limit of ~300. A 429 or "confirm
@@ -37,10 +39,8 @@ import os
 import random
 import re
 import sys
-import tempfile
 import time
 from datetime import datetime, timezone
-from pathlib import Path
 
 from scripts.knowledge.paths import (
     MIN_INDEX_SECONDS,
@@ -55,13 +55,16 @@ FINAL = {"manual_he", "auto_he", "none", "unavailable"}
 MAX_ATTEMPTS = 3  # an "error" this many times in a row is not retried
 MIN_MANUAL_CHARS = 300  # a manual track shorter than this is a stub (title, "[מוזיקה]")
 HEBREW = ("iw", "he")  # YouTube still labels Hebrew "iw"
+# English and Hebrew forms: with lang=iw YouTube localises its playability messages.
 BLOCK_PATTERNS = re.compile(
-    r"HTTP Error 429|Too Many Requests|confirm you.re not a bot|rate.limit|This content isn.t available, try again later",
+    r"HTTP Error 429|Too Many Requests|confirm you.re not a bot|rate.limit|This content isn.t available, try again later|"
+    r"שאינך בוט|שאינך רובוט|אינך בוט",
     re.I,
 )
 UNAVAILABLE_PATTERNS = re.compile(
     r"Private video|Video unavailable|has been removed|members.only|Join this channel|"
-    r"confirm your age|age.restricted|Premieres in|live event will begin|This video is not available|account associated",
+    r"confirm your age|age.restricted|Premieres in|live event will begin|This video is not available|account associated|"
+    r"הסרטון הזה לא זמין|סרטון פרטי|הסרטון הוסר|לחברי הערוץ|לאשר את גילך",
     re.I,
 )
 POT_PATTERN = re.compile(r"PO token was not provided|require a PO Token", re.I)
@@ -156,7 +159,7 @@ def caption_chars(raw: dict) -> int:
     return sum(len("".join(s.get("utf8", "") for s in e.get("segs") or [])) for e in raw.get("events") or [])
 
 
-def ydl_options(tmpdir: str, capture: CaptureLogger, auto_only: bool = False) -> dict:
+def ydl_options(capture: CaptureLogger, auto_only: bool = False) -> dict:
     opts = {
         "quiet": True,
         "no_warnings": False,
@@ -166,7 +169,6 @@ def ydl_options(tmpdir: str, capture: CaptureLogger, auto_only: bool = False) ->
         "writeautomaticsub": True,
         "subtitleslangs": list(HEBREW),
         "subtitlesformat": "json3",
-        "outtmpl": os.path.join(tmpdir, "%(id)s.%(ext)s"),
         "noplaylist": True,
         "ignore_no_formats_error": True,
         "sleep_interval_requests": 1.0,
@@ -184,6 +186,12 @@ def ydl_options(tmpdir: str, capture: CaptureLogger, auto_only: bool = False) ->
 def fetch_one(vid: str, auto_only: bool = False) -> dict:
     """Fetch metadata + the best Hebrew track for one video. Returns a status entry.
 
+    Two steps: the extraction (watch page + player API: metadata and the list of
+    caption tracks, no subtitle request), then one request for the chosen json3
+    track. YouTube rate-limits the subtitle endpoint on its own; a 429 there gives
+    "blocked_subs" (metadata already saved) so the run can move on and retry the
+    download later, while blocks on the page itself give "blocked".
+
     A manual track that is only a stub (a title or "[מוזיקה]", < MIN_MANUAL_CHARS)
     is replaced by the Hebrew ASR track when there is one (one more extraction).
     """
@@ -191,52 +199,58 @@ def fetch_one(vid: str, auto_only: bool = False) -> dict:
 
     capture = CaptureLogger()
     url = f"https://www.youtube.com/watch?v={vid}"
-    with tempfile.TemporaryDirectory(prefix="captions-") as tmpdir:
-        try:
-            with yt_dlp.YoutubeDL(ydl_options(tmpdir, capture, auto_only)) as ydl:
-                info = ydl.extract_info(url, download=True)
-        except Exception as exc:  # noqa: BLE001 - yt-dlp raises DownloadError subclasses
-            msg = f"{exc} | {' | '.join(capture.messages[-3:])}"
-            if BLOCK_PATTERNS.search(msg):
-                return {"status": "blocked", "error": msg[:300]}
-            if UNAVAILABLE_PATTERNS.search(msg):
-                return {"status": "unavailable", "error": msg[:300]}
-            return {"status": "error", "error": msg[:300]}
-        if not info:
-            return {"status": "error", "error": "no info"}
+    try:
+        ydl = yt_dlp.YoutubeDL(ydl_options(capture, auto_only))
+        info = ydl.extract_info(url, download=False)
+    except Exception as exc:  # noqa: BLE001 - yt-dlp raises DownloadError subclasses
+        msg = f"{exc} | {' | '.join(capture.messages[-3:])}"
+        if BLOCK_PATTERNS.search(msg):
+            return {"status": "blocked", "error": msg[:300]}
+        if UNAVAILABLE_PATTERNS.search(msg):
+            return {"status": "unavailable", "error": msg[:300]}
+        return {"status": "error", "error": msg[:300]}
+    if not info:
+        return {"status": "error", "error": "no info"}
+    # ignore_no_formats_error turns a dead page into a stub ("youtube video #<id>", no
+    # duration) instead of an exception; classify it from the warnings in any language.
+    if not info.get("duration") and (info.get("title") or "").startswith("youtube video #"):
+        msg = " | ".join(capture.messages[-4:]) or "no metadata"
+        return {"status": "blocked" if BLOCK_PATTERNS.search(msg) else "unavailable", "error": msg[:300]}
 
-        meta = metadata_record(info)
-        (metadata_dir() / f"{vid}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
-        entry: dict = {"duration": info.get("duration"), "title": info.get("title")}
+    meta = metadata_record(info)
+    (metadata_dir() / f"{vid}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+    entry: dict = {"duration": info.get("duration"), "title": info.get("title")}
 
-        if auto_only:
-            info = {**info, "subtitles": {}}
-        picked = pick_track(info)
-        if picked is None:
-            if any(POT_PATTERN.search(m) for m in capture.messages):
-                return {**entry, "status": "blocked", "error": "subtitles need a PO token"}
-            asr = sorted(k for k in (info.get("automatic_captions") or {}) if k.endswith("-orig"))
-            return {**entry, "status": "none", **({"asr": asr} if asr else {})}
-        label, key = picked
-        files = sorted(Path(tmpdir).glob(f"{vid}.*.json3"))
-        chosen = next((f for f in files if f.name == f"{vid}.{key}.json3"), None)
-        if chosen is None:
-            msg = " | ".join(capture.messages[-3:])
-            status = "blocked" if BLOCK_PATTERNS.search(msg) else "error"
-            return {**entry, "status": status, "error": f"track {key} listed but not written: {msg}"[:300]}
-        raw = json.loads(chosen.read_text(encoding="utf-8"))
-        if not raw.get("events"):
-            return {**entry, "status": "error", "error": "empty json3"}
-        if label == "manual_he" and caption_chars(raw) < MIN_MANUAL_CHARS:
-            asr = any(f"{k}-orig" in (info.get("automatic_captions") or {}) for k in HEBREW)
-            if not asr:
-                return {**entry, "status": "none", "note": "manual track is a stub, no Hebrew ASR"}
-            time.sleep(random.uniform(4, 7))
-            result = fetch_one(vid, auto_only=True)
-            return {**result, "note": "manual track is a stub; used the ASR track"}
-        dest = subtitles_dir() / f"{vid}.json"
-        dest.write_text(json.dumps(raw, ensure_ascii=False), encoding="utf-8")
-        return {**entry, "status": label, "track": chosen.name.split(".")[-2]}
+    picked = pick_track({**info, "subtitles": {}} if auto_only else info)
+    if picked is None:
+        if any(POT_PATTERN.search(m) for m in capture.messages):
+            return {**entry, "status": "blocked", "error": "subtitles need a PO token"}
+        asr = sorted(k for k in (info.get("automatic_captions") or {}) if k.endswith("-orig"))
+        return {**entry, "status": "none", **({"asr": asr} if asr else {})}
+    label, key = picked
+    track = (info.get("requested_subtitles") or {}).get(key) or {}
+    if not track.get("url") or track.get("ext") != "json3":
+        return {**entry, "status": "error", "error": f"track {key} listed without a json3 url"}
+
+    time.sleep(1.0)
+    try:
+        raw = json.loads(ydl.urlopen(track["url"]).read().decode("utf-8"))
+    except Exception as exc:  # noqa: BLE001 - urllib/yt-dlp network errors
+        msg = str(exc)
+        if BLOCK_PATTERNS.search(msg):
+            return {**entry, "status": "blocked_subs", "track_status": label, "error": msg[:200]}
+        return {**entry, "status": "error", "error": f"subtitle download: {msg}"[:300]}
+    if not raw.get("events"):
+        return {**entry, "status": "error", "error": "empty json3"}
+    if label == "manual_he" and caption_chars(raw) < MIN_MANUAL_CHARS:
+        asr = any(f"{k}-orig" in (info.get("automatic_captions") or {}) for k in HEBREW)
+        if not asr:
+            return {**entry, "status": "none", "note": "manual track is a stub, no Hebrew ASR"}
+        time.sleep(random.uniform(4, 7))
+        result = fetch_one(vid, auto_only=True)
+        return {**result, "note": "manual track is a stub; used the ASR track"}
+    (subtitles_dir() / f"{vid}.json").write_text(json.dumps(raw, ensure_ascii=False), encoding="utf-8")
+    return {**entry, "status": label, "track": key}
 
 
 COST_WORDS = ("עלות", "עלויות", "תקציב", "מחיר", "כמה עול", "משכנת", "לחסוך", "חיסכון", "כסף")
@@ -328,6 +342,15 @@ def main() -> int:
     consecutive_blocks = 0
     done = 0
     pause_scale = 1.0
+
+    def record(vid: str, prev: dict, entry: dict) -> None:
+        status[vid] = {k: v for k, v in {**prev, **entry}.items() if not (k == "error" and entry["status"] in FINAL - {"unavailable"})}
+        save_status(status)
+        counts: dict[str, int] = {}
+        for s in status.values():
+            counts[s["status"]] = counts.get(s["status"], 0) + 1
+        log.info("[%d/%d] %s %s %s | totals %s", done, len(queue), vid, entry["status"], entry.get("track", ""), counts)
+
     i = 0
     while i < len(queue):
         vid = queue[i]
@@ -335,7 +358,7 @@ def main() -> int:
         entry = fetch_one(vid)
         entry["attempts"] = int(prev.get("attempts", 0)) + 1
         entry["updated_at"] = now_iso()
-        if entry["status"] == "blocked":
+        if entry["status"] == "blocked":  # the page or player itself: back off, retry this video
             consecutive_blocks += 1
             status[vid] = {**prev, **entry}
             save_status(status)
@@ -346,20 +369,47 @@ def main() -> int:
             pause_scale = min(pause_scale * 1.5, 4.0)
             log.warning("%s blocked (%s); backing off %ds, pause scale %.1f", vid, entry.get("error", "")[:120], wait, pause_scale)
             time.sleep(wait)
-            continue  # retry the same video
+            continue
         consecutive_blocks = 0
-        if entry["status"] == "error":
-            log.warning("%s error #%d (%s)", vid, entry["attempts"], entry.get("error", "")[:160])
-        status[vid] = {k: v for k, v in {**prev, **entry}.items() if not (k == "error" and entry["status"] in FINAL - {"unavailable"})}
-        save_status(status)
         done += 1
-        counts: dict[str, int] = {}
-        for s in status.values():
-            counts[s["status"]] = counts.get(s["status"], 0) + 1
-        log.info("[%d/%d] %s %s %s | totals %s", done, len(queue), vid, entry["status"], entry.get("track", ""), counts)
+        if entry["status"] == "blocked_subs":  # only the subtitle endpoint: defer the download
+            pause_scale = min(pause_scale * 1.25, 3.0)
+            log.warning("%s subtitle download rate-limited; deferred (pause scale %.1f)", vid, pause_scale)
+        else:
+            pause_scale = max(1.0, pause_scale * 0.85)
+            if entry["status"] == "error":
+                log.warning("%s error #%d (%s)", vid, entry["attempts"], entry.get("error", "")[:160])
+        record(vid, prev, entry)
         i += 1
         if i < len(queue):
             time.sleep(random.uniform(args.min_sleep, args.max_sleep) * pause_scale)
+
+    # Deferred subtitle downloads: cool down, then retry with exponential backoff.
+    deferred = [v for v, s in status.items() if s.get("status") == "blocked_subs" and (not args.ids or v in queue)]
+    if deferred:
+        log.info("retrying %d deferred subtitle downloads after a 10 min cool-down", len(deferred))
+        time.sleep(600)
+    failures = 0
+    for vid in deferred:
+        while True:
+            prev = status.get(vid) or {}
+            entry = fetch_one(vid)
+            entry["attempts"] = int(prev.get("attempts", 0)) + 1
+            entry["updated_at"] = now_iso()
+            if entry["status"] not in ("blocked", "blocked_subs"):
+                failures = 0
+                record(vid, prev, entry)
+                time.sleep(random.uniform(args.min_sleep, args.max_sleep))
+                break
+            failures += 1
+            status[vid] = {**prev, **entry}
+            save_status(status)
+            if failures >= args.max_blocks:
+                log.error("still rate-limited after %d tries; stopping (resume later)", failures)
+                return 3
+            wait = min(120 * 2 ** (failures - 1), 1800)
+            log.warning("%s still rate-limited; backing off %ds", vid, wait)
+            time.sleep(wait)
     log.info("finished: %d videos", done)
     return 0
 

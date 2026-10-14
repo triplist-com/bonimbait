@@ -183,6 +183,9 @@ class CaptionTests(unittest.TestCase):
         self.assertFalse(BLOCK_PATTERNS.search("Sign in to confirm your age"))
         self.assertTrue(UNAVAILABLE_PATTERNS.search("Sign in to confirm your age"))
         self.assertTrue(UNAVAILABLE_PATTERNS.search("ERROR: [youtube] x: Private video"))
+        # lang=iw localises YouTube's messages
+        self.assertTrue(UNAVAILABLE_PATTERNS.search("[youtube] הסרטון הזה לא זמין"))
+        self.assertTrue(BLOCK_PATTERNS.search("צריך להיכנס לחשבון כדי לאשר שאינך בוט"))
 
 
 class MarksTests(unittest.TestCase):
