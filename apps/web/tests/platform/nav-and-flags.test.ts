@@ -7,7 +7,8 @@ const hrefs = (groups: AdminNavGroup[]) => groups.flatMap((g) => g.items.map((i)
 
 describe('admin nav config', () => {
   it('keeps every screen of the previous hard-coded sidebar', () => {
-    expect(hrefs(adminNavFor('admin'))).toEqual([
+    // Superset check: squads add screens (e.g. /admin/autopilot/), but none may disappear.
+    expect(hrefs(adminNavFor('admin'))).toEqual(expect.arrayContaining([
       '/admin/',
       '/admin/posts/',
       '/admin/taxonomy/',
@@ -27,7 +28,7 @@ describe('admin nav config', () => {
       '/admin/redirects/',
       '/admin/members/',
       '/admin/search-stats/',
-    ]);
+    ]));
   });
 
   it('hides admin-only screens from editors and everything from non-staff', () => {
