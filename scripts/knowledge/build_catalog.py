@@ -21,13 +21,14 @@ New records:
   kind                             video | podcast | live (channel inventory)
 
 Run after build_search_index.py --embed-only (the centroids need the vectors):
-  scripts/.venv/bin/python -m scripts.knowledge.build_catalog [--dry-run]
+  scripts/.venv/bin/python -m scripts.knowledge.build_catalog --base feature/platform [--dry-run]
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 from collections import Counter
 from datetime import datetime, timezone
 
@@ -42,9 +43,10 @@ from scripts.knowledge.catalog import (
     rule_category,
     summary_from_description,
 )
-from scripts.knowledge.embeddings import EmbeddingCache, text_key, unit
+from scripts.knowledge.embeddings import EmbeddingCache, row_text, text_key, unit, video_titles
 from scripts.knowledge.paths import (
     MIN_INDEX_SECONDS,
+    REPO_ROOT,
     WEB_DATA,
     inventory_path,
     metadata_dir,
@@ -79,11 +81,18 @@ def load_segments() -> dict[str, list[dict]]:
     return out
 
 
-def video_vectors(segments: dict[str, list[dict]], cache: EmbeddingCache) -> dict[str, np.ndarray]:
-    """Unit mean of each video's segment vectors (videos with any cached segment)."""
+def video_vectors(segments: dict[str, list[dict]], cache: EmbeddingCache, titles: dict[str, str]) -> dict[str, np.ndarray]:
+    """Unit mean of each video's segment vectors (videos with any cached segment).
+
+    Uses the index row text ("title + segment", see build_search_index.py); falls back
+    to bare-text vectors for videos embedded the 2026-03 way.
+    """
     out = {}
     for vid, segs in segments.items():
-        vecs = [cache.get(k) for k in (text_key(s["text"]) for s in segs) if k in cache]
+        keys = [text_key(row_text(titles.get(vid), s["text"])) for s in segs]
+        if not any(k in cache for k in keys):
+            keys = [text_key(s["text"]) for s in segs]
+        vecs = [cache.get(k) for k in keys if k in cache]
         if vecs:
             out[vid] = unit(np.mean(np.stack(vecs), axis=0))
     return out
@@ -121,10 +130,24 @@ def assign_categories(candidates: dict[str, dict], all_rows: dict[str, dict], ve
 def main() -> int:
     ap = argparse.ArgumentParser(description="Add newly indexed videos to videos.json")
     ap.add_argument("--dry-run", action="store_true", help="report, write nothing")
+    ap.add_argument(
+        "--base",
+        default="",
+        help="start from videos.json at this git revision (e.g. feature/platform) instead of the working file, "
+        "so a rebuild re-decides every added record",
+    )
     args = ap.parse_args()
 
     catalog_path = WEB_DATA / "videos.json"
-    catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    if args.base:
+        raw = subprocess.run(
+            ["git", "-C", str(REPO_ROOT), "show", f"{args.base}:apps/web/data/videos.json"],
+            capture_output=True,
+            check=True,
+        ).stdout
+        catalog = json.loads(raw)
+    else:
+        catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
     records = catalog["videos"]
     by_id = {v["youtube_id"]: v for v in records}
 
@@ -145,7 +168,7 @@ def main() -> int:
     print(f"catalog: {len(records)} records | segment files: {len(segments)} | new: {len(new_ids)}")
 
     cache = EmbeddingCache()
-    vectors = video_vectors(segments, cache)
+    vectors = video_vectors(segments, cache, video_titles(records))
     rows_for_rules = {
         vid: {"title": (metas.get(vid) or {}).get("title") or inv.get("title"), "playlists": inv.get("playlists", [])}
         for vid, inv in inventory.items()

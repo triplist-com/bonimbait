@@ -220,8 +220,29 @@ def fetch_one(vid: str) -> dict:
         return {**entry, "status": label, "track": chosen.name.split(".")[-2]}
 
 
+COST_WORDS = ("עלות", "עלויות", "תקציב", "מחיר", "כמה עול", "משכנת", "לחסוך", "חיסכון", "כסף")
+
+
+def priority(row: dict, legacy: set[str]) -> tuple[int, int]:
+    """Fetch order (the product priorities, in case YouTube rate-limits the run):
+    1. podcasts and cost/budget episodes from 2023 on; 2. other 2025-2026 videos;
+    3. older series (old podcasts and cost episodes first, then videos on legacy
+    /video/ pages); 4. shorts of unknown length.
+    """
+    year = (row.get("upload_date") or "")[:4]
+    title = row.get("title") or ""
+    valuable = row.get("type") == "podcast" or any(w in title for w in COST_WORDS)
+    if row.get("type") == "short":
+        return (4, 0)
+    if valuable and year >= "2023":
+        return (1, 0)
+    if year >= "2025":
+        return (2, 0)
+    return (3, 0 if valuable else 1 if row["id"] in legacy else 2)
+
+
 def build_queue(inventory: dict, status: dict[str, dict], ids: list[str] | None, include_indexed: bool) -> list[str]:
-    """Legacy-page videos first, then newest first; shorts (unknown length) last."""
+    """Videos still to fetch, in priority() order, newest first within a group."""
     rows = {r["id"]: r for r in inventory["videos"]}
     if ids:
         return [i for i in ids if i in rows]
@@ -247,7 +268,7 @@ def build_queue(inventory: dict, status: dict[str, dict], ids: list[str] | None,
     todo = [r for r in rows.values() if wanted(r)]
     # Newest first inside each priority group (stable sorts).
     todo.sort(key=lambda r: r["upload_date"] or "", reverse=True)
-    todo.sort(key=lambda r: (r["id"] not in legacy, r["type"] == "short"))
+    todo.sort(key=lambda r: priority(r, legacy))
     return [r["id"] for r in todo]
 
 

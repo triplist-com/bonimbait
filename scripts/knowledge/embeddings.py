@@ -28,6 +28,22 @@ def text_key(text: str) -> str:
     return hashlib.sha256(text[:MAX_CHARS].encode("utf-8")).hexdigest()
 
 
+def video_titles(catalog_videos: list[dict]) -> dict[str, str]:
+    """youtube_id -> title: the catalog's, else the fetched metadata's (stripped)."""
+    from scripts.knowledge.paths import metadata_dir
+
+    titles = {v["youtube_id"]: v["title"] for v in catalog_videos}
+    for p in metadata_dir().glob("*.json"):
+        if p.stem not in titles and p.stem != "channel_videos":
+            titles[p.stem] = (json.loads(p.read_text(encoding="utf-8")).get("title") or "").strip()
+    return titles
+
+
+def row_text(title: str | None, segment_text: str) -> str:
+    """Stored and embedded text of a video index row: "<title>\\n<segment text>" (like post chunks)."""
+    return f"{title}\n{segment_text}" if title else segment_text
+
+
 class EmbeddingCache:
     """Append-only text-hash -> float32 vector store (keys JSON + raw f32 rows)."""
 

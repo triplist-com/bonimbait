@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
-import { semanticSearch, type PostHit, type SearchHit, type SegmentHit } from '../../_lib/semantic';
+import { extractContentTerms, semanticSearch, type PostHit, type SearchHit, type SegmentHit } from '../../_lib/semantic';
 import { getVideo } from '../../_lib/data';
 import { matchPros } from '../../_lib/pros';
+import { focusSegment, wantsNumbers } from '@/lib/knowledge/moments';
 import type { ProsCta } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -52,6 +53,10 @@ export async function POST(request: NextRequest) {
 
   // The pros CTA runs in parallel with retrieval and the answer stream.
   const prosPromise: Promise<ProsCta | null> = matchPros(query);
+  // Query terms (and, for cost questions, price figures) locate the matching passage
+  // inside each video segment and the second it is said.
+  const terms = extractContentTerms(query);
+  const focus = { numeric: wantsNumbers(query) };
 
   // Step 1: hybrid search over video segments and article chunks
   let hits: SearchHit[];
@@ -100,18 +105,20 @@ export async function POST(request: NextRequest) {
       const v = getVideo(top.youtube_id)!;
       for (const s of videoSegs.slice(0, 3)) {
         blockIdx += 1;
-        const ts = Math.max(0, Math.floor(s.start_time));
+        // The part of the 3-minute segment that matches the question, and its own second.
+        const f = focusSegment(s, v.title, terms, focus);
         contextBlocks.push(
-          `[מקור ${blockIdx}] סרטון: ${v.title}\nמתוך דקה ${Math.floor(ts / 60)}:${String(ts % 60).padStart(2, '0')}\n${s.text.slice(0, 800)}`,
+          `[מקור ${blockIdx}] סרטון: ${v.title}\nמתוך דקה ${Math.floor(f.second / 60)}:${String(f.second % 60).padStart(2, '0')}\n${f.text}`,
         );
       }
-      // Source shown to the user = best segment per video (one source per video)
+      // Source shown to the user = best segment per video (one source per video),
+      // played from the second its matching passage starts.
       sources.push({
         kind: 'video',
         video_id: v.id,
         youtube_id: v.youtube_id,
         title: v.title,
-        timestamp: top.start_time,
+        timestamp: focusSegment(top, v.title, terms, focus).second,
         relevance_score: top.cos,
       });
     } else {

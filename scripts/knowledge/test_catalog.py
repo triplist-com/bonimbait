@@ -21,6 +21,7 @@ from scripts.knowledge.catalog import (
 )
 from scripts.knowledge.fetch_captions import BLOCK_PATTERNS, UNAVAILABLE_PATTERNS, pick_track
 from scripts.knowledge.inventory import classify, in_index_scope, interpolate_dates
+from scripts.knowledge.summarize import mmss, select, to_record, transcript_with_markers
 
 TEMPLATE = "📌 מתכננים לבנות בית? קבעו עכשיו פגישת ייעוץ » https://tinyurl.com/x\n\nשלכם,\nתומר חן ריחאנה וצוות בונים בית 🏠"
 
@@ -130,6 +131,60 @@ class CaptionTests(unittest.TestCase):
         self.assertFalse(BLOCK_PATTERNS.search("Sign in to confirm your age"))
         self.assertTrue(UNAVAILABLE_PATTERNS.search("Sign in to confirm your age"))
         self.assertTrue(UNAVAILABLE_PATTERNS.search("ERROR: [youtube] x: Private video"))
+
+
+class MarksTests(unittest.TestCase):
+    def test_marks_map_offsets_to_seconds(self) -> None:
+        from scripts.build_search_index import segment_marks
+
+        lines = [{"start": 100.0, "text": "שלום"}, {"start": 104.0, "text": "לכולם"}, {"start": 112.5, "text": "שלד"}, {"start": 130.0, "text": "סוף"}]
+        seg = {"start_time": 100.0, "text": "שלום לכולם שלד"}
+        self.assertEqual(segment_marks(lines, seg, every=10), [[0, 100], [11, 112]])
+
+    def test_marks_give_up_when_lines_do_not_match(self) -> None:
+        from scripts.build_search_index import segment_marks
+
+        lines = [{"start": 0.0, "text": "אחר"}]
+        self.assertEqual(segment_marks(lines, {"start_time": 0.0, "text": "שונה לגמרי"}), [])
+        self.assertEqual(segment_marks(lines, {"start_time": 5.0, "text": "אחר"}), [])
+
+
+class SummarizeTests(unittest.TestCase):
+    def test_markers_about_every_minute(self) -> None:
+        lines = [{"start": s, "text": f"מילה{s}"} for s in (0, 20, 61, 70, 125)]
+        out = transcript_with_markers(lines, every=60)
+        self.assertEqual(out.count("["), 3)
+        self.assertIn("[01:01] מילה61", out)
+        self.assertEqual(mmss(3725), "1:02:05")
+
+    def test_markers_respect_the_char_cap(self) -> None:
+        lines = [{"start": i, "text": "א" * 50} for i in range(100)]
+        self.assertLessEqual(len(transcript_with_markers(lines, max_chars=500)), 520)
+
+    def test_select_newest_then_most_viewed(self) -> None:
+        vids = [
+            {"youtube_id": "a", "published_at": "2026-09-01", "view_count": 10, "has_transcript": True},
+            {"youtube_id": "b", "published_at": "2026-01-01", "view_count": 9000, "has_transcript": True},
+            {"youtube_id": "c", "published_at": "2026-08-01", "view_count": 5, "has_transcript": True},
+            {"youtube_id": "d", "published_at": "2026-10-01", "view_count": 1, "has_transcript": False},
+            {"youtube_id": "e", "published_at": "2026-07-01", "view_count": 99999, "has_transcript": True, "key_points": ["x"]},
+        ]
+        self.assertEqual([v["youtube_id"] for v in select(vids, 2, set())], ["a", "b"])
+        self.assertEqual([v["youtube_id"] for v in select(vids, 3, {"a"})], ["c", "b"])
+
+    def test_to_record_clamps_times(self) -> None:
+        data = {
+            "summary": " סיכום ",
+            "key_points": [{"text": "א", "t": 30}, {"text": "ב", "t": 999}, {"text": " ", "t": 1}],
+            "costs": [{"item": "רשת", "price": "200 ש\"ח", "unit": "מ\"ר", "context": ""}, {"item": "", "price": "1", "unit": "", "context": ""}],
+            "tips": ["טיפ"],
+            "warnings": [],
+        }
+        rec = to_record(data, duration=600)
+        self.assertEqual(rec["summary"], "סיכום")
+        self.assertEqual(rec["key_points"], ["א", "ב"])
+        self.assertEqual(rec["key_point_times"], [30, None])
+        self.assertEqual(len(rec["costs"]), 1)
 
 
 if __name__ == "__main__":
