@@ -9,6 +9,18 @@ import { publishSource, restoreSource, skipSource, unpublishSource } from '@/lib
 import { ACTION_LABELS, availableActions } from '@/lib/autopilot/status';
 import type { SourceStatus } from '@/lib/autopilot/types';
 
+type ProcessResponse = { ok?: boolean; message?: string; error?: string; next?: 'index' } | null;
+
+/** POST /api/admin/autopilot/process (shared with TranscriptForm). */
+export async function requestProcess(id: string): Promise<ProcessResponse> {
+  const res = await fetch('/api/admin/autopilot/process', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  });
+  return (await res.json().catch(() => null)) as ProcessResponse;
+}
+
 function withId(id: string, fd: FormData = new FormData()): FormData {
   fd.set('id', id);
   return fd;
@@ -44,12 +56,12 @@ export default function SourceActions({
     setBusy(label);
     setMessage(null);
     try {
-      const res = await fetch('/api/admin/autopilot/process', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      });
-      const data = (await res.json().catch(() => null)) as { ok?: boolean; message?: string; error?: string } | null;
+      let data = await requestProcess(id);
+      // The server stopped after the transcript to stay within its time budget: continue once.
+      if (data?.ok && data.next === 'index') {
+        setMessage({ ok: true, text: data.message ?? 'ממשיכים…' });
+        data = await requestProcess(id);
+      }
       setMessage(data?.ok ? { ok: true, text: data.message ?? 'העיבוד הסתיים.' } : { ok: false, text: data?.error ?? 'העיבוד נכשל.' });
     } catch {
       setMessage({ ok: false, text: 'החיבור נקטע. רעננו את הדף כדי לראות את המצב.' });

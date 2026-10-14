@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import ActionForm, { SubmitButton } from '@/components/admin/ActionForm';
 import FormField, { Checkbox, Select, TextArea } from '@/components/admin/FormField';
 import { saveTranscript } from '@/lib/admin/actions/autopilot';
+import { requestProcess } from './SourceActions';
 
 /**
  * Transcript strategy (b): upload a captions file (VTT/SRT/SBV/TXT/json3) or
@@ -20,12 +21,8 @@ export default function TranscriptForm({ id }: { id: string }) {
     setProcessing(true);
     setNote('מעבד: סיכום, פרקים ואינדוקס לחיפוש… (עד דקה)');
     try {
-      const res = await fetch('/api/admin/autopilot/process', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      });
-      const data = (await res.json().catch(() => null)) as { ok?: boolean; message?: string; error?: string } | null;
+      let data = await requestProcess(id);
+      if (data?.ok && data.next === 'index') data = await requestProcess(id);
       setNote(data?.ok ? (data.message ?? 'העיבוד הסתיים.') : (data?.error ?? 'העיבוד נכשל.'));
     } catch {
       setNote('החיבור נקטע. רעננו את הדף כדי לראות את המצב.');

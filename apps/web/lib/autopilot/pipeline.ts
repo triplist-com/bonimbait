@@ -2,12 +2,20 @@ import 'server-only';
 
 import { CaptionsUnavailableError, captionsMissMessage, fetchYoutubeCaptions, type FetchedCaptions } from './captions';
 import { chunkCues } from './chunk';
+import { FUNCTION_BUDGET_MS, INDEX_MIN_MS } from './config';
 import { getBudgetGuard, type AutopilotBudgetGuard } from './cost';
-import { embedTexts, toVectorLiteral, type EmbedResult } from './embed';
+import { embedTexts, toVectorLiteral, type EmbedOptions, type EmbedResult } from './embed';
 import { embeddingCostMicros, estimateTokens } from './pricing';
 import { IN_PROGRESS, PROCESSABLE, isStale } from './status';
 import type { SourceStore } from './store';
-import { estimateSummaryMicros, summarizeTranscript, usageOf, type SummaryInput, type SummaryResult } from './summarize';
+import {
+  estimateSummaryMicros,
+  summarizeTranscript,
+  usageOf,
+  type SummarizeOptions,
+  type SummaryInput,
+  type SummaryResult,
+} from './summarize';
 import { cuesToText } from './transcript';
 import type { KnowledgeSourceRow, SourceStatus, UsageEntry } from './types';
 
@@ -24,17 +32,23 @@ import type { KnowledgeSourceRow, SourceStatus, UsageEntry } from './types';
 
 export interface PipelineDeps {
   store: SourceStore;
-  fetchCaptions?: (videoId: string) => Promise<FetchedCaptions>;
-  embed?: (texts: string[]) => Promise<EmbedResult>;
-  summarize?: (input: SummaryInput) => Promise<SummaryResult>;
+  fetchCaptions?: (videoId: string, opts: { deadline: number }) => Promise<FetchedCaptions>;
+  embed?: (texts: string[], opts: EmbedOptions) => Promise<EmbedResult>;
+  summarize?: (input: SummaryInput, opts: SummarizeOptions) => Promise<SummaryResult>;
   guard?: AutopilotBudgetGuard;
   now?: () => Date;
+  /**
+   * Epoch ms by which this request must be done (default: now + FUNCTION_BUDGET_MS).
+   * Step timeouts are sized to it, so spend is recorded before the platform's limit.
+   */
+  deadline?: number;
 }
 
 export type ProcessCode = 'not_found' | 'busy' | 'not_processable' | 'race' | 'needs_transcript' | 'budget' | 'failed';
 
 export type ProcessOutcome =
-  | { ok: true; status: SourceStatus; message: string; costMicros: number }
+  /** next: 'index' when the time budget ran out after transcription: call again to index. */
+  | { ok: true; status: SourceStatus; message: string; costMicros: number; next?: 'index' }
   | { ok: false; code: ProcessCode; status: SourceStatus | null; error: string; costMicros: number };
 
 const RACE = 'הפריט עודכן במקביל (אולי בלשונית אחרת). רעננו את הדף.';
@@ -48,10 +62,15 @@ function sumMicros(usage: readonly UsageEntry[]): number {
   return usage.reduce((n, u) => n + u.usd_micros, 0);
 }
 
+function clamp(n: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, n));
+}
+
 /** Process a source as far as it can go (to `indexed`, or to the step that needs a person). */
 export async function processSource(id: string, deps: PipelineDeps): Promise<ProcessOutcome> {
   const { store } = deps;
   const now = deps.now ?? (() => new Date());
+  const deadline = deps.deadline ?? Date.now() + FUNCTION_BUDGET_MS;
 
   let src = await store.get(id);
   if (!src) return { ok: false, code: 'not_found', status: null, error: 'הפריט לא נמצא.', costMicros: 0 };
@@ -72,17 +91,21 @@ export async function processSource(id: string, deps: PipelineDeps): Promise<Pro
   // One attempt per run: counted by the first step that runs.
   let counted = false;
   if (!src.transcript_cues?.length) {
-    const transcribed = await transcribeStep(src, deps);
+    const transcribed = await transcribeStep(src, deps, deadline);
     if (!transcribed.ok) return transcribed;
     src = transcribed.source;
     counted = true;
+    if (deadline - Date.now() < INDEX_MIN_MS) {
+      return { ok: true, status: 'transcribed', message: 'התמליל נשמר. ממשיכים לסיכום ולאינדוקס…', costMicros: 0, next: 'index' };
+    }
   }
-  return indexStep(src, deps, now, counted);
+  return indexStep(src, deps, now, counted, deadline);
 }
 
 async function transcribeStep(
   src: KnowledgeSourceRow,
   deps: PipelineDeps,
+  deadline: number,
 ): Promise<{ ok: true; source: KnowledgeSourceRow } | Extract<ProcessOutcome, { ok: false }>> {
   const { store } = deps;
   const started = await store.transition(src.id, src.status, 'transcribing', { error: null, attempts: src.attempts + 1 });
@@ -92,7 +115,7 @@ async function transcribeStep(
     if (started.kind !== 'youtube') {
       throw new CaptionsUnavailableError('no_captions', 'Only YouTube videos have captions to fetch');
     }
-    const caps = await (deps.fetchCaptions ?? fetchYoutubeCaptions)(started.external_id);
+    const caps = await (deps.fetchCaptions ?? fetchYoutubeCaptions)(started.external_id, { deadline });
     const done = await store.transition(src.id, 'transcribing', 'transcribed', {
       transcript_cues: caps.cues,
       transcript_text: cuesToText(caps.cues),
@@ -117,8 +140,15 @@ async function transcribeStep(
   }
 }
 
-async function indexStep(src: KnowledgeSourceRow, deps: PipelineDeps, now: () => Date, attemptCounted: boolean): Promise<ProcessOutcome> {
+async function indexStep(
+  src: KnowledgeSourceRow,
+  deps: PipelineDeps,
+  now: () => Date,
+  attemptCounted: boolean,
+  deadline: number,
+): Promise<ProcessOutcome> {
   const { store } = deps;
+  const left = () => deadline - Date.now();
   const cues = src.transcript_cues ?? [];
   const chunks = chunkCues(cues);
   const input: SummaryInput = { title: src.title, durationS: src.duration_s, cues };
@@ -150,9 +180,16 @@ async function indexStep(src: KnowledgeSourceRow, deps: PipelineDeps, now: () =>
   const usage: UsageEntry[] = [];
   try {
     if (chunks.length === 0) throw new Error('התמליל ריק');
-    const emb = await (deps.embed ?? embedTexts)(chunks.map((c) => c.text));
+    // Leave room for the summary after embedding; retry Claude only when a retry still fits.
+    const emb = await (deps.embed ?? embedTexts)(
+      chunks.map((c) => c.text),
+      { timeoutMs: clamp(left() - 25_000, 5_000, 25_000) },
+    );
     usage.push(emb.usage);
-    const sum = await (deps.summarize ?? summarizeTranscript)(input);
+    const sum = await (deps.summarize ?? summarizeTranscript)(input, {
+      timeoutMs: clamp(left() - 2_000, 8_000, 45_000),
+      maxRetries: left() > 95_000 ? 1 : 0,
+    });
     usage.push(sum.usage);
     await store.replaceChunks(
       src.id,

@@ -79,12 +79,19 @@ export interface SummaryResult {
   usage: UsageEntry;
 }
 
-export async function summarizeTranscript(input: SummaryInput, opts: { client?: Anthropic } = {}): Promise<SummaryResult> {
+export interface SummarizeOptions {
+  client?: Anthropic;
+  /** Request timeout; the pipeline passes what is left of the function's time budget. */
+  timeoutMs?: number;
+  /** SDK retries for transient errors (each retry gets the full timeout again). */
+  maxRetries?: number;
+}
+
+export async function summarizeTranscript(input: SummaryInput, opts: SummarizeOptions = {}): Promise<SummaryResult> {
   if (!opts.client && !process.env.ANTHROPIC_API_KEY) throw new SummaryError('ANTHROPIC_API_KEY is not set');
   const categories = videoCategories();
   const slugs = categories.map((c) => c.slug);
-  // One retry for transient errors; the route has a 60s budget.
-  const client = opts.client ?? new Anthropic({ timeout: 45_000, maxRetries: 1 });
+  const client = opts.client ?? new Anthropic({ timeout: opts.timeoutMs ?? 45_000, maxRetries: opts.maxRetries ?? 0 });
 
   const response = await client.messages.parse({
     model: SUMMARY_MODEL,

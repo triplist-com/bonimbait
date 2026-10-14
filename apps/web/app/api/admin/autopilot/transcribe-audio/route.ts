@@ -52,17 +52,31 @@ export async function POST(request: NextRequest) {
 
     const result = await transcribeAudio(file, path.split('/').pop() || 'audio');
     await guard.record({ label, usdMicros: result.usage.usd_micros, sourceId: id });
-    await applyTranscript(store, id, {
-      cues: result.cues,
-      source: 'audio_transcription',
-      durationS: Math.round(result.durationS),
-      usage: result.usage,
-    });
-    await supabase.storage.from(AUDIO_BUCKET).remove([path]);
+    try {
+      await applyTranscript(store, id, {
+        cues: result.cues,
+        source: 'audio_transcription',
+        durationS: Math.round(result.durationS),
+        usage: result.usage,
+      });
+    } catch (err) {
+      // The transcription was billed: keep its spend on the row even if the save lost a race.
+      const now = await store.get(id);
+      if (now) {
+        await store.update(id, {
+          cost_usd_micros: now.cost_usd_micros + result.usage.usd_micros,
+          usage: [...(now.usage ?? []), result.usage],
+        });
+      }
+      throw err;
+    }
     return NextResponse.json({ ok: true, status: 'transcribed', cues: result.cues.length, costMicros: result.usage.usd_micros });
   } catch (err) {
     if (err instanceof ManageError) return NextResponse.json({ ok: false, error: err.message }, { status: 409 });
     console.error('[autopilot] audio transcription failed:', err instanceof Error ? err.message : err);
     return NextResponse.json({ ok: false, error: 'התמלול נכשל. נסו שוב.' }, { status: 500 });
+  } finally {
+    // The upload is only an input: never keep it, whatever happened.
+    await supabase.storage.from(AUDIO_BUCKET).remove([path]).catch(() => undefined);
   }
 }

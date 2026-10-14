@@ -137,15 +137,21 @@ async function playerResponse(videoId: string, client: InnertubeClient, fetchFn:
  */
 export async function fetchYoutubeCaptions(
   videoId: string,
-  opts: { fetchFn?: FetchFn; timeoutMs?: number } = {},
+  opts: { fetchFn?: FetchFn; timeoutMs?: number; deadline?: number } = {},
 ): Promise<FetchedCaptions> {
   const fetchFn = opts.fetchFn ?? fetch;
-  const timeoutMs = opts.timeoutMs ?? 12_000;
+  const perRequestMs = opts.timeoutMs ?? 8_000;
+  // Each request gets what is left before the deadline, at most perRequestMs.
+  const budget = (): number => {
+    const left = opts.deadline ? opts.deadline - Date.now() - 500 : perRequestMs;
+    if (left < 1_000) throw new CaptionsUnavailableError('timeout', 'No time left for YouTube in this request');
+    return Math.min(perRequestMs, left);
+  };
   let lastMiss: CaptionsUnavailableError | null = null;
 
   for (const client of CLIENTS) {
     try {
-      const player = await playerResponse(videoId, client, fetchFn, timeoutMs);
+      const player = await playerResponse(videoId, client, fetchFn, budget());
       const status = player.playabilityStatus?.status;
       if (status === 'LOGIN_REQUIRED') {
         throw new CaptionsUnavailableError('blocked', `YouTube asked to sign in (${player.playabilityStatus?.reason ?? 'bot check'})`);
@@ -158,7 +164,7 @@ export async function fetchYoutubeCaptions(
       const durationS = Number.isFinite(lengthSeconds) && lengthSeconds > 0 ? lengthSeconds : null;
       if (!track?.baseUrl) throw new CaptionsUnavailableError('no_captions', 'The video has no Hebrew captions yet');
 
-      const res = await fetchWithTimeout(fetchFn, json3Url(track.baseUrl), { headers: { 'User-Agent': client.userAgent } }, timeoutMs);
+      const res = await fetchWithTimeout(fetchFn, json3Url(track.baseUrl), { headers: { 'User-Agent': client.userAgent } }, budget());
       if (!res.ok) throw new CaptionsUnavailableError(res.status === 429 ? 'blocked' : 'http_error', `Captions request ${res.status}`);
       const body = await res.text();
       if (!body.trim()) throw new CaptionsUnavailableError('empty', 'YouTube returned empty captions (proof-of-origin required)');
@@ -181,8 +187,8 @@ export async function fetchYoutubeCaptions(
     } catch (err) {
       if (!(err instanceof CaptionsUnavailableError)) throw err;
       lastMiss = err;
-      // A video without Hebrew captions has none for any client.
-      if (err.reason === 'no_captions' || err.reason === 'unplayable') break;
+      // A video without Hebrew captions has none for any client; no time left is final too.
+      if (err.reason === 'no_captions' || err.reason === 'unplayable' || err.reason === 'timeout') break;
     }
   }
   throw lastMiss ?? new CaptionsUnavailableError('http_error', 'YouTube captions unavailable');

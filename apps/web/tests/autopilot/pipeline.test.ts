@@ -68,7 +68,7 @@ describe('processSource', () => {
     expect(stored.map((c) => c.chunk_index)).toEqual([0, 1, 2]);
     expect(stored.map((c) => c.text)).toEqual(expected.map((c) => c.text));
     expect(stored[0].embedding).toBe('[0.1,0.2]');
-    expect(d.embed).toHaveBeenCalledWith(stored.map((c) => c.text));
+    expect(d.embed).toHaveBeenCalledWith(stored.map((c) => c.text), { timeoutMs: expect.any(Number) });
   });
 
   it('parks a video without captions in needs_transcript, with nothing paid', async () => {
@@ -145,6 +145,42 @@ describe('processSource', () => {
     expect(await processSource('p', deps(m.store))).toMatchObject({ ok: false, code: 'not_processable' });
     expect(await processSource('k', deps(m.store))).toMatchObject({ ok: false, code: 'not_processable' });
     expect(await processSource('nope', deps(m.store))).toMatchObject({ ok: false, code: 'not_found' });
+  });
+
+  it('hands off after the transcript when too little time is left, then indexes on the next call', async () => {
+    const m = memoryStore([sourceRow({ id: 's1' })]);
+    const d = deps(m.store, { deadline: Date.now() + 20_000 });
+    expect(await processSource('s1', d)).toMatchObject({ ok: true, status: 'transcribed', next: 'index', costMicros: 0 });
+    expect(d.embed).not.toHaveBeenCalled();
+    expect(d.summarize).not.toHaveBeenCalled();
+
+    const again = deps(m.store);
+    expect(await processSource('s1', again)).toMatchObject({ ok: true, status: 'indexed' });
+    expect(again.fetchCaptions).not.toHaveBeenCalled();
+    expect(m.rows.get('s1')!.attempts).toBe(2);
+  });
+
+  it('sizes the Claude timeout to the time left, with no retry that would not fit', async () => {
+    const m = memoryStore([sourceRow({ id: 's1', status: 'transcribed', transcript_cues: cues })]);
+    const d = deps(m.store, { deadline: Date.now() + 52_000 });
+    await processSource('s1', d);
+    const [, opts] = (d.summarize as ReturnType<typeof vi.fn>).mock.calls[0] as [unknown, { timeoutMs: number; maxRetries: number }];
+    expect(opts.timeoutMs).toBeLessThanOrEqual(45_000);
+    expect(opts.timeoutMs).toBeGreaterThan(8_000);
+    expect(opts.maxRetries).toBe(0);
+    const [, embedOpts] = (d.embed as ReturnType<typeof vi.fn>).mock.calls[0] as [unknown, { timeoutMs: number }];
+    expect(embedOpts.timeoutMs).toBeLessThanOrEqual(25_000);
+  });
+
+  it('records embedding batches billed before a failure', async () => {
+    const m = memoryStore([sourceRow({ id: 's1', status: 'transcribed', transcript_cues: cues })]);
+    const d = deps(m.store, {
+      embed: vi.fn(async () => {
+        throw Object.assign(new Error('OpenAI embeddings 429'), { usage: usage('embed', 40) });
+      }),
+    });
+    expect(await processSource('s1', d)).toMatchObject({ ok: false, code: 'failed', costMicros: 40 });
+    expect(m.rows.get('s1')).toMatchObject({ status: 'failed', cost_usd_micros: 40 });
   });
 
   it('asks for a transcript for podcast episodes instead of fetching captions', async () => {

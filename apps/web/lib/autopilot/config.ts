@@ -6,6 +6,17 @@
 /** The "בונים בית" YouTube channel. */
 export const DEFAULT_CHANNEL_ID = 'UCCehs0A1gUmOUtZIhvkXVJQ';
 
+/**
+ * Time budget of one request that processes sources. The routes export
+ * maxDuration = 60 s; steps size their timeouts to finish (and record spend)
+ * before the platform kills the function.
+ */
+export const FUNCTION_BUDGET_MS = 52_000;
+/** Indexing (embeddings + Claude summary) is started only with this much time left. */
+export const INDEX_MIN_MS = 30_000;
+/** The cron starts another source only with this much time left. */
+export const SOURCE_MIN_MS = 40_000;
+
 function intEnv(name: string, fallback: number, min: number, max: number): number {
   const v = Number(process.env[name]);
   return Number.isInteger(v) ? Math.min(max, Math.max(min, v)) : fallback;
