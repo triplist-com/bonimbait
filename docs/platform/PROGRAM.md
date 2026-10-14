@@ -116,10 +116,11 @@ merged into `feature/platform` and passes the gates.
 | B | `hub` | P2 | 3112 |
 | B | `revenue` | P3 | 3113 |
 | B | `command` | P4 | 3114 |
-| B | `growth` | P6 | 3115 |
+| B | `growth` | P6 (budget planner + video Clip markup; no programmatic SEO) | 3115 |
 | B | `pitch`: Sales Experience | `/platform/` pitch site + guided demo tour; sales kit in `sales/` | 3116 |
 | C | `qa` | E2E, parity, Lighthouse, a11y, security, cost guard | 3121 |
 | C | `polish` | Cross-site visual consistency pass, the "wow" details | 3122 |
+| C | `bonimos` | P7 Bonim.Os: the hub's managed-client mode, demo-grade plus the project-manager role | 3123 |
 
 ## 5. Rules of engagement (all squads)
 
@@ -240,6 +241,47 @@ Use timestamps inside your range.
 ### Navigation
 - Site and admin navigation are config-driven: `lib/nav.ts` and `lib/admin/nav.ts`, created in Wave A.
 - To add an entry, add one config line.
+
+### Project file contract (the money link)
+
+The project file is how every lead and consult booking carries context. Three Wave B squads produce data
+for it and one squad assembles it, so the shape is fixed here and everyone builds against it in parallel.
+
+```ts
+// lib/project-file/types.ts — owned by `revenue`; others import the type only.
+// Stages are the owner's 7: purchase | planning | permit | shell | infrastructure | finishes | move_in.
+export interface ProjectFile {
+  version: 1;
+  stage?: 'purchase' | 'planning' | 'permit' | 'shell' | 'infrastructure' | 'finishes' | 'move_in';
+  regionSlug?: string;               // regions.slug (14 canonical)
+  sizeM2?: number;
+  budgetRangeNis?: [number, number]; // whole shekels
+  targetMoveIn?: string;             // ISO month, e.g. '2027-09'
+  questions?: { q: string; at: string }[];  // last ≤ 10 advisor questions
+  plannerEstimate?: { totalMin: number; totalMax: number; at: string; inputs: Record<string, unknown> };
+  savedCount?: number;
+  shortlistBusinessIds?: string[];
+  source?: { utm?: Record<string, string>; landing?: string; lastTouch?: string };
+}
+```
+
+Client-side producers write a snapshot to `localStorage` (anonymous visitors), with the server as the source of truth for members:
+
+| Key | Writer | Content |
+|---|---|---|
+| `bb.advisor.recent` | advisor | `{ q, at }[]`, the last 10 questions |
+| `bb.planner.last` | growth | `plannerEstimate` |
+| `bb.hub.draft` | hub | the onboarding answers (stage, regionSlug, sizeM2, budgetRangeNis, targetMoveIn) |
+| `bb.shortlist` | hub | business ids |
+
+`revenue` builds the rest of the chain:
+- `collectProjectFile()`, which merges the client snapshots, plus the hub project for signed-in members;
+- the scoring (0–100, with reasons);
+- storage in `leads.payload.project_file`;
+- the consult booking flow, which:
+  - creates a `consultation` lead with the file **before** opening the Calendly embed;
+  - prefills Calendly name and email and passes the lead's short ID in `utm_content`;
+  - listens for Calendly's `calendly.event_scheduled` postMessage and marks the lead booked.
 
 ### Owner brand
 - The owner's brand is magenta (≈ `#E6195B`; the live Calendly embed uses `#fc3565`), black and white, with photos of Tomer and podcast art.
