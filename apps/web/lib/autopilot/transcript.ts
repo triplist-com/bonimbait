@@ -19,6 +19,22 @@ export function tsToSeconds(ts: string): number {
   return parseFloat(parts[0]);
 }
 
+const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', lrm: '', rlm: '' };
+
+/** Caption text: drop markup tags (<c>, <i>, <00:00:01.000>), then decode entities (VTT escapes ">>" as "&gt;&gt;"). */
+function cleanCaptionText(line: string): string {
+  return line
+    .replace(/<[^>]+>/g, '')
+    .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, body: string) => {
+      if (body[0] === '#') {
+        const code = body[1] === 'x' || body[1] === 'X' ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10);
+        return Number.isFinite(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : m;
+      }
+      return ENTITIES[body.toLowerCase()] ?? m;
+    })
+    .trim();
+}
+
 interface Json3Event {
   tStartMs?: number;
   dDurationMs?: number;
@@ -70,9 +86,13 @@ export function parseVtt(content: string): Cue[] {
     const end = tsToSeconds(m[2]);
     i += 1;
     const textLines: string[] = [];
-    while (i < lines.length && lines[i].trim()) {
-      const line = lines[i].trim().replace(/<[^>]+>/g, '').trim();
-      if (line) textLines.push(line);
+    // A cue ends at an EMPTY line (WebVTT spec). YouTube auto-caption files put a
+    // whitespace-only line first in each cue, which convert_subs.py's strip() check
+    // took for the end. Also stop at the next timing line, skipping its numeric id.
+    while (i < lines.length && lines[i] !== '' && !VTT_TIME.test(lines[i].trim())) {
+      const isCueId = /^\d+$/.test(lines[i].trim()) && VTT_TIME.test(lines[i + 1]?.trim() ?? '');
+      const line = cleanCaptionText(lines[i].trim());
+      if (line && !isCueId) textLines.push(line);
       i += 1;
     }
     // Rolling captions start each cue with the line the previous cue showed.
@@ -99,9 +119,9 @@ export function parseSrt(content: string): Cue[] {
         .slice(idx + 1)
         .map((l) => l.trim())
         .filter(Boolean)
-        .join(' ')
-        .replace(/<[^>]+>/g, '');
-      if (text) cues.push({ start: tsToSeconds(m[1]), end: tsToSeconds(m[2]), text });
+        .join(' ');
+      const clean = cleanCaptionText(text);
+      if (clean) cues.push({ start: tsToSeconds(m[1]), end: tsToSeconds(m[2]), text: clean });
       break;
     }
   }
@@ -117,7 +137,7 @@ export function parseSbv(content: string): Cue[] {
     const lines = block.trim().split('\n');
     const m = lines[0]?.trim().match(SBV_TIME);
     if (!m) continue;
-    const text = lines.slice(1).map((l) => l.trim()).filter(Boolean).join(' ');
+    const text = cleanCaptionText(lines.slice(1).map((l) => l.trim()).filter(Boolean).join(' '));
     if (text) cues.push({ start: tsToSeconds(m[1]), end: tsToSeconds(m[2]), text });
   }
   return cues;

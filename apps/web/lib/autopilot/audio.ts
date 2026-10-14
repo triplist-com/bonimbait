@@ -11,6 +11,8 @@ import type { Cue, UsageEntry } from './types';
  */
 
 export const AUDIO_MAX_BYTES = 25 * 1024 * 1024;
+/** Private bucket (migration 20261014103000); objects live at `<source id>/<file name>`. */
+export const AUDIO_BUCKET = 'autopilot-audio';
 
 export function isAudioTranscriptionEnabled(): boolean {
   return process.env.AUTOPILOT_AUDIO_TRANSCRIPTION === 'true';

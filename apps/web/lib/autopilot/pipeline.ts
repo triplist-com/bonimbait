@@ -69,12 +69,15 @@ export async function processSource(id: string, deps: PipelineDeps): Promise<Pro
     return { ok: false, code: 'not_processable', status: src.status, error: 'אי אפשר לעבד פריט במצב הזה.', costMicros: 0 };
   }
 
+  // One attempt per run: counted by the first step that runs.
+  let counted = false;
   if (!src.transcript_cues?.length) {
     const transcribed = await transcribeStep(src, deps);
     if (!transcribed.ok) return transcribed;
     src = transcribed.source;
+    counted = true;
   }
-  return indexStep(src, deps, now);
+  return indexStep(src, deps, now, counted);
 }
 
 async function transcribeStep(
@@ -114,7 +117,7 @@ async function transcribeStep(
   }
 }
 
-async function indexStep(src: KnowledgeSourceRow, deps: PipelineDeps, now: () => Date): Promise<ProcessOutcome> {
+async function indexStep(src: KnowledgeSourceRow, deps: PipelineDeps, now: () => Date, attemptCounted: boolean): Promise<ProcessOutcome> {
   const { store } = deps;
   const cues = src.transcript_cues ?? [];
   const chunks = chunkCues(cues);
@@ -131,14 +134,17 @@ async function indexStep(src: KnowledgeSourceRow, deps: PipelineDeps, now: () =>
     return { ok: false, code: 'budget', status: src.status, error: decision.reason, costMicros: 0 };
   }
 
-  // failed -> transcribed -> summarizing (a failed row keeps its transcript).
+  // Rows that kept a transcript (failed, restored from skipped) pass through transcribed.
   let from: SourceStatus = src.status;
-  if (from === 'failed' || from === 'needs_transcript') {
+  if (from !== 'transcribed') {
     const back = await store.transition(src.id, from, 'transcribed', { error: null });
     if (!back) return { ok: false, code: 'race', status: null, error: RACE, costMicros: 0 };
     from = 'transcribed';
   }
-  const running = await store.transition(src.id, from, 'summarizing', { error: null });
+  const running = await store.transition(src.id, from, 'summarizing', {
+    error: null,
+    ...(attemptCounted ? {} : { attempts: src.attempts + 1 }),
+  });
   if (!running) return { ok: false, code: 'race', status: null, error: RACE, costMicros: 0 };
 
   const usage: UsageEntry[] = [];

@@ -10,6 +10,16 @@ import type { KnowledgeMatchRow, SourceSummary } from './types';
  * this sits on the search path (fusion.ts).
  */
 
+/** AI-index video categories (videos.json), with a built-in fallback. */
+export function videoCategories(): ReadonlyArray<{ slug: string; name_he: string }> {
+  try {
+    const cats = getCategories();
+    return cats.length > 0 ? cats : FALLBACK_CATEGORIES;
+  } catch {
+    return FALLBACK_CATEGORIES;
+  }
+}
+
 export function categoryName(slug: string | null | undefined): string {
   const s = slug || DEFAULT_CATEGORY;
   try {

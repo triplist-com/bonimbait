@@ -81,6 +81,44 @@ Kind: captions
     ]);
   });
 
+  it('parses yt-dlp / YouTube auto-caption VTT (whitespace-led cues, inline word timings)', () => {
+    const vtt = [
+      'WEBVTT',
+      'Kind: captions',
+      'Language: iw',
+      '',
+      '00:00:17.080 --> 00:00:20.310 align:start position:100%',
+      ' ',
+      'איפה<00:00:17.439><c> אתם</c><00:00:17.640><c> אנשים?</c>',
+      '',
+      '00:00:20.310 --> 00:00:20.320 align:start position:100%',
+      'איפה אתם אנשים?',
+      ' ',
+      '',
+      '00:00:20.320 --> 00:00:23.589 align:start position:100%',
+      'איפה אתם אנשים?',
+      'בתהליך<00:00:20.720><c> המטורף</c><00:00:21.199><c> של</c><00:00:21.320><c> הגמרים.</c>',
+      '',
+      '00:00:23.589 --> 00:00:25.000 align:start position:100%',
+      'בתהליך המטורף של הגמרים.',
+      '&gt;&gt; נכון &amp; ברור',
+      '',
+    ].join('\n');
+    expect(parseVtt(vtt)).toEqual([
+      { start: 17.08, end: 20.31, text: 'איפה אתם אנשים?' },
+      { start: 20.32, end: 23.589, text: 'בתהליך המטורף של הגמרים.' },
+      { start: 23.589, end: 25, text: '>> נכון & ברור' },
+    ]);
+  });
+
+  it('ends a cue at the next timing line when separators are missing, ignoring cue ids', () => {
+    const vtt = 'WEBVTT\n\n1\n00:00:01.000 --> 00:00:02.000\nראשון\n  \n2\n00:00:02.000 --> 00:00:03.000\nשני\n';
+    expect(parseVtt(vtt)).toEqual([
+      { start: 1, end: 2, text: 'ראשון' },
+      { start: 2, end: 3, text: 'שני' },
+    ]);
+  });
+
   it('parses SubRip', () => {
     const srt = `1
 00:00:01,000 --> 00:00:04,000

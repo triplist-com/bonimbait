@@ -3,9 +3,9 @@ import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { z } from 'zod';
-import { getCategories } from '@/app/api/_lib/data';
 import { SUMMARY_MODEL, claudeCostMicros, estimateTokens } from './pricing';
-import { FALLBACK_CATEGORIES, STAGES, normalizeSummary } from './summary';
+import { videoCategories } from './records';
+import { STAGES, normalizeSummary } from './summary';
 import { formatClock, timestampedText } from './transcript';
 import type { Cue, SourceSummary, UsageEntry } from './types';
 
@@ -20,23 +20,14 @@ import type { Cue, SourceSummary, UsageEntry } from './types';
 export const SUMMARY_MAX_TOKENS = 16_000;
 const EFFORT = 'medium' as const;
 
-export function videoCategories(): ReadonlyArray<{ slug: string; name_he: string }> {
-  try {
-    const cats = getCategories();
-    return cats.length > 0 ? cats : FALLBACK_CATEGORIES;
-  } catch {
-    return FALLBACK_CATEGORIES;
-  }
-}
-
 function systemPrompt(categories: ReadonlyArray<{ slug: string; name_he: string }>): string {
   return `You write the page for a video from "בונים בית", an Israeli YouTube channel for people building their own private home. You get the video's title and its automatic Hebrew captions with [m:ss] time markers.
 
 Write every text field in natural Israeli Hebrew, the way the channel talks to its viewers. Use only what the video says: never invent prices, rules or facts. Automatic captions mishear words, so correct obvious recognition errors in what you write, and leave out anything you cannot make sense of.
 
 - summary: 2-4 sentences on what the video covers and what a builder should take from it.
-- key_points: 3-8 concrete takeaways. start_s is the second (from the markers) where each one is discussed.
-- costs: every price or cost the video mentions, with the price as said, its unit and a short context. Empty when there are none.
+- key_points: 3-8 concrete takeaways, in the order the video covers them. start_s is the second (from the markers) where each one is discussed.
+- costs: every price or cost the video states as a number, with the price as said, its unit and a short context. Leave out items whose price isn't said. Empty when there are none.
 - tips and warnings: practical advice, and mistakes or risks to avoid. Empty when there are none.
 - chapters: the video's parts in order with short titles (2-6 words). The first starts at 0. Use about one chapter per 1-2 minutes, at least 2.
 - category_slug: the best fit among: ${categories.map((c) => `${c.slug} (${c.name_he})`).join(', ')}.

@@ -92,6 +92,7 @@ describe('processSource', () => {
     expect((await processSource('s1', d)).ok).toBe(true);
     expect(d.fetchCaptions).not.toHaveBeenCalled();
     expect(m.history.map((h) => h.to)).toEqual(['summarizing', 'indexed']);
+    expect(m.rows.get('s1')!.attempts).toBe(1);
   });
 
   it('refuses over budget before any paid call and leaves the status alone', async () => {

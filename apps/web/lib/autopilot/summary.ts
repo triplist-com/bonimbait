@@ -51,6 +51,15 @@ function strings(list: unknown, max: number, maxLen = 400): string[] {
   return out;
 }
 
+/**
+ * Spoken shekel amounts ("180 שק", "1,000 שקלים", '200-220 ש"ח') -> the bare
+ * amount, which ContentSummary renders as "180 ₪". Anything else stays as said.
+ */
+export function normalizePrice(price: string): string {
+  const m = price.match(/^([\d.,\s\-–]+?)\s*(?:₪|ש"ח|ש״ח|שח|שקלים|שקל|שק'?|NIS)\.?\s*$/);
+  return m ? m[1].replace(/–/g, '-').replace(/\s+/g, '') : price;
+}
+
 export interface RawSummary {
   summary?: unknown;
   key_points?: unknown;
@@ -79,6 +88,8 @@ export function normalizeSummary(
     keyPoints.push({ text, start_s: second((kp as { start_s?: unknown })?.start_s, opts.durationS) });
     if (keyPoints.length >= LIMITS.keyPoints) break;
   }
+  // Chronological, so the list reads along the video (untimed points last; sort is stable).
+  keyPoints.sort((a, b) => (a.start_s ?? Infinity) - (b.start_s ?? Infinity));
 
   const byStart = new Map<number, SummaryChapter>();
   for (const ch of Array.isArray(raw.chapters) ? raw.chapters : []) {
@@ -96,8 +107,9 @@ export function normalizeSummary(
   for (const c of Array.isArray(raw.costs) ? raw.costs : []) {
     const o = (c ?? {}) as Record<string, unknown>;
     const item = clean(o.item, 160);
-    const price = clean(o.price, 80);
-    if (!item || !price) continue;
+    const price = normalizePrice(clean(o.price, 80));
+    // A cost needs an actual number ("לא נאמר" / "not said" is not a price).
+    if (!item || !/\d/.test(price)) continue;
     costs.push({ item, price, unit: clean(o.unit, 80), context: clean(o.context, 240) });
     if (costs.length >= LIMITS.costs) break;
   }

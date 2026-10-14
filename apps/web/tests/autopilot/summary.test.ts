@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_CATEGORY,
+  normalizePrice,
   chaptersFromText,
   chaptersToText,
   costsFromText,
@@ -48,10 +49,31 @@ describe('normalizeSummary', () => {
       { title: 'פתיחה', start_s: 0 },
       { title: 'סיכום', start_s: 250 },
     ]);
-    expect(s.costs).toEqual([{ item: 'אבן פראית', price: '250 ש"ח', unit: 'למ"ר', context: 'כולל עבודה' }]);
+    expect(s.costs).toEqual([{ item: 'אבן פראית', price: '250', unit: 'למ"ר', context: 'כולל עבודה' }]);
     expect(s.stage).toBe('finishing');
     expect(s.tips).toEqual(['טיפ']);
     expect(s.suggested_questions).toHaveLength(4);
+  });
+
+  it('orders key points along the video and drops costs without a stated number', () => {
+    const s = normalizeSummary(
+      {
+        summary: 'x',
+        key_points: [
+          { text: 'שלישית', start_s: 380 },
+          { text: 'בלי זמן', start_s: null },
+          { text: 'ראשונה', start_s: 60 },
+          { text: 'שנייה', start_s: 375 },
+        ],
+        costs: [
+          { item: 'גוף תאורה', price: '1000 שקל', unit: 'לגוף', context: '' },
+          { item: 'מסנן מים', price: 'לא נאמר', unit: '', context: '' },
+        ],
+      },
+      { durationS: 948, categorySlugs: slugs },
+    );
+    expect(s.key_points.map((k) => k.text)).toEqual(['ראשונה', 'שנייה', 'שלישית', 'בלי זמן']);
+    expect(s.costs.map((c) => c.item)).toEqual(['גוף תאורה']);
   });
 
   it('restricts category and stage to known values', () => {
@@ -60,6 +82,17 @@ describe('normalizeSummary', () => {
     expect(s.stage).toBeNull();
     expect(s.key_points).toEqual([]);
     expect(s.chapters).toEqual([]);
+  });
+});
+
+describe('normalizePrice', () => {
+  it('reduces spoken shekel amounts to the amount', () => {
+    expect(normalizePrice('180 שק')).toBe('180');
+    expect(normalizePrice('1,000 שקלים')).toBe('1,000');
+    expect(normalizePrice('200-220 ש"ח')).toBe('200-220');
+    expect(normalizePrice('200 – 220 ₪')).toBe('200-220');
+    expect(normalizePrice('15 אלף שקל')).toBe('15 אלף שקל');
+    expect(normalizePrice('כ-500 ש"ח לחודש')).toBe('כ-500 ש"ח לחודש');
   });
 });
 

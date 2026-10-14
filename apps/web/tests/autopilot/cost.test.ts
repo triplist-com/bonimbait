@@ -33,6 +33,8 @@ describe('pricing (micro-USD)', () => {
     expect(formatUsd(0)).toBe('$0');
     expect(formatUsd(2_500)).toBe('$0.0025');
     expect(formatUsd(123_456)).toBe('$0.123');
+    expect(formatUsd(100_000)).toBe('$0.10');
+    expect(formatUsd(2_000_000)).toBe('$2.00');
   });
 });
 

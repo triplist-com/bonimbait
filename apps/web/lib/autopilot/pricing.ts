@@ -61,16 +61,19 @@ export function audioCostMicros(seconds: number): number {
 }
 
 /**
- * Conservative token estimate for Hebrew text before a call: about two
- * characters per token (measured ~2.4-3 on this channel's captions).
+ * Conservative token estimate for Hebrew text before a call: one token per
+ * character. Measured on this channel's captions: ~1.05 characters per token
+ * for text-embedding-3-small and ~1.3 for Claude Haiku 5.5.
  */
 export function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 2);
+  return text.length;
 }
 
+/** "$0.0031", "$0.012", "$0.10", "$2.00". */
 export function formatUsd(micros: number): string {
   const usd = microsToUsd(micros);
   if (usd === 0) return '$0';
   if (usd < 0.01) return `$${usd.toFixed(4)}`;
-  return `$${usd.toFixed(3)}`;
+  if (usd < 1) return `$${usd.toFixed(3).replace(/(\.\d\d)0$/, '$1')}`;
+  return `$${usd.toFixed(2)}`;
 }
