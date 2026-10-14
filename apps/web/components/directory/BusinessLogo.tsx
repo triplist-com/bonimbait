@@ -1,4 +1,10 @@
-/** Business logo with an initial-letter fallback. Plain <img>: logos come from several hosts. */
+import Image from 'next/image';
+import { isOptimizableImage } from '@/lib/images';
+
+/**
+ * Business logo with an initial-letter fallback. Storage logos go through
+ * next/image (many are large PNGs shown at 64px); other hosts use <img>.
+ */
 export default function BusinessLogo({
   name,
   src,
@@ -9,15 +15,13 @@ export default function BusinessLogo({
   className?: string;
 }) {
   if (src) {
+    const cls = `${className} shrink-0 rounded-xl border border-ink-100 bg-white object-contain`;
+    if (isOptimizableImage(src)) {
+      return <Image src={src} alt={`לוגו ${name}`} width={160} height={160} sizes="80px" className={cls} />;
+    }
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={src}
-        alt={`לוגו ${name}`}
-        loading="lazy"
-        decoding="async"
-        className={`${className} shrink-0 rounded-xl border border-gray-100 bg-white object-contain`}
-      />
+      <img src={src} alt={`לוגו ${name}`} loading="lazy" decoding="async" className={cls} />
     );
   }
   return (

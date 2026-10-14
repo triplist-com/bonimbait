@@ -25,6 +25,16 @@ function scale(name: keyof typeof COLOR_SCALES, defaultStep?: string) {
 
 const inkScale = scale("ink", "900");
 
+/**
+ * Text-only overrides for AA contrast (backgrounds and borders keep the exact
+ * brand colours):
+ * - text-primary is primary-700: the logo magenta (600) is 4.55:1 on white
+ *   but only ~4.2:1 on paper/sand; 700 is 5.5:1 on both.
+ * - legacy text-gray-400 / text-neutral-400 are ink-500 (4.9:1): the old
+ *   template used them for small text.
+ */
+const legacyText = { ...inkScale, 400: v("ink-500") };
+
 const config: Config = {
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
@@ -58,6 +68,11 @@ const config: Config = {
         line: { DEFAULT: v("line"), subtle: v("line-subtle") },
         // Third-party brand colour (WhatsApp); dark text on it for AA contrast.
         whatsapp: { DEFAULT: "#25D366", bubble: "#DCF8C6" },
+      },
+      textColor: {
+        primary: { ...scale("primary"), DEFAULT: v("primary-700") },
+        gray: legacyText,
+        neutral: legacyText,
       },
       fontFamily: {
         heebo: ["var(--font-heebo)", "Heebo", "Arial", "sans-serif"],

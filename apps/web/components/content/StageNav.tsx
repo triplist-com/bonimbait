@@ -39,7 +39,7 @@ export default function StageNav({
                   <img src={s.icon} alt="" width={40} height={28} className="h-7 w-10 object-contain" />
                 </span>
                 <span className="flex items-baseline gap-1.5">
-                  <span className={cn('num text-xs font-bold', isActive ? 'text-primary-300' : 'text-ink-400')}>{s.order}</span>
+                  <span className={cn('num text-xs font-bold', isActive ? 'text-primary-300' : 'text-ink-500')}>{s.order}</span>
                   <span className={cn('text-sm font-bold', isActive ? 'text-white' : 'text-ink-900 group-hover:text-primary-700')}>{s.label}</span>
                 </span>
               </Link>

@@ -45,7 +45,7 @@ export default function JourneyNavigator({ stages, counts = {}, currentId, class
                   )}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- owner's small SVG icons */}
-                  <img src={stage.icon} alt="" width={56} height={40} className="h-10 w-14 object-contain" />
+                  <img src={stage.icon} alt="" width={56} height={40} loading="lazy" decoding="async" className="h-10 w-14 object-contain" />
                   <span className="num absolute -top-2 end-[-0.5rem] inline-flex size-7 items-center justify-center rounded-full bg-ink-900 text-xs font-bold text-white ring-4 ring-sand-50">
                     {stage.order}
                   </span>
@@ -79,11 +79,11 @@ export default function JourneyNavigator({ stages, counts = {}, currentId, class
                   )}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- owner's small SVG icons */}
-                  <img src={stage.icon} alt="" width={42} height={30} className="h-[1.875rem] w-[2.625rem] object-contain" />
+                  <img src={stage.icon} alt="" width={42} height={30} loading="lazy" decoding="async" className="h-[1.875rem] w-[2.625rem] object-contain" />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline gap-2">
-                    <span className="num text-xs font-bold text-ink-400">{String(stage.order).padStart(2, '0')}</span>
+                    <span className="num text-xs font-bold text-ink-500">{String(stage.order).padStart(2, '0')}</span>
                     <span className="text-title text-ink-900">{stage.label}</span>
                   </span>
                   <span className="block truncate text-sm text-ink-500">{stage.summary}</span>

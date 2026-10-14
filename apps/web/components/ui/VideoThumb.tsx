@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Play } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { durationLabel, formatDuration } from '@/lib/format';
+import { SmartImage } from './SmartImage';
 
 export interface VideoThumbProps {
   src: string | null | undefined;
@@ -21,6 +22,8 @@ export interface VideoThumbProps {
   size?: 'sm' | 'md' | 'lg';
   /** Above-the-fold: load eagerly with high fetch priority. */
   priority?: boolean;
+  /** Responsive sizes hint for the image. */
+  sizes?: string;
   className?: string;
   /** Classes for the rounded frame (default rounded-2xl). */
   rounded?: string;
@@ -53,6 +56,7 @@ export function VideoThumb({
   aspect = 'video',
   size = 'md',
   priority,
+  sizes = '(min-width: 1024px) 25vw, (min-width: 640px) 45vw, 80vw',
   className,
   rounded = 'rounded-2xl',
 }: VideoThumbProps) {
@@ -61,14 +65,12 @@ export function VideoThumb({
   const inner = (
     <>
       {src ? (
-        // eslint-disable-next-line @next/next/no-img-element -- thumbnails come from YouTube and Storage; native lazy loading keeps the quota free
-        <img
+        <SmartImage
           src={src}
           alt={alt}
-          loading={priority ? 'eager' : 'lazy'}
-          decoding="async"
-          {...(priority ? { fetchPriority: 'high' as const } : {})}
-          className="absolute inset-0 size-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+          sizes={sizes}
+          priority={priority}
+          className="transition-transform duration-500 ease-out group-hover:scale-[1.04]"
         />
       ) : (
         <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-br from-ink-800 to-ink-950 bg-blueprint-dark" />

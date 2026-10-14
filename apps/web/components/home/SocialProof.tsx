@@ -3,11 +3,12 @@ import { Quote } from 'lucide-react';
 import { Section } from '@/components/ui/Section';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { TEAM, TESTIMONIALS, teamPhotoUrl, testimonialMedia } from '@/lib/commerce/membership-content';
+import VideoTestimonial from './VideoTestimonial';
 
 /**
  * Social proof: the founder's promise and short video testimonials from
  * families the team accompanied (the owner's own clips, membership page).
- * Videos load nothing until played (preload="none" + poster).
+ * Clips load only a small poster until played (VideoTestimonial).
  */
 export default function SocialProof() {
   const founder = TEAM[0];
@@ -50,19 +51,7 @@ export default function SocialProof() {
             const media = testimonialMedia(t.id);
             return (
               <li key={t.id} className="w-[62%] sm:w-auto">
-                <figure className="overflow-hidden rounded-3xl bg-ink-900 shadow-card">
-                  <video
-                    controls
-                    playsInline
-                    preload="none"
-                    poster={media.poster}
-                    className="aspect-[9/16] w-full bg-ink-900 object-cover"
-                    aria-label={t.label}
-                  >
-                    <source src={media.video} type="video/mp4" />
-                  </video>
-                  <figcaption className="px-4 py-3 text-sm font-semibold text-white">{t.label}</figcaption>
-                </figure>
+                <VideoTestimonial video={media.video} poster={media.poster} label={t.label} />
               </li>
             );
           })}

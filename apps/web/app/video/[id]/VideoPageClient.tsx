@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import VideoPlayer from '@/components/VideoPlayer';
 import VideoGrid from '@/components/VideoGrid';
@@ -12,19 +12,37 @@ import { getVideoDetail, getRelatedVideos } from '@/lib/api';
 import { formatTimestamp, thumbnailUrl as getThumbUrl } from '@/lib/types';
 import type { VideoDetail as VideoDetailType, Video } from '@/lib/types';
 
-function VideoContent() {
-  const params = useParams();
-  const searchParams = useSearchParams();
-  const id = params.id as string;
-  const startTime = parseInt(searchParams.get('t') || '0', 10);
+interface InitialData {
+  initialVideo?: VideoDetailType | null;
+  initialRelated?: Video[];
+}
 
-  const [video, setVideo] = useState<VideoDetailType | null>(null);
-  const [related, setRelated] = useState<Video[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+function VideoContent({ initialVideo, initialRelated }: InitialData) {
+  const params = useParams();
+  const id = params.id as string;
+  const hasInitial = Boolean(initialVideo);
+
+  const [video, setVideo] = useState<VideoDetailType | null>(initialVideo ?? null);
+  const [related, setRelated] = useState<Video[]>(initialRelated ?? []);
+  const [isLoading, setIsLoading] = useState(!hasInitial);
   const [openTranscript, setOpenTranscript] = useState(false);
-  const [playerTime, setPlayerTime] = useState(startTime);
+  const [playerTime, setPlayerTime] = useState(0);
+  const [playRequested, setPlayRequested] = useState(false);
+  const seek = (seconds: number) => {
+    setPlayerTime(seconds);
+    setPlayRequested(true);
+  };
+
+  // Deep link (?t=157, from an AI answer): read after mount, not via
+  // useSearchParams, so the statically rendered page keeps its server HTML.
+  useEffect(() => {
+    const t = parseInt(new URLSearchParams(window.location.search).get('t') || '0', 10);
+    if (t > 0) setPlayerTime(t);
+  }, [id]);
 
   useEffect(() => {
+    // Server-rendered data: nothing to fetch.
+    if (hasInitial) return;
     let cancelled = false;
     setIsLoading(true);
 
@@ -40,7 +58,7 @@ function VideoContent() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, hasInitial]);
 
   if (isLoading) {
     return (
@@ -109,6 +127,7 @@ function VideoContent() {
           youtubeId={video.youtube_id}
           title={video.title}
           startTime={playerTime}
+          playing={playRequested}
           poster={video.thumbnail_url}
         />
 
@@ -150,7 +169,7 @@ function VideoContent() {
           tips={video.tips}
           warnings={video.warnings}
           variant="full"
-          onTimestampClick={(seconds) => setPlayerTime(seconds)}
+          onTimestampClick={seek}
         />
 
         {/* Transcript Accordion */}
@@ -181,7 +200,7 @@ function VideoContent() {
                 {video.segments.map((seg) => (
                   <button
                     key={seg.id}
-                    onClick={() => setPlayerTime(seg.start_time)}
+                    onClick={() => seek(seg.start_time)}
                     className="w-full flex items-start gap-3 py-2 px-3 rounded-lg hover:bg-primary-50 transition-colors text-right group"
                     aria-label={`דלג לדקה ${formatTimestamp(seg.start_time)}: ${seg.text.substring(0, 50)}`}
                   >
@@ -209,7 +228,7 @@ function VideoContent() {
   );
 }
 
-export default function VideoPageClient() {
+export default function VideoPageClient(props: InitialData) {
   return (
     <Suspense
       fallback={
@@ -221,7 +240,7 @@ export default function VideoPageClient() {
         </div>
       }
     >
-      <VideoContent />
+      <VideoContent {...props} />
     </Suspense>
   );
 }

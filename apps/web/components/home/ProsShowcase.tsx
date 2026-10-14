@@ -6,6 +6,7 @@ import { RatingStars } from '@/components/ui/RatingStars';
 import { Badge } from '@/components/ui/Badge';
 import { initials } from '@/components/ui/Avatar';
 import type { HomePro } from '@/lib/home/data';
+import { SmartImage } from '@/components/ui/SmartImage';
 
 function ProCard({ pro }: { pro: HomePro }) {
   const href = `/business/${pro.slug}/`;
@@ -14,13 +15,12 @@ function ProCard({ pro }: { pro: HomePro }) {
       <article className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-card transition-[box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:shadow-card-hover">
         <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-b from-sand-50 to-sand-100">
           {pro.photo ? (
-            // eslint-disable-next-line @next/next/no-img-element -- directory photos and logos from many hosts
-            <img
+            <SmartImage
               src={pro.photo}
               alt=""
-              loading="lazy"
-              decoding="async"
-              className="absolute inset-0 size-full object-contain object-bottom p-3 pb-0 transition-transform duration-500 group-hover:scale-[1.03]"
+              fit="contain"
+              sizes="(min-width: 1024px) 18rem, 72vw"
+              className="object-bottom p-3 pb-0 transition-transform duration-500 group-hover:scale-[1.03]"
             />
           ) : (
             <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center text-4xl font-extrabold text-primary-300">

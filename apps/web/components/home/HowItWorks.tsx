@@ -24,7 +24,7 @@ function AskPreview() {
         <span className="mt-2 block h-2 w-full rounded-full bg-primary-200/80" />
         <span className="mt-1.5 block h-2 w-11/12 rounded-full bg-primary-200/80" />
         <span className="mt-1.5 block h-2 w-3/5 rounded-full bg-primary-200/80" />
-        <span className="mt-2.5 block text-[0.6875rem] text-ink-500">מחירים נכונים ל-2026</span>
+        <span className="mt-2.5 block text-[0.6875rem] text-ink-600">מחירים נכונים ל-2026</span>
       </div>
     </div>
   );

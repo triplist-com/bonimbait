@@ -4,6 +4,7 @@ import { formatHebrewDate } from '@/lib/content/seo';
 import { htmlToText } from '@/lib/content/sanitize';
 import { stageForCategory } from '@/lib/stages';
 import { Badge } from '@/components/ui/Badge';
+import { SmartImage } from '@/components/ui/SmartImage';
 
 export interface PostCardData {
   slug: string;
@@ -26,15 +27,12 @@ export default function PostCard({ post, priority = false }: { post: PostCardDat
     <article className="group relative flex flex-col overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-card transition-[box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:shadow-card-hover">
       <div className="relative aspect-[16/10] overflow-hidden bg-sand-100">
         {post.featured_image ? (
-          // Storage images through plain <img> (lazy, many hosts); priority cards load eagerly.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <SmartImage
             src={post.featured_image}
             alt={post.featured_image_alt || ''}
-            loading={priority ? 'eager' : 'lazy'}
-            decoding="async"
-            {...(priority ? { fetchPriority: 'high' as const } : {})}
-            className="size-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+            priority={priority}
+            sizes="(min-width: 1024px) 26rem, (min-width: 640px) 50vw, 100vw"
+            className="transition-transform duration-500 ease-out group-hover:scale-[1.04]"
           />
         ) : (
           <div className="bg-blueprint flex size-full items-center justify-center" aria-hidden="true">

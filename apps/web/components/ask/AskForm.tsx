@@ -108,7 +108,7 @@ export default function AskForm({
         {showOverlay && example && (
           <span
             aria-hidden="true"
-            className={cn('pointer-events-none absolute inset-y-0 flex items-center overflow-hidden text-ink-400', s.field.match(/ps-\S+/g)?.join(' '))}
+            className={cn('pointer-events-none absolute inset-y-0 flex items-center overflow-hidden text-ink-500', s.field.match(/ps-\S+/g)?.join(' '))}
             style={{ insetInlineStart: 0, insetInlineEnd: size === 'md' ? '3rem' : '8rem' }}
           >
             <span key={index} className="truncate motion-safe:animate-question-in">

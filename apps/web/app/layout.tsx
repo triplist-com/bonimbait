@@ -9,8 +9,11 @@ import ConsultationCTA from '@/components/leads/ConsultationCTA';
 import { SITE_URL, absoluteUrl } from '@/lib/site';
 import { primary } from '@/lib/design/tokens';
 
+// Heebo (variable 100-900). `subsets` only controls preloading: every subset's
+// @font-face (latin, latin-ext, …) is still emitted and loads on demand. Only
+// the Hebrew file is preloaded so the fonts don't compete with the LCP image.
 const heebo = Heebo({
-  subsets: ['hebrew', 'latin'],
+  subsets: ['hebrew'],
   variable: '--font-heebo',
   display: 'swap',
 });

@@ -266,7 +266,7 @@ export default function ConsultationCTA({
       <>
         <aside data-floating-cta="hide" className={cn('rounded-3xl border border-sand-200 bg-sand-50 p-6 shadow-card', className)}>
           <p className="text-sm font-bold text-primary-700">ייעוץ ללא עלות</p>
-          <h3 className="mt-1 text-title-lg text-ink-900">{title}</h3>
+          <h2 className="mt-1 text-title-lg text-ink-900">{title}</h2>
           <p className="mt-2 text-body-sm text-ink-600">{description}</p>
           <div className="mt-5 flex flex-col gap-3">
             {primaryButton('', 'lg', true)}

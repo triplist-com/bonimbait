@@ -4,6 +4,7 @@ import { Section } from '@/components/ui/Section';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Badge } from '@/components/ui/Badge';
 import type { HomeBenefit } from '@/lib/home/data';
+import { SmartImage } from '@/components/ui/SmartImage';
 
 /** Community benefits shop teaser. */
 export default function BenefitsTeaser({ items }: { items: HomeBenefit[] }) {
@@ -29,13 +30,11 @@ export default function BenefitsTeaser({ items }: { items: HomeBenefit[] }) {
             <article className="group relative flex h-full flex-col overflow-hidden rounded-3xl bg-white shadow-card ring-1 ring-sand-200 transition-[box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:shadow-card-hover">
               <div className="relative aspect-[16/10] overflow-hidden bg-sand-100">
                 {p.image && (
-                  // eslint-disable-next-line @next/next/no-img-element -- product images from Storage
-                  <img
+                  <SmartImage
                     src={p.image}
                     alt=""
-                    loading="lazy"
-                    decoding="async"
-                    className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                    sizes="(min-width: 1024px) 26rem, (min-width: 640px) 50vw, 82vw"
+                    className="transition-transform duration-500 group-hover:scale-[1.04]"
                   />
                 )}
                 {p.tag && (

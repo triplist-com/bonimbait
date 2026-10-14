@@ -56,7 +56,7 @@ export default function BusinessCard({
             <li key={s.id}>
               <Link
                 href={listingHref({ specialty: s.slug })}
-                className="inline-block rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700 hover:bg-primary-100"
+                className="inline-flex min-h-6 items-center rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700 hover:bg-primary-100"
               >
                 {s.name}
               </Link>

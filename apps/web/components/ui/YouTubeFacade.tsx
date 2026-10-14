@@ -3,12 +3,12 @@
 /**
  * YouTube player behind a facade: the poster renders immediately (and can be
  * the page's LCP image), the ~1 MB YouTube player loads only on click.
- * Changing `start` after mount (e.g. a timestamp in the summary was clicked)
- * starts playback at that second.
+ * `start` sets the second to play from (the button then says "צפו מ-2:37");
+ * `playing` lets a parent start playback, e.g. when a timestamp is clicked.
  *
  *   <YouTubeFacade youtubeId="9803SaFIvXM" title="…" poster={page.featured_image} priority />
  */
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Play } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { formatDuration } from '@/lib/format';
@@ -21,6 +21,8 @@ export interface YouTubeFacadeProps {
   poster?: string | null;
   /** Start second (from ?t= or a clicked timestamp). */
   start?: number;
+  /** Controlled play request (the visitor clicked a timestamp elsewhere). */
+  playing?: boolean;
   /** Above the fold: preload the poster with high priority. */
   priority?: boolean;
   className?: string;
@@ -32,17 +34,9 @@ export function youtubeEmbedUrl(id: string, start?: number): string {
   return `https://www.youtube-nocookie.com/embed/${id}?${params.toString()}`;
 }
 
-export function YouTubeFacade({ youtubeId, title, poster, start, priority, className }: YouTubeFacadeProps) {
-  const [playing, setPlaying] = useState(false);
-  const mounted = useRef(false);
-
-  useEffect(() => {
-    if (!mounted.current) {
-      mounted.current = true;
-      return;
-    }
-    if (start !== undefined) setPlaying(true);
-  }, [start]);
+export function YouTubeFacade({ youtubeId, title, poster, start, playing: playRequested, priority, className }: YouTubeFacadeProps) {
+  const [clicked, setClicked] = useState(false);
+  const playing = clicked || Boolean(playRequested);
 
   const from = start && start > 0 ? formatDuration(start) : null;
 
@@ -60,7 +54,7 @@ export function YouTubeFacade({ youtubeId, title, poster, start, priority, class
       ) : (
         <button
           type="button"
-          onClick={() => setPlaying(true)}
+          onClick={() => setClicked(true)}
           className="group absolute inset-0 block size-full focus-visible:outline-none"
           aria-label={from ? `הפעלת הסרטון מ-${from}: ${title}` : `הפעלת הסרטון: ${title}`}
         >

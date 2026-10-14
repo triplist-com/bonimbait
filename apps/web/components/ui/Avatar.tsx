@@ -1,4 +1,6 @@
+import Image from 'next/image';
 import { cn } from '@/lib/cn';
+import { isOptimizableImage } from '@/lib/images';
 
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
@@ -9,6 +11,9 @@ const SIZES: Record<AvatarSize, string> = {
   lg: 'size-14 text-base',
   xl: 'size-20 text-xl',
 };
+
+/** CSS pixel size per avatar size (images are requested at 2x). */
+const PX: Record<AvatarSize, number> = { xs: 24, sm: 32, md: 44, lg: 56, xl: 80 };
 
 /** First letters of the first two words: "תומר חן" -> "תח". */
 export function initials(name: string): string {
@@ -42,10 +47,15 @@ export function Avatar({ name, src, size = 'md', shape = 'circle', ring, fit = '
     className,
   );
   if (src) {
+    const imgClass = cn('size-full', fit === 'contain' ? 'object-contain p-1' : 'object-cover');
     return (
       <span className={cn(classes, fit === 'contain' && 'bg-white')}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- remote logos of many hosts; tiny images */}
-        <img src={src} alt={name} loading="lazy" decoding="async" className={cn('size-full', fit === 'contain' ? 'object-contain p-1' : 'object-cover')} />
+        {isOptimizableImage(src) ? (
+          <Image src={src} alt={name} width={PX[size] * 2} height={PX[size] * 2} sizes={`${PX[size]}px`} className={imgClass} />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element -- host not configured for next/image
+          <img src={src} alt={name} loading="lazy" decoding="async" className={imgClass} />
+        )}
       </span>
     );
   }

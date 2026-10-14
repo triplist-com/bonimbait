@@ -70,7 +70,7 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(function Switch(
   ref,
 ) {
   return (
-    <label className={cn('inline-flex cursor-pointer items-center gap-3', disabled && 'cursor-not-allowed opacity-50', className)}>
+    <label className={cn('flex w-fit cursor-pointer items-center gap-3', disabled && 'cursor-not-allowed opacity-50', className)}>
       <input ref={ref} type="checkbox" role="switch" disabled={disabled} className="peer sr-only" {...rest} />
       <span
         aria-hidden="true"

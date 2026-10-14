@@ -144,7 +144,7 @@ export default function SignupForm({ next }: { next: string }) {
         </div>
         <label className="flex items-start gap-2 text-sm text-gray-700">
           <input type="checkbox" checked={whatsapp} onChange={(e) => setWhatsapp(e.target.checked)}
-            className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
+            className="mt-0.5 size-5 shrink-0 rounded accent-primary-600" />
           אשמח להצטרף לקבוצות הוואטסאפ של הקהילה ולקבל עדכונים
         </label>
 
