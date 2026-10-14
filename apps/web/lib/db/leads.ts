@@ -42,6 +42,8 @@ export type NewLead = {
   whatsappGroupId?: string | null;
   memberId?: string | null;
   ipHash?: string | null;
+  /** Trusted path only (the DB ignores it from untrusted writers). */
+  attribution?: Json | null;
 };
 
 function toInsert(lead: NewLead): TablesInsert<'leads'> {
@@ -62,6 +64,7 @@ function toInsert(lead: NewLead): TablesInsert<'leads'> {
     whatsapp_group_id: lead.whatsappGroupId ?? null,
     member_id: lead.memberId ?? null,
     ip_hash: lead.ipHash ?? null,
+    attribution: lead.attribution ?? null,
   };
 }
 
@@ -69,6 +72,7 @@ function toInsert(lead: NewLead): TablesInsert<'leads'> {
 export async function createLead(db: DbClient, lead: NewLead): Promise<void> {
   const row = toInsert(lead);
   delete row.ip_hash; // reserved for the trusted path
+  delete row.attribution;
   check(await db.from('leads').insert(row));
 }
 
@@ -201,7 +205,7 @@ export async function listLeads(db: DbClient, opts: LeadListFilter = {}): Promis
   if (opts.q) {
     // Strip PostgREST filter syntax characters before building the or() filter.
     const term = opts.q.replace(/[,()*%\\]/g, ' ').trim();
-    if (term) query = query.or(`full_name.ilike.*${term}*,email.ilike.*${term}*,phone.ilike.*${term}*`);
+    if (term) query = query.or(`full_name.ilike.*${term}*,email.ilike.*${term}*,phone.ilike.*${term}*,ref.ilike.*${term}*`);
   }
   const result = await query;
   return { items: unwrap(result), total: result.count ?? 0, page, pageSize };

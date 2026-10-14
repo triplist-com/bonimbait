@@ -98,7 +98,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Record
           </Select>
         </label>
         <label className="min-w-[10rem] flex-1 text-sm">
-          <span className="mb-1 block text-gray-600">שם / טלפון / מייל</span>
+          <span className="mb-1 block text-gray-600">שם / טלפון / מייל / מספר ליד</span>
           <TextInput name="q" defaultValue={query.q} />
         </label>
       </FilterBar>
@@ -107,6 +107,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Record
         rowKey={(r) => r.id}
         empty="אין לידים תואמים."
         columns={[
+          { key: 'ref', header: 'מספר', render: (r) => <span dir="ltr" className="whitespace-nowrap font-mono text-xs">{r.ref}</span> },
           { key: 'd', header: 'התקבל', render: (r) => <span className="whitespace-nowrap">{formatDateTime(r.created_at)}</span> },
           { key: 't', header: 'סוג', render: (r) => LEAD_TYPE_LABELS[r.type] },
           {

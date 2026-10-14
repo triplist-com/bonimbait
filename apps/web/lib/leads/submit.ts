@@ -27,6 +27,8 @@ import {
   insertLeadTrusted,
 } from '@/lib/db/leads';
 import { REGIONS } from '@/lib/constants/community';
+import { lastTouchForVisitor } from '@/lib/analytics/attribution';
+import { currentVisitor, trackServer } from '@/lib/analytics/server';
 import { validateLead, isUuid, type FieldErrors } from './schemas';
 import { notifyLead, type NotifyResult } from './notify';
 import {
@@ -161,6 +163,9 @@ export async function submitLead(input: SubmitLeadInput): Promise<SubmitLeadResu
       if (!(k in extra)) extra[k] = typeof v === 'string' ? v.slice(0, 300) : v;
     }
 
+    // 5b. What brought this visitor in: 4h last touch (lib/analytics/attribution.ts).
+    const attribution = await lastTouchForVisitor(currentVisitor().anonId);
+
     // 6. Insert.
     const lead = await insertLeadTrusted(db, {
       type: input.type,
@@ -179,7 +184,27 @@ export async function submitLead(input: SubmitLeadInput): Promise<SubmitLeadResu
       whatsappGroupId,
       memberId: input.memberId ?? null,
       ipHash,
+      attribution,
     });
+
+    // Analytics (never throws; no contact details in props).
+    await trackServer(
+      'lead_submitted',
+      {
+        lead_type: lead.type,
+        lead_id: lead.id,
+        lead_ref: lead.ref,
+        business_id: lead.business_id ?? undefined,
+        kind: typeof extra.kind === 'string' ? extra.kind : undefined,
+        cta_source: typeof extra.cta_source === 'string' ? extra.cta_source : undefined,
+        region: parsed.regionSlug ?? undefined,
+        stage: parsed.constructionStage ?? undefined,
+        touch: attribution?.touch,
+        touch_medium: attribution?.medium,
+        touch_source: attribution?.source ?? undefined,
+      },
+      { ip: input.ip, userId: input.memberId, path: input.sourceUrl },
+    );
 
     // 7. Notify (never throws; bounded by per-channel timeouts).
     const notification = await notifyLead(lead, { db });
