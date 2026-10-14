@@ -125,6 +125,14 @@ class CaptionTests(unittest.TestCase):
         self.assertIsNone(pick_track({"automatic_captions": {"en-orig": [{}], "iw": [{}]}}))
         self.assertIsNone(pick_track({}))
 
+    def test_caption_chars_spots_stub_tracks(self) -> None:
+        from scripts.knowledge.fetch_captions import MIN_MANUAL_CHARS, caption_chars
+
+        stub = {"events": [{"tStartMs": 0}, {"segs": [{"utf8": "[מוזיקה]"}]}]}
+        real = {"events": [{"segs": [{"utf8": "שלום "}, {"utf8": "לכולם"}]}] * 40}
+        self.assertLess(caption_chars(stub), MIN_MANUAL_CHARS)
+        self.assertEqual(caption_chars(real), 400)
+
     def test_error_classification(self) -> None:
         self.assertTrue(BLOCK_PATTERNS.search("ERROR: Sign in to confirm you're not a bot"))
         self.assertTrue(BLOCK_PATTERNS.search("HTTP Error 429: Too Many Requests"))

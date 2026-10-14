@@ -53,6 +53,7 @@ from scripts.knowledge.paths import (
 
 FINAL = {"manual_he", "auto_he", "none", "unavailable"}
 MAX_ATTEMPTS = 3  # an "error" this many times in a row is not retried
+MIN_MANUAL_CHARS = 300  # a manual track shorter than this is a stub (title, "[מוזיקה]")
 HEBREW = ("iw", "he")  # YouTube still labels Hebrew "iw"
 BLOCK_PATTERNS = re.compile(
     r"HTTP Error 429|Too Many Requests|confirm you.re not a bot|rate.limit|This content isn.t available, try again later",
@@ -150,13 +151,18 @@ def metadata_record(info: dict) -> dict:
     }
 
 
-def ydl_options(tmpdir: str, capture: CaptureLogger) -> dict:
+def caption_chars(raw: dict) -> int:
+    """Characters of caption text in a json3 track."""
+    return sum(len("".join(s.get("utf8", "") for s in e.get("segs") or [])) for e in raw.get("events") or [])
+
+
+def ydl_options(tmpdir: str, capture: CaptureLogger, auto_only: bool = False) -> dict:
     opts = {
         "quiet": True,
         "no_warnings": False,
         "logger": capture,
         "skip_download": True,
-        "writesubtitles": True,
+        "writesubtitles": not auto_only,
         "writeautomaticsub": True,
         "subtitleslangs": list(HEBREW),
         "subtitlesformat": "json3",
@@ -175,15 +181,19 @@ def ydl_options(tmpdir: str, capture: CaptureLogger) -> dict:
     return opts
 
 
-def fetch_one(vid: str) -> dict:
-    """Fetch metadata + the best Hebrew track for one video. Returns a status entry."""
+def fetch_one(vid: str, auto_only: bool = False) -> dict:
+    """Fetch metadata + the best Hebrew track for one video. Returns a status entry.
+
+    A manual track that is only a stub (a title or "[מוזיקה]", < MIN_MANUAL_CHARS)
+    is replaced by the Hebrew ASR track when there is one (one more extraction).
+    """
     import yt_dlp
 
     capture = CaptureLogger()
     url = f"https://www.youtube.com/watch?v={vid}"
     with tempfile.TemporaryDirectory(prefix="captions-") as tmpdir:
         try:
-            with yt_dlp.YoutubeDL(ydl_options(tmpdir, capture)) as ydl:
+            with yt_dlp.YoutubeDL(ydl_options(tmpdir, capture, auto_only)) as ydl:
                 info = ydl.extract_info(url, download=True)
         except Exception as exc:  # noqa: BLE001 - yt-dlp raises DownloadError subclasses
             msg = f"{exc} | {' | '.join(capture.messages[-3:])}"
@@ -199,6 +209,8 @@ def fetch_one(vid: str) -> dict:
         (metadata_dir() / f"{vid}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
         entry: dict = {"duration": info.get("duration"), "title": info.get("title")}
 
+        if auto_only:
+            info = {**info, "subtitles": {}}
         picked = pick_track(info)
         if picked is None:
             if any(POT_PATTERN.search(m) for m in capture.messages):
@@ -215,6 +227,13 @@ def fetch_one(vid: str) -> dict:
         raw = json.loads(chosen.read_text(encoding="utf-8"))
         if not raw.get("events"):
             return {**entry, "status": "error", "error": "empty json3"}
+        if label == "manual_he" and caption_chars(raw) < MIN_MANUAL_CHARS:
+            asr = any(f"{k}-orig" in (info.get("automatic_captions") or {}) for k in HEBREW)
+            if not asr:
+                return {**entry, "status": "none", "note": "manual track is a stub, no Hebrew ASR"}
+            time.sleep(random.uniform(4, 7))
+            result = fetch_one(vid, auto_only=True)
+            return {**result, "note": "manual track is a stub; used the ASR track"}
         dest = subtitles_dir() / f"{vid}.json"
         dest.write_text(json.dumps(raw, ensure_ascii=False), encoding="utf-8")
         return {**entry, "status": label, "track": chosen.name.split(".")[-2]}
