@@ -87,12 +87,12 @@ export default function WizardResult({ result, onRestart }: WizardResultProps) {
       </div>
 
       {/* Disclaimer */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+      <div className="bg-warning-50 border border-warning-200 rounded-xl p-4 mb-6">
         <div className="flex gap-2">
-          <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-5 h-5 text-warning-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
           </svg>
-          <p className="text-sm text-yellow-800">
+          <p className="text-sm text-warning-800">
             הערכה בלבד, מבוססת על ניתוח סרטונים ונתוני שוק. לא מהווה הצעת מחיר.
           </p>
         </div>

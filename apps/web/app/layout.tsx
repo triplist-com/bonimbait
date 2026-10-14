@@ -7,6 +7,7 @@ import StructuredData from '@/components/StructuredData';
 import Analytics from '@/components/Analytics';
 import ConsultationCTA from '@/components/leads/ConsultationCTA';
 import { SITE_URL, absoluteUrl } from '@/lib/site';
+import { primary } from '@/lib/design/tokens';
 
 const heebo = Heebo({
   subsets: ['hebrew', 'latin'],
@@ -68,7 +69,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#E61559',
+  themeColor: primary[600],
 };
 
 export default function RootLayout({

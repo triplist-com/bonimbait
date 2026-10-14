@@ -56,7 +56,8 @@ const config: Config = {
         paper: v("paper"),
         background: v("paper"),
         line: { DEFAULT: v("line"), subtle: v("line-subtle") },
-        whatsapp: "#25D366",
+        // Third-party brand colour (WhatsApp); dark text on it for AA contrast.
+        whatsapp: { DEFAULT: "#25D366", bubble: "#DCF8C6" },
       },
       fontFamily: {
         heebo: ["var(--font-heebo)", "Heebo", "Arial", "sans-serif"],

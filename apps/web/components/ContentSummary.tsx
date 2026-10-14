@@ -74,16 +74,16 @@ function SectionHeader({
 
 function SummarySection({ text, compact }: { text: string; compact: boolean }) {
   return (
-    <div className={`${compact ? 'mb-4' : 'bg-gradient-to-br from-blue-50/60 to-indigo-50/40 border border-blue-100/80 rounded-xl p-5 mb-5'}`}>
+    <div className={`${compact ? 'mb-4' : 'bg-gradient-to-br from-primary-50/70 to-sand-50 border border-primary-100 rounded-2xl p-5 mb-5'}`}>
       {!compact && (
         <SectionHeader
           icon={
-            <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
             </svg>
           }
           title="סיכום"
-          color="text-blue-900"
+          color="text-ink-900"
         />
       )}
       <p className={`text-gray-700 leading-relaxed ${compact ? 'text-sm' : 'text-sm'} whitespace-pre-line`}>
@@ -106,7 +106,7 @@ function KeyPointsSection({
     <div className={`${compact ? 'mb-4' : 'bg-white border border-gray-200/80 rounded-xl p-5 mb-5 shadow-sm'}`}>
       <SectionHeader
         icon={
-          <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-5 h-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
           </svg>
         }
@@ -115,7 +115,7 @@ function KeyPointsSection({
       <ul className={`space-y-${compact ? '2' : '3'}`}>
         {points.map((kp, i) => (
           <li key={i} className="flex items-start gap-3">
-            <span className={`${compact ? 'w-5 h-5 text-2xs' : 'w-6 h-6 text-xs'} rounded-full bg-amber-100 text-amber-700 font-bold flex items-center justify-center flex-shrink-0 mt-0.5`}>
+            <span className={`${compact ? 'w-5 h-5 text-2xs' : 'w-6 h-6 text-xs'} rounded-full bg-primary-50 text-primary-700 font-bold flex items-center justify-center flex-shrink-0 mt-0.5`}>
               {i + 1}
             </span>
             <div className="flex-1 min-w-0">
@@ -222,7 +222,7 @@ function TipsSection({ items, compact }: { items: string[]; compact: boolean }) 
 
 function WarningsSection({ items, compact }: { items: string[]; compact: boolean }) {
   return (
-    <div className={`${compact ? 'mb-4' : 'bg-gradient-to-br from-red-50/60 to-orange-50/40 border border-red-200/60 rounded-xl p-5 mb-5'}`}>
+    <div className={`${compact ? 'mb-4' : 'bg-gradient-to-br from-danger-50/70 to-warning-50/60 border border-danger-100 rounded-2xl p-5 mb-5'}`}>
       <SectionHeader
         icon={
           <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

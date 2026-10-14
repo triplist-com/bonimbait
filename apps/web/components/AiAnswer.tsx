@@ -21,7 +21,7 @@ interface AiAnswerProps {
 
 const confidenceConfig = {
   high: { label: 'ביטחון גבוה', color: 'bg-green-100 text-green-700' },
-  medium: { label: 'ביטחון בינוני', color: 'bg-yellow-100 text-yellow-700' },
+  medium: { label: 'ביטחון בינוני', color: 'bg-warning-100 text-warning-700' },
   low: { label: 'ביטחון נמוך', color: 'bg-red-100 text-red-700' },
 };
 
