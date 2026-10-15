@@ -11,6 +11,7 @@
 import { CONSTRUCTION_STAGES, REGIONS } from '@/lib/constants/community';
 import type { ConstructionStage } from '@/lib/db/types';
 import { BUILD_STAGES, stageForProfile } from '@/lib/stages';
+import { BAND_THRESHOLDS } from '@/lib/project-file/score';
 import type { LeadSource, ScoreBandId } from './types';
 
 export const UNKNOWN = 'unknown';
@@ -56,8 +57,8 @@ export const SCORE_BANDS: ReadonlyArray<{ id: ScoreBandId; label: string; min: n
   { id: 'none', label: 'ללא ציון', min: null },
 ];
 
-/** A lead is "hot" (worth a call today) from this score. */
-export const HOT_SCORE = 70;
+/** A lead is "hot" (worth a call today) from this score: the revenue scorer's own "חם" threshold. */
+export const HOT_SCORE = BAND_THRESHOLDS.hot;
 
 export function scoreBand(score: number | null | undefined): ScoreBandId {
   if (score == null || !Number.isFinite(score)) return 'none';

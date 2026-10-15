@@ -2,10 +2,13 @@
  * Lead readers for the Command Center: raw leads rows -> LeadFact. Pure and
  * client-safe; no contact details ever leave this module.
  *
- * The revenue squad stores a scored project file in leads.payload.project_file
- * (docs/platform/PROGRAM.md §6). Until it lands, every read here is defensive:
- * a missing or malformed field is null, never an error.
- * TODO(revenue): confirm the score path. Read today, in order:
+ * The revenue squad's contract (lib/project-file, lib/revenue/lead-pipeline.ts):
+ *   leads.score                     0-100, the column to read (indexed; the queue sorts by it)
+ *   payload.project_score           { version, score, band, reasons: [{ code, group, label, points }], missing }
+ *   payload.project_file            the ProjectFile (docs/platform/PROGRAM.md §6)
+ *   leads.booked_at                 when the consultation was booked (also payload.booking.status = 'booked')
+ * Every read stays defensive: a missing or malformed field is null, never an
+ * error. Older shapes are still read after the contract ones:
  *   payload.project_file.score            number | { value | score | total, reasons? }
  *   payload.project_file.score_reasons    string[]   (also scoreReasons)
  *   payload.score                         number
@@ -36,8 +39,22 @@ function strings(value: unknown, max = 6): string[] {
 
 export type LeadScore = { score: number | null; reasons: string[] };
 
+/** Reason labels from payload.project_score.reasons ([{ label, points }], biggest first). */
+function reasonLabels(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((r) => (typeof r === 'string' ? r : str(obj(r).label, 160)))
+    .filter((v): v is string => Boolean(v))
+    .slice(0, 6);
+}
+
 export function readLeadScore(payload: unknown): LeadScore {
   const p = obj(payload);
+  const stored = obj(p.project_score);
+  const storedScore = num(stored.score);
+  if (storedScore != null) {
+    return { score: Math.max(0, Math.min(100, Math.round(storedScore))), reasons: reasonLabels(stored.reasons) };
+  }
   const file = obj(p.project_file);
   const raw = file.score;
   let score: number | null = null;
@@ -134,10 +151,14 @@ export type RawLeadRow = {
   attribution: Json | null;
   source_url: string | null;
   service_plan_id: string | null;
+  /** 0-100 lead score (revenue migration 20261014122000); optional so older rows and fixtures still map. */
+  score?: number | null;
+  /** When the consultation was booked (revenue migration 20261014122000). */
+  booked_at?: string | null;
 };
 
 export const LEAD_FACT_COLUMNS =
-  'id, ref, type, status, created_at, construction_stage, region_id, payload, utm, attribution, source_url, service_plan_id';
+  'id, ref, type, status, created_at, construction_stage, region_id, payload, utm, attribution, source_url, service_plan_id, score, booked_at';
 
 export type LeadFactContext = {
   regionSlugById: ReadonlyMap<string, string>;
@@ -148,7 +169,11 @@ export type LeadFactContext = {
 export function toLeadFact(row: RawLeadRow, ctx: LeadFactContext): LeadFact {
   const payload = obj(row.payload);
   const file = readProjectFile(row.payload);
-  const { score, reasons } = readLeadScore(row.payload);
+  const fromPayload = readLeadScore(row.payload);
+  // The leads.score column is authoritative (the trigger keeps it in step with payload.project_score).
+  const column = num(row.score);
+  const score = column != null ? Math.max(0, Math.min(100, Math.round(column))) : fromPayload.score;
+  const reasons = score == null ? [] : fromPayload.reasons;
   const regionSlug =
     file?.regionSlug ?? (row.region_id ? ctx.regionSlugById.get(row.region_id) ?? null : null) ?? str(payload.region, 60);
   const sizeM2 = file?.sizeM2 ?? num(payload.size_sqm) ?? num(payload.sizeM2);
@@ -168,6 +193,7 @@ export function toLeadFact(row: RawLeadRow, ctx: LeadFactContext): LeadFact {
     budgetLabel,
     score,
     scoreReasons: reasons,
+    bookedAt: str(row.booked_at, 40),
     planSlug: row.service_plan_id ? ctx.planSlugById.get(row.service_plan_id) ?? null : null,
     source: leadSource(row),
     sourcePath: pathOf(row.source_url),

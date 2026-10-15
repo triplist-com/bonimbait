@@ -8,9 +8,22 @@ import DataTable from '@/components/admin/DataTable';
 import StatusBadge from '@/components/admin/StatusBadge';
 import PageHeader, { FilterBar } from '@/components/admin/PageHeader';
 import AdminPagination, { pageParam, param } from '@/components/admin/AdminPagination';
-import { Select, TextInput } from '@/components/admin/FormField';
+import { Checkbox, Select, TextInput } from '@/components/admin/FormField';
+import ScoreBadge from '@/components/revenue/ScoreBadge';
+import { bandFor } from '@/lib/project-file/score';
+import type { LeadRow } from '@/lib/db/types';
+import { isEnabled } from '@/lib/flags';
 
 export const metadata = { title: 'לידים' };
+
+/** Revenue columns on leads (migration 20261014122000), outside the shared row type. */
+type InboxLead = LeadRow & { score?: number | null; booked_at?: string | null };
+
+function hasProjectFile(lead: LeadRow): boolean {
+  const p = lead.payload && typeof lead.payload === 'object' && !Array.isArray(lead.payload) ? lead.payload : null;
+  const file = p?.project_file && typeof p.project_file === 'object' && !Array.isArray(p.project_file) ? p.project_file : null;
+  return Boolean(file && Object.keys(file).some((k) => k !== 'version' && k !== 'source'));
+}
 
 export default async function LeadsPage({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
   const db = createClient();
@@ -21,7 +34,11 @@ export default async function LeadsPage({ searchParams }: { searchParams: Record
     to: param(searchParams.to),
     business: param(searchParams.business),
     q: param(searchParams.q),
+    min_score: param(searchParams.min_score),
+    booked: param(searchParams.booked),
+    sort: param(searchParams.sort),
   };
+  const revenue = isEnabled('revenue');
   const page = pageParam(searchParams.page);
   const pageSize = 50;
   const filter = leadFilterFromQuery(query);
@@ -39,9 +56,16 @@ export default async function LeadsPage({ searchParams }: { searchParams: Record
         title="תיבת לידים"
         description={`${result.total.toLocaleString('he-IL')} לידים תואמים`}
         actions={
-          <a href={`/admin/leads/export/${exportQs ? `?${exportQs}` : ''}`} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
-            ייצוא ל-CSV
-          </a>
+          <>
+            {revenue && (
+              <Link href="/admin/consult-queue/" className="rounded-lg bg-ink-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-ink-800">
+                תור הייעוצים
+              </Link>
+            )}
+            <a href={`/admin/leads/export/${exportQs ? `?${exportQs}` : ''}`} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+              ייצוא ל-CSV
+            </a>
+          </>
         }
       />
       <div className="mb-4 flex flex-wrap gap-2">
@@ -101,12 +125,36 @@ export default async function LeadsPage({ searchParams }: { searchParams: Record
           <span className="mb-1 block text-gray-600">שם / טלפון / מייל / מספר ליד</span>
           <TextInput name="q" defaultValue={query.q} />
         </label>
+        <label className="text-sm">
+          <span className="mb-1 block text-gray-600">ציון</span>
+          <Select name="min_score" defaultValue={query.min_score ?? ''}>
+            <option value="">הכול</option>
+            <option value="70">חמים (70+)</option>
+            <option value="45">פושרים ומעלה (45+)</option>
+          </Select>
+        </label>
+        <label className="text-sm">
+          <span className="mb-1 block text-gray-600">מיון</span>
+          <Select name="sort" defaultValue={query.sort ?? ''}>
+            <option value="">החדשים קודם</option>
+            <option value="score">הציון הגבוה קודם</option>
+          </Select>
+        </label>
+        <div className="pb-2">
+          <Checkbox name="booked" value="1" defaultChecked={query.booked === '1'} label="רק פגישות שנקבעו" />
+        </div>
       </FilterBar>
       <DataTable
-        rows={result.items}
+        rows={result.items as InboxLead[]}
         rowKey={(r) => r.id}
         empty="אין לידים תואמים."
         columns={[
+          {
+            key: 'score',
+            header: 'ציון',
+            render: (r) =>
+              r.score != null ? <ScoreBadge score={r.score} band={bandFor(r.score)} size="sm" /> : <span className="text-xs text-gray-400">—</span>,
+          },
           { key: 'ref', header: 'מספר', render: (r) => <span dir="ltr" className="whitespace-nowrap font-mono text-xs">{r.ref}</span> },
           { key: 'd', header: 'התקבל', render: (r) => <span className="whitespace-nowrap">{formatDateTime(r.created_at)}</span> },
           { key: 't', header: 'סוג', render: (r) => LEAD_TYPE_LABELS[r.type] },
@@ -114,9 +162,21 @@ export default async function LeadsPage({ searchParams }: { searchParams: Record
             key: 'n',
             header: 'פונה',
             render: (r) => (
-              <Link href={`/admin/leads/${r.id}/`} className="font-medium hover:text-primary hover:underline">
-                {r.full_name || r.email || r.phone || 'ללא שם'}
-              </Link>
+              <span className="flex flex-wrap items-center gap-1.5">
+                <Link href={`/admin/leads/${r.id}/`} className="font-medium hover:text-primary hover:underline">
+                  {r.full_name || r.email || r.phone || 'ללא שם'}
+                </Link>
+                {hasProjectFile(r) && (
+                  <span title="יש תיק פרויקט" className="rounded-full bg-sand-100 px-1.5 py-0.5 text-[0.6875rem] font-semibold text-sand-800">
+                    תיק
+                  </span>
+                )}
+                {r.booked_at && (
+                  <span title="נקבעה פגישה" className="rounded-full bg-info-50 px-1.5 py-0.5 text-[0.6875rem] font-semibold text-info-700">
+                    פגישה
+                  </span>
+                )}
+              </span>
             ),
           },
           { key: 'p', header: 'טלפון', render: (r) => <span dir="ltr">{r.phone ?? ''}</span> },

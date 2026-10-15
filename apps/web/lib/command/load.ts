@@ -3,6 +3,7 @@ import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import { isEnabled } from '@/lib/flags';
 import { dailyBudgetUsd } from '@/lib/guard/aiBudget';
+import { commandTierId, loadPartnerTiers, type PartnerTierRecord } from '@/lib/revenue/partner-tiers';
 import { commandUserDb, selectAll } from './db';
 import type { QuestionStatRow } from './db-types';
 import { loadInsights } from './insights/store';
@@ -19,6 +20,7 @@ import type {
   OrderFact,
   PartnerFact,
   PartnerTierId,
+  PartnerTierInfo,
   PendingCounts,
   PeriodDays,
   PlanFact,
@@ -54,27 +56,38 @@ function unwrap<T>(res: { data: T | null; error: { message: string } | null }): 
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-type PartnerDirectoryEntry = { name: string; tier: PartnerTierId | null };
+type PartnerDirectoryEntry = { name: string; tier: PartnerTierId | null; tierInfo: PartnerTierInfo | null };
 
 /**
- * Partner names and tiers. Today: a partner id that is a business id takes the
- * business name; the tier is unknown.
- * TODO(revenue): join partner_subscriptions (active) -> partner_tiers here and
- * map the tier to 'members' | 'partners' | 'ambassadors' (חברים / שותפים /
- * שגרירים), so health is measured against each partner's own tier.
+ * Partner names and tiers. The partner key is the partner's businesses.id
+ * (what <PartnerOfferSlot> sends as partner_id and attribution stores as the
+ * source), so the name comes from businesses and the tier from its live
+ * subscription (partner_subscriptions -> partner_tiers, lib/revenue/partner-tiers.ts),
+ * mapped to 'members' | 'partners' | 'ambassadors' (חברים / שותפים / שגרירים)
+ * with its own price and impression target.
  */
-async function partnerDirectory(ids: readonly string[]): Promise<Map<string, PartnerDirectoryEntry>> {
+async function partnerDirectory(
+  ids: readonly string[],
+  tiers: ReadonlyMap<string, PartnerTierRecord>,
+): Promise<Map<string, PartnerDirectoryEntry>> {
   const out = new Map<string, PartnerDirectoryEntry>();
-  const businessIds = ids.filter((id) => UUID_RE.test(id));
+  const businessIds = ids.filter((id) => UUID_RE.test(id)).slice(0, 200);
   if (businessIds.length > 0) {
     const rows = await safe(
       'partner names',
-      async () => unwrap(await createClient().from('businesses').select('id, name').in('id', businessIds.slice(0, 200))),
+      async () => unwrap(await createClient().from('businesses').select('id, name').in('id', businessIds)),
       [] as { id: string; name: string }[],
     );
-    for (const b of rows) out.set(b.id, { name: b.name, tier: null });
+    for (const b of rows) {
+      const t = tiers.get(b.id);
+      out.set(b.id, {
+        name: b.name,
+        tier: t ? commandTierId(t) : null,
+        tierInfo: t ? { label: t.tierName, monthlyPriceNis: Math.round(t.priceAgorot / 100), monthlyImpressionTarget: t.monthlyImpressionTarget } : null,
+      });
+    }
   }
-  for (const id of ids) if (!out.has(id)) out.set(id, { name: id, tier: isPartnerTier(id) ? id : null });
+  for (const id of ids) if (!out.has(id)) out.set(id, { name: id, tier: isPartnerTier(id) ? id : null, tierInfo: null });
   return out;
 }
 
@@ -233,9 +246,11 @@ async function loadPartners(
   leads: readonly LeadFact[],
 ): Promise<PartnerFact[]> {
   type Stat = { partner_id: string; impressions: number; clicks: number };
-  const [cur, prev] = await Promise.all([
+  const [cur, prev, tiers] = await Promise.all([
     safe('partner stats', async () => unwrap(await cdb.rpc('command_partner_stats', { p_from: window.from, p_to: nowIso })) as Stat[], [] as Stat[]),
     safe('partner stats (previous)', async () => unwrap(await cdb.rpc('command_partner_stats', { p_from: window.prevFrom, p_to: window.prevTo })) as Stat[], [] as Stat[]),
+    // Every live subscription, so a partner that got nothing this period still shows (at risk).
+    safe('partner tiers', () => loadPartnerTiers(createClient()), new Map<string, PartnerTierRecord>()),
   ]);
   const leadsBy = (from: string, to: string) => {
     const m = new Map<string, number>();
@@ -247,15 +262,24 @@ async function loadPartners(
   };
   const curLeads = leadsBy(window.from, nowIso);
   const prevLeads = leadsBy(window.prevFrom, window.prevTo);
-  const ids = Array.from(new Set([...cur.map((s) => s.partner_id), ...prev.map((s) => s.partner_id), ...Array.from(curLeads.keys()), ...Array.from(prevLeads.keys())]));
+  const ids = Array.from(
+    new Set([
+      ...cur.map((s) => s.partner_id),
+      ...prev.map((s) => s.partner_id),
+      ...Array.from(curLeads.keys()),
+      ...Array.from(prevLeads.keys()),
+      ...Array.from(tiers.keys()),
+    ]),
+  );
   if (ids.length === 0) return [];
-  const directory = await partnerDirectory(ids);
+  const directory = await partnerDirectory(ids, tiers);
   const curBy = new Map(cur.map((s) => [s.partner_id, s]));
   const prevBy = new Map(prev.map((s) => [s.partner_id, s]));
   return ids.map((id) => ({
     id,
     name: directory.get(id)?.name ?? id,
     tier: directory.get(id)?.tier ?? null,
+    tierInfo: directory.get(id)?.tierInfo ?? null,
     impressions: Number(curBy.get(id)?.impressions ?? 0),
     clicks: Number(curBy.get(id)?.clicks ?? 0),
     leads: curLeads.get(id) ?? 0,

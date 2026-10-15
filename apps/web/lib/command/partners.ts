@@ -4,10 +4,12 @@
  * deliver. Pure and client-safe.
  *
  * Tier names and prices are the owner's public ones (חברים / שותפים /
- * שגרירים). The monthly delivery targets are placeholders until the revenue
- * squad's tier subscriptions define them.
- * TODO(revenue): read tier per partner and its targets from the partner
- * subscriptions (lib/command/load.ts partnerDirectory()) instead of these.
+ * שגרירים). Live data wins: lib/command/load.ts partnerDirectory() reads each
+ * partner's subscription and tier (lib/revenue/partner-tiers.ts), so a fact
+ * carries its own price (locked at purchase) and impression target
+ * (partner_tiers.monthly_impression_target, admin-editable). PARTNER_TIERS
+ * below are the seeded defaults, used by the demo and when a fact has no
+ * live terms.
  */
 import { periodDelta } from './period';
 import type { CommandCenterData, PartnerFact, PartnerHealth, PartnerHealthStatus, PartnerTierId } from './types';
@@ -42,8 +44,15 @@ export function isPartnerTier(value: unknown): value is PartnerTierId {
 }
 
 export function partnerHealth(fact: PartnerFact, periodDays: number): PartnerHealth {
-  const tier = fact.tier ? PARTNER_TIERS[fact.tier] : null;
-  const target = tier ? Math.round((tier.monthlyImpressionTarget * periodDays) / 30) : null;
+  const defaults = fact.tier ? PARTNER_TIERS[fact.tier] : null;
+  const tier = fact.tierInfo
+    ? {
+        label: fact.tierInfo.label,
+        monthlyPriceNis: fact.tierInfo.monthlyPriceNis,
+        monthlyImpressionTarget: fact.tierInfo.monthlyImpressionTarget ?? defaults?.monthlyImpressionTarget ?? null,
+      }
+    : defaults;
+  const target = tier?.monthlyImpressionTarget != null ? Math.round((tier.monthlyImpressionTarget * periodDays) / 30) : null;
   const pace = target && target > 0 ? fact.impressions / target : null;
   const status: PartnerHealthStatus =
     pace == null ? 'no_tier' : pace >= PACE_ON_TRACK ? 'on_track' : pace >= PACE_BEHIND ? 'behind' : 'at_risk';

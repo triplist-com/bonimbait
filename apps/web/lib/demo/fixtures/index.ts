@@ -7,6 +7,7 @@ import { commandDemo } from './command';
 import { foundationDemo } from './foundation';
 import { growthDemo } from './growth';
 import { hubDemo } from './hub';
+import { revenueDemo } from './revenue';
 
 export const DEMO_FIXTURES = {
   foundation: foundationDemo,
@@ -14,6 +15,7 @@ export const DEMO_FIXTURES = {
   command: commandDemo,
   growth: growthDemo,
   hub: hubDemo,
+  revenue: revenueDemo,
 } as const;
 
 export type DemoFixtureName = keyof typeof DEMO_FIXTURES;

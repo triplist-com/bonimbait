@@ -6,6 +6,7 @@
  * hubDb() in lib/hub/db.ts for a client typed with these tables. Client-safe.
  */
 import type { BuildStage } from '@/lib/stages';
+import type { CoreField, PlannerEstimate, ProjectFile } from '@/lib/project-file/types';
 
 export type StageId = BuildStage['id'];
 
@@ -24,44 +25,27 @@ export function isStageId(value: unknown): value is StageId {
   return typeof value === 'string' && (STAGE_IDS as readonly string[]).includes(value);
 }
 
-/**
- * The onboarding answers. Stored for anonymous visitors in localStorage under
- * `bb.hub.draft` with EXACTLY these fields (PROGRAM.md §6, ProjectFile names).
+/*
+ * The project-file shapes come from the single source of truth, the PROGRAM.md
+ * §6 `ProjectFile` in lib/project-file/types.ts (owned by `revenue`).
  */
-export interface HubDraft {
-  stage?: StageId;
-  regionSlug?: string;
-  sizeM2?: number;
-  /** Whole shekels, [min, max]. */
-  budgetRangeNis?: [number, number];
-  /** ISO month, e.g. '2027-09'. */
-  targetMoveIn?: string;
-}
+
+/**
+ * The onboarding answers: the file's five core facts (stage, regionSlug,
+ * sizeM2, budgetRangeNis in whole shekels, targetMoveIn as an ISO month).
+ * Stored for anonymous visitors in localStorage under `bb.hub.draft` with
+ * EXACTLY these fields.
+ */
+export type HubDraft = Pick<ProjectFile, CoreField>;
 
 /** growth's `bb.planner.last` (PROGRAM.md §6 `plannerEstimate`). */
-export interface PlannerEstimate {
-  totalMin: number;
-  totalMax: number;
-  at: string;
-  inputs: Record<string, unknown>;
-}
+export type { PlannerEstimate };
 
 /**
- * The hub's part of the project file: structurally the PROGRAM.md §6
- * `ProjectFile` (owned by `revenue` in lib/project-file/types.ts) minus the
- * fields other squads produce (`questions`, `source`). Assignable to it.
+ * The hub's part of the project file: the §6 `ProjectFile` minus the fields
+ * other squads produce (`questions`, `source`).
  */
-export interface ProjectFileSnapshot {
-  version: 1;
-  stage?: StageId;
-  regionSlug?: string;
-  sizeM2?: number;
-  budgetRangeNis?: [number, number];
-  targetMoveIn?: string;
-  plannerEstimate?: PlannerEstimate;
-  savedCount?: number;
-  shortlistBusinessIds?: string[];
-}
+export type ProjectFileSnapshot = Omit<ProjectFile, 'questions' | 'source'>;
 
 export type HubMode = 'member' | 'local' | 'demo';
 

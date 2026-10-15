@@ -15,6 +15,9 @@ import Gallery from '@/components/directory/Gallery';
 import { ContactBusinessForm, ShowPhoneButton } from '@/components/directory/ContactLead';
 import { ReviewList, ScoreSummary } from '@/components/directory/Reviews';
 import TrackEvent from '@/components/analytics/TrackEvent';
+import PartnerTierBadge from '@/components/revenue/PartnerTierBadge';
+import QuoteRequestButton from '@/components/revenue/QuoteRequestButton';
+import { loadPartnerBadges } from '@/lib/revenue/badges';
 import ShortlistButton from '@/components/hub/ShortlistButton';
 import { isEnabled } from '@/lib/flags';
 
@@ -28,11 +31,12 @@ const load = cache(async (rawSlug: string) => {
   const db = createPublicClient();
   const business = await getPublishedBusinessBySlug(db, slug);
   if (!business) return null;
-  const [reviews, statsMap] = await Promise.all([
+  const [reviews, statsMap, badges] = await Promise.all([
     listApprovedReviews(db, business.id),
     getReviewStats(db, [business.id]),
+    loadPartnerBadges(db),
   ]);
-  return { business, reviews, stats: statsMap.get(business.id) ?? null };
+  return { business, reviews, stats: statsMap.get(business.id) ?? null, badge: badges.get(business.id) ?? null };
 });
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -76,7 +80,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
 export default async function BusinessPage({ params }: Props) {
   const data = await load(params.slug);
   if (!data) notFound();
-  const { business, reviews, stats } = data;
+  const { business, reviews, stats, badge } = data;
 
   const gallery = parseGallery(business.gallery);
   const specialties = [...business.specialties].sort(
@@ -166,6 +170,7 @@ export default async function BusinessPage({ params }: Props) {
               )}
               <div className="mt-3 flex flex-wrap items-center gap-4">
                 <RatingBadge percent={stats?.rating_percent} count={reviewCount} size="lg" />
+                <PartnerTierBadge badge={badge} size="md" />
                 <Link href={reviewHref} rel="nofollow" className="text-sm font-semibold text-primary hover:underline">
                   השאר/י חוות דעת
                 </Link>
@@ -173,6 +178,8 @@ export default async function BusinessPage({ params }: Props) {
             </div>
             <div className="flex flex-col gap-2 sm:flex-row md:flex-col">
               <ShowPhoneButton businessId={business.id} businessName={business.name} />
+              {/* Quote request with the visitor's project file (revenue; FLAG_REVENUE). */}
+              {isEnabled('revenue') && <QuoteRequestButton businessId={business.id} businessName={business.name} />}
               {isEnabled('hub') && (
                 <ShortlistButton
                   businessId={business.id}

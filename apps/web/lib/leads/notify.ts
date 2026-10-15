@@ -10,8 +10,9 @@
  *
  * Routing: a `business_contact` lead whose business has lead_routing='direct'
  * and a lead_email goes to that email; everything else goes to the site inbox
- * (LEAD_NOTIFY_EMAIL, comma-separated allowed). The webhook always receives
- * every lead, with the routing decision in the body.
+ * (LEAD_NOTIFY_EMAIL, comma-separated allowed). An admin routing rule
+ * (lib/revenue/routing.ts) can override that through `route`. The webhook
+ * always receives every lead, with the routing decision in the body.
  *
  * notifyLead() NEVER throws: failures are recorded on the lead
  * (notify_status / notify_channels / notify_error / notified_at / forwarded_to).
@@ -23,6 +24,8 @@ import { getLeadRoutingTarget, recordLeadNotification, type LeadRoutingTarget } 
 import { SITE_HOST, SITE_NAME, SITE_URL } from '@/lib/site';
 import { LEAD_TYPE_LABELS } from './constants';
 import { ink } from '@/lib/design/tokens';
+import { projectHeadline } from '@/lib/project-file/format';
+import { sanitizeProjectFile } from '@/lib/project-file/sanitize';
 
 export type NotifyEnv = {
   RESEND_API_KEY?: string;
@@ -33,6 +36,13 @@ export type NotifyEnv = {
 };
 
 export type Recipient = { to: string[]; routedTo: 'business' | 'site' };
+
+/**
+ * A routing rule's decision (lib/revenue/routing-server.ts): send to the site
+ * inbox, or forward to a business (its lead_email; the inbox if it has none).
+ * Omitted = the default below.
+ */
+export type RouteOverride = { kind: 'site' } | { kind: 'business'; business: Pick<LeadRoutingTarget, 'leadEmail'> | null };
 
 export type ChannelResult = { ok: boolean; skipped?: boolean; error?: string; status?: number; to?: string[] };
 
@@ -71,7 +81,13 @@ export function resolveRecipient(
   lead: Pick<LeadRow, 'type' | 'business_id'>,
   business: Pick<LeadRoutingTarget, 'leadRouting' | 'leadEmail'> | null,
   siteInbox: string | undefined,
+  route?: RouteOverride | null,
 ): Recipient {
+  if (route?.kind === 'site') return { to: splitEmails(siteInbox), routedTo: 'site' };
+  if (route?.kind === 'business') {
+    const email = route.business?.leadEmail?.trim();
+    return email && email.includes('@') ? { to: [email], routedTo: 'business' } : { to: splitEmails(siteInbox), routedTo: 'site' };
+  }
   if (
     lead.type === 'business_contact' &&
     lead.business_id &&
@@ -95,10 +111,14 @@ export function planNotification(
   lead: LeadRow,
   business: LeadRoutingTarget | null,
   env: NotifyEnv,
+  route?: RouteOverride | null,
 ): NotificationPlan {
-  const recipient = resolveRecipient(lead, business, env.LEAD_NOTIFY_EMAIL);
+  const recipient = resolveRecipient(lead, business, env.LEAD_NOTIFY_EMAIL, route);
   const emailEnabled = Boolean(env.RESEND_API_KEY) && recipient.to.length > 0;
   const rows = describeLead(lead, business);
+  // The lead score is for the owner's team, not for the business receiving the lead.
+  const score = recipient.routedTo === 'site' ? leadScoreLabel(lead) : null;
+  if (score) rows.splice(Math.min(2, rows.length), 0, ['ציון ליד', score]);
   const typeLabel = LEAD_TYPE_LABELS[lead.type] ?? lead.type;
   const subject = `ליד חדש${lead.ref ? ` ${lead.ref}` : ''}: ${typeLabel}${lead.full_name ? ` – ${lead.full_name}` : ''}`;
   return {
@@ -141,8 +161,17 @@ export function describeLead(lead: LeadRow, business: LeadRoutingTarget | null):
     : {}) as Record<string, Json>;
   for (const [key, value] of Object.entries(payload)) {
     if (value === null || value === undefined || key === 'group' || key === 'region') continue;
+    // Nested values (the project file, routing) are summarized below, not dumped.
+    if (typeof value === 'object') continue;
     const label = PAYLOAD_LABELS[key] ?? key;
     rows.push([label, typeof value === 'boolean' ? (value ? 'כן' : 'לא') : String(value)]);
+  }
+  if (payload.project_file && typeof payload.project_file === 'object') {
+    const file = sanitizeProjectFile(payload.project_file);
+    const headline = projectHeadline(file);
+    if (headline) rows.push(['תיק פרויקט', headline]);
+    const recent = (file.questions ?? []).slice(-3).map((q) => q.q);
+    if (recent.length) rows.push(['שאלות אחרונות', recent.join('\n')]);
   }
   if (lead.construction_stage) rows.push(['שלב בנייה', lead.construction_stage]);
   if (business) rows.push(['בעל מקצוע', `${business.businessName} (${SITE_URL}/business/${business.businessSlug}/)`]);
@@ -151,6 +180,15 @@ export function describeLead(lead: LeadRow, business: LeadRoutingTarget | null):
   rows.push(['מזהה ליד', lead.id]);
   rows.push(['התקבל', lead.created_at]);
   return rows;
+}
+
+/** "82 (חם)" from payload.project_score, or null. */
+function leadScoreLabel(lead: Pick<LeadRow, 'payload'>): string | null {
+  const p = lead.payload && typeof lead.payload === 'object' && !Array.isArray(lead.payload) ? lead.payload : null;
+  const s = p?.project_score && typeof p.project_score === 'object' && !Array.isArray(p.project_score) ? p.project_score : null;
+  if (!s || typeof s.score !== 'number') return null;
+  const band = s.band === 'hot' ? 'חם' : s.band === 'warm' ? 'פושר' : s.band === 'cool' ? 'ראשוני' : null;
+  return band ? `${s.score} (${band})` : String(s.score);
 }
 
 function escapeHtml(s: string): string {
@@ -252,6 +290,8 @@ export type NotifyOptions = {
   fetchImpl?: FetchLike;
   /** Pre-loaded routing target (skips the DB lookup). */
   business?: LeadRoutingTarget | null;
+  /** A routing rule's decision (lib/revenue/routing-server.ts); omitted = default routing. */
+  route?: RouteOverride | null;
   logger?: Pick<Console, 'info' | 'error'>;
 };
 
@@ -267,7 +307,7 @@ export async function notifyLead(lead: LeadRow, opts: NotifyOptions = {}): Promi
     if (business === null && opts.business === undefined && lead.business_id && opts.db) {
       business = await getLeadRoutingTarget(opts.db, lead.business_id).catch(() => null);
     }
-    const plan = planNotification(lead, business, env);
+    const plan = planNotification(lead, business, env, opts.route);
     const [email, webhook] = await Promise.allSettled([
       plan.email ? sendEmail(plan.email, env.RESEND_API_KEY!, fetchImpl) : Promise.resolve(null),
       plan.webhook ? sendWebhook(plan.webhook, webhookBody(lead, business, plan.recipient), fetchImpl) : Promise.resolve(null),

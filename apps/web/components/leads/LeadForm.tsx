@@ -30,6 +30,7 @@ import type { LeadType } from '@/lib/db/types';
 import { submitLeadAction } from '@/lib/leads/actions';
 import { HONEYPOT_FIELD } from '@/lib/leads/constants';
 import { INITIAL_LEAD_FORM_STATE, type LeadField, type LeadFormState } from '@/lib/leads/types';
+import ProjectFileField from '@/components/revenue/ProjectFileField';
 
 export type LeadFormProps = {
   type: LeadType;
@@ -179,6 +180,8 @@ export default function LeadForm({
       <input type="hidden" name="_type" value={type} />
       <input type="hidden" name="_source" value={source} />
       {utm && <input type="hidden" name="_utm" value={utm} />}
+      {/* The visitor's project file travels with every lead (the money link). */}
+      <ProjectFileField />
       {successRedirect && <input type="hidden" name="_success" value={successRedirect} />}
       {businessId && <input type="hidden" name="_business_id" value={businessId} />}
       {productId && <input type="hidden" name="_product_id" value={productId} />}
