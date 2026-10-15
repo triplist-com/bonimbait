@@ -194,6 +194,33 @@ export function pipelineSummary(
   };
 }
 
+/** Upper bound for a deal value typed in the editor (₪). */
+export const MAX_DEAL_NIS = 10_000_000;
+
+/**
+ * The editor's two fields for one row: deal value in shekels ("6,900",
+ * "₪29000") and close rate in percent ("35", "35%"). Returns agorot and a
+ * 0..1 rate, or a Hebrew error.
+ */
+export function parseExpectedValueInput(raw: { deal: string; rate: string }):
+  | { ok: true; dealValueAgorot: number; closeRate: number }
+  | { ok: false; error: string } {
+  const deal = Number(raw.deal.replace(/[₪,\s]/g, ''));
+  const rate = Number(raw.rate.replace(/[%\s]/g, ''));
+  if (!raw.deal.trim() || !Number.isFinite(deal) || deal < 0 || deal > MAX_DEAL_NIS) {
+    return { ok: false, error: `שווי עסקה צריך להיות מספר בין 0 ל-${MAX_DEAL_NIS.toLocaleString('en-US')} ₪` };
+  }
+  if (!raw.rate.trim() || !Number.isFinite(rate) || rate < 0 || rate > 100) {
+    return { ok: false, error: 'סיכוי סגירה צריך להיות אחוז בין 0 ל-100' };
+  }
+  return { ok: true, dealValueAgorot: Math.round(deal * 100), closeRate: Math.round(rate * 100) / 10_000 };
+}
+
+/** Same value as the default (so the override can be dropped)? */
+export function sameAsDefault(def: Pick<ExpectedValue, 'dealValueAgorot' | 'closeRate'>, v: { dealValueAgorot: number; closeRate: number }): boolean {
+  return def.dealValueAgorot === v.dealValueAgorot && Math.abs(def.closeRate - v.closeRate) < 1e-6;
+}
+
 /**
  * A plan's typical price ex-VAT from its price tiers: the middle of the tiers
  * (turnkey ₪133K-149K -> ₪141K). Prices marked VAT-included are divided by

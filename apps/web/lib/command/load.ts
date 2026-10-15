@@ -206,6 +206,26 @@ export async function loadCommandInputs(opts: { periodDays: PeriodDays; now?: nu
   };
 }
 
+/** Just the expected-value table (defaults from live plan prices, plus admin overrides). */
+export async function loadExpectedValueTable(): Promise<ExpectedValue[]> {
+  const db = createClient();
+  const [plansRaw, overrides] = await Promise.all([
+    safe(
+      'plans',
+      async () =>
+        unwrap(await db.from('service_plans').select('slug, name, sort_order, service_plan_prices(price_agorot, vat_included)').eq('is_active', true)),
+      [] as Array<{ slug: string; name: string; sort_order: number; service_plan_prices: { price_agorot: number; vat_included: boolean }[] }>,
+    ),
+    safe(
+      'expected values',
+      async () => unwrap(await commandUserDb().from('pipeline_expected_values').select('key, deal_value_agorot, close_rate, note')),
+      [] as ExpectedValueOverride[],
+    ),
+  ]);
+  const plans: PlanFact[] = plansRaw.map((p) => ({ slug: p.slug, name: p.name, sortOrder: p.sort_order, priceAgorot: typicalPlanPrice(p.service_plan_prices ?? []) }));
+  return mergeExpectedValues(defaultExpectedValues(plans), overrides);
+}
+
 async function loadPartners(
   cdb: ReturnType<typeof commandUserDb>,
   window: ReturnType<typeof periodWindow>,
