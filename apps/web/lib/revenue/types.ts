@@ -125,6 +125,9 @@ export type BusinessMetrics = {
   clicks: number;
   category_questions: number;
   category_askers: number;
+  /** Of those, asked from a region the business serves (answer_completed.props.region; migration 20261014130500). */
+  regional_questions: number;
+  regional_askers: number;
   leads: number;
   leads_new: number;
   leads_contacted: number;

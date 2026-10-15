@@ -229,6 +229,7 @@ export default function PortalDashboard({
             <dl className="space-y-3 text-sm">
               {[
                 ['בונים ששאלו על התחום באתר', metrics.category_askers],
+                ['מהם, באזורים שלכם', metrics.regional_askers],
                 ['תיקי פרויקט באזורים שלכם ששאלו על התחום', metrics.regional_builders],
                 ['הוסיפו אתכם לרשימה הקצרה', metrics.shortlist_adds],
                 ['בקשות הצעת מחיר', metrics.quote_requests],

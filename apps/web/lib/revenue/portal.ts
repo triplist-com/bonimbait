@@ -117,6 +117,8 @@ export const EMPTY_METRICS: BusinessMetrics = {
   clicks: 0,
   category_questions: 0,
   category_askers: 0,
+  regional_questions: 0,
+  regional_askers: 0,
   leads: 0,
   leads_new: 0,
   leads_contacted: 0,
