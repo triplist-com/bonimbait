@@ -63,6 +63,15 @@ export const ADMIN_NAV: readonly AdminNavGroup[] = [
     ],
   },
   { id: 'leads', title: 'לידים', items: [{ href: '/admin/leads/', label: 'תיבת לידים' }] },
+  {
+    // P7 Bonim.Os (bonimos squad): managed clients and their project managers.
+    id: 'bonimos',
+    title: 'Bonim.Os',
+    items: [
+      { href: '/admin/bonimos/', label: 'לקוחות ליווי ומנהלים', minRole: 'admin', flag: 'bonimos' },
+      { href: '/manage/', label: 'הפרויקטים שלי', flag: 'bonimos' },
+    ],
+  },
   { id: 'growth', title: 'צמיחה', items: [{ href: '/admin/planner/', label: 'מחירון מתכנן התקציב' }] },
   {
     id: 'commerce',
