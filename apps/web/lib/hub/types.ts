@@ -229,6 +229,8 @@ export interface HubViewData {
   tasks: HubTaskView[];
   picks: StagePicksMap;
   file: ProjectFileSnapshot;
+  /** Advisor questions asked (demo fixture); otherwise read from bb.advisor.recent in the browser. */
+  advisorQuestions?: number;
 }
 
 // ---------------------------------------------------------------------------

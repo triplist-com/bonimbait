@@ -10,6 +10,7 @@ import { readAdvisorQuestionCount } from '@/lib/hub/local';
 import { projectFileCompleteness, type CompletenessKey } from '@/lib/hub/snapshot';
 import type { HubViewData } from '@/lib/hub/types';
 import { cn } from '@/lib/cn';
+import { DemoConsultButton } from './DemoConsultButton';
 import { MoneyRange } from './Money';
 import { HubSection } from './parts';
 
@@ -22,8 +23,9 @@ export const FILE_CTA_LABEL = 'קבעו פגישת ייעוץ — התיק יג�
  * advisor's recent questions live in the browser (bb.advisor.recent).
  */
 export function ProjectFilePanel({ data }: { data: HubViewData }) {
-  const [questions, setQuestions] = useState(0);
+  const [localQuestions, setQuestions] = useState(0);
   useEffect(() => setQuestions(readAdvisorQuestionCount()), []);
+  const questions = data.advisorQuestions ?? localQuestions;
 
   const { file, project, estimate } = data;
   const completeness = projectFileCompleteness(file, { hasEstimate: Boolean(estimate), questions });
@@ -83,14 +85,18 @@ export function ProjectFilePanel({ data }: { data: HubViewData }) {
           );
         })}
       </dl>
-      <ConsultationCTA
-        source="hub-file"
-        label={FILE_CTA_LABEL}
-        fullWidth
-        size="lg"
-        showWhatsApp={false}
-        className="mt-5 !h-auto min-h-12 !whitespace-normal py-3 text-center leading-snug"
-      />
+      {data.mode === 'demo' ? (
+        <DemoConsultButton label={FILE_CTA_LABEL} fullWidth className="mt-5 !h-auto min-h-12 !whitespace-normal py-3 text-center leading-snug" />
+      ) : (
+        <ConsultationCTA
+          source="hub-file"
+          label={FILE_CTA_LABEL}
+          fullWidth
+          size="lg"
+          showWhatsApp={false}
+          className="mt-5 !h-auto min-h-12 !whitespace-normal py-3 text-center leading-snug"
+        />
+      )}
       <p className="mt-2 text-center text-caption text-ink-600">פגישת ייעוץ תקציב ללא עלות וללא התחייבות.</p>
     </HubSection>
   );

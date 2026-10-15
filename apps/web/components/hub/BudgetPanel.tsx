@@ -7,6 +7,7 @@ import { formatMoney } from '@/lib/hub/format';
 import type { HubViewData } from '@/lib/hub/types';
 import { cn } from '@/lib/cn';
 import { BudgetAddButton, BudgetItemList, PlannerRebasePrompt } from './BudgetControls';
+import { DemoConsultButton } from './DemoConsultButton';
 import { Money, MoneyRange, Variance } from './Money';
 import { HubSection, SignupPrompt } from './parts';
 
@@ -114,9 +115,12 @@ export function BudgetPanel({ data }: { data: HubViewData }) {
               )}
             </span>
           </p>
-          {gap.kind === 'below' && (
-            <ConsultationCTA source="hub-budget-gap" label="לפגישת ייעוץ תקציב" size="md" buttonVariant="secondary" showWhatsApp={false} />
-          )}
+          {gap.kind === 'below' &&
+            (data.mode === 'demo' ? (
+              <DemoConsultButton label="לפגישת ייעוץ תקציב" size="md" variant="secondary" />
+            ) : (
+              <ConsultationCTA source="hub-budget-gap" label="לפגישת ייעוץ תקציב" size="md" buttonVariant="secondary" showWhatsApp={false} />
+            ))}
         </div>
       )}
       {gap?.kind === 'within' && (
@@ -139,7 +143,9 @@ export function BudgetPanel({ data }: { data: HubViewData }) {
           {rows.some((c) => c.forecastBasis === 'plan') && (
             <details className="group/rest mt-2 rounded-2xl border border-ink-100">
               <summary className="flex cursor-pointer list-none items-center justify-between p-3 text-body-sm font-semibold text-ink-800 [&::-webkit-details-marker]:hidden">
-                קטגוריות בלי הצעות עדיין (<span className="num">{rows.filter((c) => c.forecastBasis === 'plan').length}</span>)
+                <span>
+                  קטגוריות בלי הצעות עדיין (<span className="num">{rows.filter((c) => c.forecastBasis === 'plan').length}</span>)
+                </span>
                 <ChevronDown aria-hidden="true" className="size-4 text-ink-500 transition-transform group-open/rest:rotate-180" />
               </summary>
               <ul className="divide-y divide-ink-100 border-t border-ink-100">
@@ -173,7 +179,9 @@ export function BudgetPanel({ data }: { data: HubViewData }) {
             </ul>
             <details className="group/cats mt-2 rounded-2xl border border-ink-100">
               <summary className="flex cursor-pointer list-none items-center justify-between p-3 text-body-sm font-semibold text-ink-800 [&::-webkit-details-marker]:hidden">
-                פירוט לפי <span className="num">{rows.length}</span> קטגוריות
+                <span>
+                  פירוט לפי <span className="num">{rows.length}</span> קטגוריות
+                </span>
                 <ChevronDown aria-hidden="true" className="size-4 text-ink-500 transition-transform group-open/cats:rotate-180" />
               </summary>
               <ul className="divide-y divide-ink-100 border-t border-ink-100">
@@ -230,13 +238,6 @@ function VarianceBadge({ value, status }: { value: number; status: 'under' | 'on
   );
 }
 
-const BASIS_NOTE: Record<CategorySummary['forecastBasis'], string> = {
-  actual: 'לפי תשלומים',
-  committed: 'לפי הצעה שנבחרה',
-  quote: 'לפי ההצעה הזולה',
-  plan: '',
-};
-
 function PlannedRow({ c }: { c: CategorySummary }) {
   return (
     <li className="flex items-baseline justify-between gap-3 px-3 py-2 text-body-sm">
@@ -277,13 +278,14 @@ function CategoryRow({ c }: { c: CategorySummary }) {
       </div>
       <p className="mt-1.5 text-caption text-ink-600">
         מתוכנן {formatMoney(c.planned)}
-        {hasData && (
+        {c.committed > 0 && <> · הצעה שנבחרה {formatMoney(c.committed)}</>}
+        {c.forecastBasis === 'quote' && c.lowestOpenQuote != null && (
           <>
             {' '}
-            · צפי {formatMoney(c.forecast)} ({BASIS_NOTE[c.forecastBasis]}
-            {c.openQuotes > 1 && c.forecastBasis === 'quote' ? ` מתוך ${c.openQuotes}` : ''})
+            · {c.openQuotes > 1 ? `הזולה מבין ${c.openQuotes} הצעות:` : 'הצעה:'} {formatMoney(c.lowestOpenQuote)}
           </>
         )}
+        {c.actual > 0 && <> · שולם {formatMoney(c.actual)}</>}
       </p>
     </li>
   );

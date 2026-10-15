@@ -100,7 +100,11 @@ export interface CategorySummary {
   committed: number;
   openQuotes: number;
   lowestOpenQuote: number | null;
-  /** Best guess of the final cost: committed/paid, else the lowest open quote, else the plan. */
+  /**
+   * Best guess of the final cost: the chosen quote (or the payments beyond
+   * it); with payments but no chosen quote, the plan until payments pass it;
+   * else the lowest open quote; else the plan.
+   */
   forecast: number;
   /** What the forecast is based on. */
   forecastBasis: 'actual' | 'committed' | 'quote' | 'plan';
@@ -159,9 +163,14 @@ export function summarizeBudget(
 
     let forecast = plan;
     let forecastBasis: CategorySummary['forecastBasis'] = 'plan';
-    if (actual > 0 || committed > 0) {
+    if (committed > 0) {
+      // A chosen quote is the commitment; payments beyond it are extras.
       forecast = Math.max(actual, committed);
-      forecastBasis = actual >= committed ? 'actual' : 'committed';
+      forecastBasis = actual > committed ? 'actual' : 'committed';
+    } else if (actual > 0) {
+      // Payments in progress: the plan holds until they pass it.
+      forecast = Math.max(actual, plan);
+      forecastBasis = 'actual';
     } else if (lowestOpenQuote != null) {
       forecast = lowestOpenQuote;
       forecastBasis = 'quote';

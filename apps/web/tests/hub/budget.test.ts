@@ -85,13 +85,26 @@ describe('summarizeBudget', () => {
     expect(e.variance).toBe(94_000);
   });
 
+  it('keeps the plan while payments are in progress, and flags them once they pass it', () => {
+    const inProgress = summarizeBudget(planned, [paid('design', 95_000)]).categories.find((c) => c.id === 'design')!;
+    expect(inProgress.forecast).toBe(planned.design);
+    expect(inProgress.forecastBasis).toBe('actual');
+    expect(inProgress.variance).toBe(0);
+    expect(inProgress.status).toBe('on');
+    const beyond = summarizeBudget(planned, [paid('fees', 151_800)]).categories.find((c) => c.id === 'fees')!;
+    expect(beyond.forecast).toBe(151_800);
+    expect(beyond.variance).toBe(151_800 - planned.fees);
+    expect(beyond.status).toBe('over');
+  });
+
   it('rolls categories up by stage and totals', () => {
-    const s = summarizeBudget(planned, [paid('design', 95_000), paid('fees', 60_000), quote('frame', 780_000)]);
-    const planning = s.byStage.find((r) => r.stage === 'planning')!;
-    expect(planning.actual).toBe(95_000);
-    expect(planning.variance).toBe(95_000 - planned.design);
-    expect(s.actual).toBe(155_000);
-    expect(s.paidShare).toBeCloseTo(155_000 / s.planned, 6);
+    const s = summarizeBudget(planned, [paid('design', 95_000), paid('fees', 160_000), quote('frame', 780_000)]);
+    const permit = s.byStage.find((r) => r.stage === 'permit')!;
+    expect(permit.actual).toBe(160_000);
+    expect(permit.variance).toBe(160_000 - planned.fees);
+    expect(s.byStage.find((r) => r.stage === 'planning')!.variance).toBe(0);
+    expect(s.actual).toBe(255_000);
+    expect(s.paidShare).toBeCloseTo(255_000 / s.planned, 6);
     expect(s.hasData).toBe(true);
     // "other" has no plan: any payment there is a real overrun.
     const other = summarizeBudget(planned, [paid('other', 12_000)]).categories.find((c) => c.id === 'other')!;

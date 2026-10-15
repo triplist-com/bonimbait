@@ -153,29 +153,36 @@ export function BudgetItemList({ items }: { items: HubBudgetItemView[] }) {
       <h3 className="mb-2 text-title-sm text-ink-900">הצעות ותשלומים</h3>
       <ul className="divide-y divide-ink-100 rounded-2xl border border-ink-100" aria-busy={pending || undefined}>
         {shown.map((item) => (
-          <li key={item.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 p-3">
-            <Badge tone={item.kind === 'actual' ? 'ink' : item.status === 'accepted' ? 'success' : item.status === 'rejected' ? 'neutral' : 'brand'} size="sm">
-              {item.kind === 'actual' ? 'שולם' : `הצעה · ${STATUS_LABEL[item.status ?? 'open']}`}
-            </Badge>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-body-sm font-semibold text-ink-900">{item.vendor || item.label || budgetCategory(item.category)?.label}</p>
-              <p className="text-caption text-ink-500">
-                {budgetCategory(item.category)?.label}
-                {item.occurredOn && <> · {dayMonthLabel(item.occurredOn)}</>}
-              </p>
+          <li key={item.id} className="p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-body-sm font-semibold text-ink-900">{item.vendor || item.label || budgetCategory(item.category)?.label}</p>
+                <p className="text-caption text-ink-500">
+                  {budgetCategory(item.category)?.label}
+                  {item.occurredOn && <> · {dayMonthLabel(item.occurredOn)}</>}
+                </p>
+              </div>
+              <Money
+                value={item.amount}
+                className={item.status === 'rejected' ? 'shrink-0 text-body-sm text-ink-500 line-through' : 'shrink-0 text-body-sm font-bold text-ink-900'}
+              />
             </div>
-            <Money value={item.amount} className={item.status === 'rejected' ? 'text-body-sm text-ink-500 line-through' : 'text-body-sm font-bold text-ink-900'} />
-            <div className="flex items-center gap-1">
-              {item.kind === 'quote' && item.status !== 'accepted' && (
-                <IconButton label="סמנו שההצעה נבחרה" icon={<Check />} size="sm" variant="ghost" onClick={() => run(() => actions.setQuoteStatus(item.id, 'accepted'), 'ההצעה סומנה כנבחרה')} />
-              )}
-              {item.kind === 'quote' && item.status === 'open' && (
-                <IconButton label="ההצעה לא רלוונטית" icon={<X />} size="sm" variant="ghost" onClick={() => run(() => actions.setQuoteStatus(item.id, 'rejected'))} />
-              )}
-              {item.kind === 'quote' && item.status !== 'open' && (
-                <IconButton label="החזרה להצעה פתוחה" icon={<RefreshCw />} size="sm" variant="ghost" onClick={() => run(() => actions.setQuoteStatus(item.id, 'open'))} />
-              )}
-              <IconButton label="מחיקה" icon={<Trash2 />} size="sm" variant="ghost" onClick={() => run(() => actions.deleteBudgetItem(item.id), 'נמחק')} />
+            <div className="mt-1.5 flex items-center justify-between gap-2">
+              <Badge tone={item.kind === 'actual' ? 'ink' : item.status === 'accepted' ? 'success' : item.status === 'rejected' ? 'neutral' : 'brand'} size="sm">
+                {item.kind === 'actual' ? 'שולם' : `הצעה · ${STATUS_LABEL[item.status ?? 'open']}`}
+              </Badge>
+              <div className="flex items-center gap-1">
+                {item.kind === 'quote' && item.status !== 'accepted' && (
+                  <IconButton label="סמנו שההצעה נבחרה" icon={<Check />} size="sm" variant="ghost" onClick={() => run(() => actions.setQuoteStatus(item.id, 'accepted'), 'ההצעה סומנה כנבחרה')} />
+                )}
+                {item.kind === 'quote' && item.status === 'open' && (
+                  <IconButton label="ההצעה לא רלוונטית" icon={<X />} size="sm" variant="ghost" onClick={() => run(() => actions.setQuoteStatus(item.id, 'rejected'))} />
+                )}
+                {item.kind === 'quote' && item.status !== 'open' && (
+                  <IconButton label="החזרה להצעה פתוחה" icon={<RefreshCw />} size="sm" variant="ghost" onClick={() => run(() => actions.setQuoteStatus(item.id, 'open'))} />
+                )}
+                <IconButton label="מחיקה" icon={<Trash2 />} size="sm" variant="ghost" onClick={() => run(() => actions.deleteBudgetItem(item.id), 'נמחק')} />
+              </div>
             </div>
           </li>
         ))}
