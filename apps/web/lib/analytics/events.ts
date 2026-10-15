@@ -147,6 +147,9 @@ export const EVENT_CATALOG = {
       touch: z.enum(['partner_click', 'source_clicked', 'page_view']).optional(),
       touch_medium: text(20).optional(),
       touch_source: text(200).optional(),
+      // Revenue engine (lib/revenue): the project-file score and the routing target.
+      score: z.number().int().min(0).max(100).optional(),
+      routing: text(30).optional(),
     }),
   ),
   quote_request: event(
@@ -168,12 +171,12 @@ export const EVENT_CATALOG = {
   consult_booking_started: event(
     'client',
     'A visitor started booking the free consultation (Calendly: picked a date and time).',
-    z.object({ source: text(60), method: z.enum(['calendly', 'callback']).optional() }),
+    z.object({ source: text(60), method: z.enum(['calendly', 'callback']).optional(), lead_ref: text(20).optional() }),
   ),
   consult_booked: event(
     'both',
-    'The free consultation was booked (Calendly event_scheduled; later also its webhook).',
-    z.object({ source: text(60).optional(), method: z.enum(['calendly', 'callback']).optional() }),
+    'The free consultation was booked (Calendly event_scheduled; later also its webhook). lead_ref = the consultation lead.',
+    z.object({ source: text(60).optional(), method: z.enum(['calendly', 'callback']).optional(), lead_ref: text(20).optional() }),
   ),
   phone_reveal: event(
     'server',

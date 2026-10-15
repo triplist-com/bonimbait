@@ -11,6 +11,7 @@ import {
 } from '@/app/business/[slug]/actions';
 import { CONSTRUCTION_STAGES, REGIONS } from '@/lib/constants/community';
 import { telHref } from '@/lib/directory/format';
+import ProjectFileField from '@/components/revenue/ProjectFileField';
 
 const input =
   'w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20';
@@ -41,6 +42,7 @@ function HiddenFields({ businessId }: { businessId: string }) {
   return (
     <>
       <input type="hidden" name="business_id" value={businessId} />
+      <ProjectFileField />
       <div aria-hidden="true" className="absolute -start-[9999px] h-px w-px overflow-hidden">
         <label>
           אתר
