@@ -35,7 +35,7 @@ interface Index {
   matrix: Float32Array; // length = N * DIM, videos first, then posts
   norms: Float32Array; // L2 norm per row
   dim: number;
-  normText: string[]; // sofit-normalized text per row, for keyword search
+  normText: string[]; // normalizeForMatch() text per row, for keyword search
 }
 
 let _index: Index | null = null;
@@ -90,7 +90,7 @@ function loadIndex(): Index {
     for (let i = r * dim, end = i + dim; i < end; i++) n += matrix[i] * matrix[i];
     norms[r] = Math.sqrt(n) || 1;
   }
-  const normText = meta.map((m) => m.text.replace(/[ךםןףץ]/g, (c) => SOFIT_MAP[c] || c));
+  const normText = meta.map((m) => normalizeForMatch(m.text));
   _index = { meta, matrix, norms, dim, normText };
   return _index;
 }
@@ -130,24 +130,46 @@ const HEBREW_STOPWORDS = new Set([
 
 const SOFIT_MAP: Record<string, string> = { 'ך': 'כ', 'ם': 'מ', 'ן': 'נ', 'ף': 'פ', 'ץ': 'צ' };
 
-function normalizeHebrewToken(tok: string): string {
-  // Only sofit normalization — prefix-stripping a single Hebrew letter
-  // is too aggressive (eats real content letters like the כ in כיריים).
-  return tok.replace(/[ךםןףץ]/g, (c) => SOFIT_MAP[c] || c);
+/**
+ * Keyword normalisation, applied the same way to query terms and to row text
+ * at match time (never by shortening a query token):
+ * - final letters to regular ones (ם -> מ);
+ * - gershayim / geresh to ASCII quotes, so תב״ע and תב"ע are one spelling;
+ * - runs of ו or י collapsed, so ktiv male and haser meet ("בנייה" ~ "בניה").
+ */
+export function normalizeForMatch(text: string): string {
+  return text
+    .replace(/[ךםןףץ]/g, (c) => SOFIT_MAP[c] || c)
+    .replace(/״/g, '"')
+    .replace(/׳/g, "'")
+    .replace(/ו{2,}/g, 'ו')
+    .replace(/י{2,}/g, 'י');
 }
 
-function extractContentTerms(query: string): string[] {
-  // Keep Hebrew (U+0590-U+05FF), Latin letters, and whitespace; drop punctuation/digits.
-  // Geresh/gershayim (׳ ״) sit inside the Hebrew block but are punctuation: treat them
-  // like ASCII quotes, so "מ״ר" behaves like "מ"ר" instead of a rare, heavy keyword.
-  const cleaned = query.replace(/[׳״]/g, ' ').replace(/[^֐-׿a-zA-Z\s]/g, ' ');
+/** Units and currency acronyms: they name no topic, and transcripts spell them out ("מטר"). */
+const UNIT_ACRONYMS = new Set(['מ"ר', 'מ"ק', 'מ"א', 'ס"מ', 'מ"מ', 'ק"ג', 'ק"מ', 'ש"ח', 'ש"ע', 'מע"מ']);
+
+/**
+ * Content terms of a query. Hebrew prefixes are never stripped from a token
+ * (the documented gotcha: it eats real letters, like the כ of כיריים); a
+ * quote between two Hebrew letters is part of the word, so acronyms such as
+ * תב"ע and תמ"א stay whole. Exported for tests.
+ */
+export function extractContentTerms(query: string): string[] {
+  const cleaned = query
+    .replace(/״/g, '"')
+    .replace(/׳/g, "'")
+    // A quote that isn't between two Hebrew letters is punctuation.
+    .replace(/(?<![֐-׿])["']|["'](?![֐-׿])/g, ' ')
+    // Keep Hebrew (U+0590-U+05FF), Latin letters, in-word quotes and whitespace; drop the rest.
+    .replace(/[^֐-׿a-zA-Z\s"']/g, ' ');
   const raw = cleaned.split(/\s+/).filter(Boolean);
   const out: string[] = [];
   for (const r of raw) {
     if (HEBREW_STOPWORDS.has(r)) continue;
-    const n = normalizeHebrewToken(r);
-    if (n.length < 2) continue;
-    if (HEBREW_STOPWORDS.has(n)) continue;
+    const n = normalizeForMatch(r);
+    if (n.replace(/["']/g, '').length < 2) continue;
+    if (HEBREW_STOPWORDS.has(n) || UNIT_ACRONYMS.has(n)) continue;
     out.push(n);
   }
   return out;
@@ -228,7 +250,7 @@ export async function semanticSearch(
   runtime.forEach((h, j) => {
     rows.push(N + j);
     cosScores.push({ i: N + j, s: h.cos });
-    kwScores.push({ i: N + j, s: weightedKeywordScore(normalizeHebrewToken(h.text), terms, idf) });
+    kwScores.push({ i: N + j, s: weightedKeywordScore(normalizeForMatch(h.text), terms, idf) });
   });
   const cosRank = cosScores.sort((a, b) => b.s - a.s);
   // Many rows tie on keyword overlap; break ties by cosine, not by row order
