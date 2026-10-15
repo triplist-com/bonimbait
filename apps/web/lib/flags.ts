@@ -86,7 +86,13 @@ export const FLAGS = {
     default: true,
     owner: 'command',
     description: 'P4 "חדר הבקרה" at /admin/ (tiles, hot leads, unanswered questions, insights, digest). Off = the previous dashboard.',
-    migrations: [...FOUNDATION, '20261014121200_hub_aggregates', '20261014122000_revenue_leads', '20261014123000_command_center'],
+    migrations: [
+      ...FOUNDATION,
+      '20261014121200_hub_aggregates',
+      '20261014122000_revenue_leads',
+      '20261014123000_command_center',
+      '20261014130600_integration_question_stats',
+    ],
   },
   budgetPlanner: {
     default: true,
