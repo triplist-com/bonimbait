@@ -24,7 +24,7 @@ New records:
   kind                             video | podcast | live (channel inventory)
 
 Run after build_search_index.py --embed-only (the centroids need the vectors):
-  scripts/.venv/bin/python -m scripts.knowledge.build_catalog --base feature/platform [--dry-run]
+  scripts/.venv/bin/python -m scripts.knowledge.build_catalog --base 095a3d5 [--dry-run]   (095a3d5: the 2026-03 catalog of 200)
 """
 
 from __future__ import annotations
@@ -175,7 +175,11 @@ def main() -> int:
     new_ids = sorted(
         vid
         for vid in segments
-        if vid not in by_id and vid in metas and (metas[vid].get("duration") or 0) >= MIN_INDEX_SECONDS
+        if vid not in by_id
+        and vid in metas
+        and (metas[vid].get("duration") or 0) >= MIN_INDEX_SECONDS
+        # Shorts, unavailable videos and unlisted copies a public video replaces stay out.
+        and inventory.get(vid, {}).get("index_scope", True)
     )
     # Videos without captions: title-level records (findable, related videos; no moments).
     title_only_ids = sorted(vid for vid in uncaptioned if vid not in by_id)
@@ -254,6 +258,10 @@ def main() -> int:
         chapters = chapters_for(m)
         if chapters and not rec.get("chapters"):
             rec["chapters"] = chapters
+            changed = True
+        kind = (inventory.get(vid) or {}).get("type")
+        if not rec.get("kind") and kind in ("video", "podcast", "live"):
+            rec["kind"] = kind  # 2026-03 records predate the field
             changed = True
         if changed:
             updated.append(vid)
