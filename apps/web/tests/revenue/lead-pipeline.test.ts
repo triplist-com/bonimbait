@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildProjectFile, lastTouchCode } from '@/lib/project-file/server';
-import { loadMemberProjectSnapshot, setMemberSnapshotLoader } from '@/lib/project-file/hub-adapter';
+import { loadMemberProjectSnapshot } from '@/lib/project-file/hub-adapter';
+import { buildProjectSnapshot } from '@/lib/hub/snapshot';
 import { isBuilderLead, prepareRevenueLead } from '@/lib/revenue/lead-pipeline';
 import { invalidateRoutingRules } from '@/lib/revenue/routing-server';
 import type { DbClient } from '@/lib/db/client';
@@ -21,33 +22,61 @@ const attribution: LeadAttribution = {
   path: '/search/',
 };
 
+// The hub's member snapshot (lib/hub/server.ts needs a database; its pure builder is used below).
+const hub = vi.hoisted(() => ({ snapshot: vi.fn() }));
+vi.mock('@/lib/hub/server', () => ({ getMemberProjectSnapshot: hub.snapshot }));
+
 afterEach(() => {
-  setMemberSnapshotLoader(undefined);
+  hub.snapshot.mockReset();
+  vi.useRealTimers();
   invalidateRoutingRules();
 });
 
-describe('the hub adapter', () => {
-  it('is empty without the hub module (no webpack here) and never throws', async () => {
-    expect(await loadMemberProjectSnapshot(MEMBER)).toBeNull();
+describe('the hub snapshot', () => {
+  it('takes the hub snapshot as is: the hub builds exactly the §6 shape', async () => {
+    const snapshot = buildProjectSnapshot({
+      project: { stage: 'frame', size_m2: 180, budget_min_agorot: 180_000_000, budget_max_agorot: 220_000_000, target_move_in: '2027-09-01' },
+      regionSlug: 'center',
+      currentVersion: {
+        basis: 'planner',
+        total_min_agorot: 190_000_000,
+        total_max_agorot: 230_000_000,
+        inputs: { planner_at: '2026-10-10T08:00:00.000Z', planner_inputs: { floors: 2 } },
+        created_at: '2026-10-10T08:00:00.000Z',
+      },
+      saved: [
+        { kind: 'video', ref: 'abc' },
+        { kind: 'business', ref: BIZ },
+      ],
+    });
+    hub.snapshot.mockResolvedValueOnce(snapshot);
+    const file = await loadMemberProjectSnapshot(MEMBER);
+    expect(hub.snapshot).toHaveBeenCalledWith(MEMBER);
+    expect(file).toEqual(snapshot);
+    expect(file).toMatchObject({ stage: 'frame', regionSlug: 'center', sizeM2: 180, budgetRangeNis: [1_800_000, 2_200_000], savedCount: 1, shortlistBusinessIds: [BIZ] });
   });
 
-  it('coerces whatever the hub returns', async () => {
-    setMemberSnapshotLoader(async (id: unknown) => ({ project: { region_slug: 'center', size_m2: 180, stage: 'frame', who: id } }));
-    expect(await loadMemberProjectSnapshot(MEMBER)).toEqual({ version: 1, regionSlug: 'center', sizeM2: 180, stage: 'frame' });
-    setMemberSnapshotLoader(() => {
-      throw new Error('hub down');
-    });
+  it('gives null for no project, an empty file, a failure or a slow hub', async () => {
+    hub.snapshot.mockResolvedValueOnce(null);
+    expect(await loadMemberProjectSnapshot(MEMBER)).toBeNull();
+    hub.snapshot.mockResolvedValueOnce({ version: 1, savedCount: 0, shortlistBusinessIds: [] });
+    expect(await loadMemberProjectSnapshot(MEMBER)).toBeNull();
     const quiet = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    hub.snapshot.mockRejectedValueOnce(new Error('hub down'));
     expect(await loadMemberProjectSnapshot(MEMBER)).toBeNull();
+    vi.useFakeTimers();
+    hub.snapshot.mockReturnValueOnce(new Promise(() => undefined));
+    const slow = loadMemberProjectSnapshot(MEMBER);
+    await vi.advanceTimersByTimeAsync(1600);
+    expect(await slow).toBeNull();
     quiet.mockRestore();
-    setMemberSnapshotLoader(async () => ({}));
-    expect(await loadMemberProjectSnapshot(MEMBER)).toBeNull();
+    expect(await loadMemberProjectSnapshot('')).toBeNull();
   });
 });
 
 describe('buildProjectFile', () => {
   it('merges browser < member < form, adds the last touch and scores it', async () => {
-    setMemberSnapshotLoader(async () => ({ stage: 'planning', sizeM2: 240, budgetRangeNis: [2_000_000, 2_400_000] }));
+    hub.snapshot.mockResolvedValueOnce({ version: 1, stage: 'planning', sizeM2: 240, budgetRangeNis: [2_000_000, 2_400_000] });
     const { file, score } = await buildProjectFile({
       clientFile: {
         stage: 'purchase',

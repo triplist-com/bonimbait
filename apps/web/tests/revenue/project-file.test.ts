@@ -12,7 +12,11 @@ import {
   toStageId,
 } from '@/lib/project-file/sanitize';
 import { formatBudgetRange, formatNisShort, projectFacts, projectHeadline } from '@/lib/project-file/format';
-import { PROJECT_FILE_STORAGE_KEYS as K } from '@/lib/project-file/types';
+import { PROJECT_FILE_STORAGE_KEYS as K, type ProjectFile } from '@/lib/project-file/types';
+import { DRAFT_KEY, PLANNER_KEY, SAVED_KEY, SHORTLIST_KEY } from '@/lib/hub/local-saved';
+import { normalizeDraft } from '@/lib/hub/onboarding';
+import { buildLocalSnapshot } from '@/lib/hub/snapshot';
+import type { ProjectFileSnapshot } from '@/lib/hub/types';
 
 const BIZ_A = '11111111-1111-4111-8111-111111111111';
 const BIZ_B = '22222222-2222-4222-8222-222222222222';
@@ -209,6 +213,32 @@ describe('readProjectSnapshots (client collection)', () => {
 
   it('returns an empty file outside the browser', () => {
     expect(collectProjectFile()).toEqual({ version: 1 });
+  });
+});
+
+describe('the hub contract (bb.hub.draft, bb.shortlist, saved items)', () => {
+  it('reads the keys the hub writes', () => {
+    expect([K.hubDraft, K.shortlist, K.plannerLast]).toEqual([DRAFT_KEY, SHORTLIST_KEY, PLANNER_KEY]);
+  });
+
+  it('builds, from what the hub stores, the same file the hub itself would build', () => {
+    const draft = normalizeDraft({ stage: 'frame', regionSlug: 'sharon', sizeM2: 230, budgetRangeNis: [2_000_000, 2_500_000], targetMoveIn: '2027-11' });
+    const saved = [
+      { kind: 'video', ref: 'abc123', title: 'שלד', at: '2026-10-10T08:00:00.000Z' },
+      { kind: 'post', ref: 'permit-guide', title: 'היתר', at: '2026-10-11T08:00:00.000Z' },
+      { kind: 'business', ref: BIZ_A, title: 'קבלן', at: '2026-10-12T08:00:00.000Z' },
+    ] as const;
+    const planner = { totalMin: 2_100_000, totalMax: 2_600_000, at: '2026-10-12T09:00:00.000Z', inputs: { finish: 'standard' } };
+    const local = fakeStorage({
+      [DRAFT_KEY]: draft,
+      [SAVED_KEY]: { v: 1, items: saved },
+      [SHORTLIST_KEY]: [BIZ_B, BIZ_A],
+      [PLANNER_KEY]: planner,
+    });
+    const hubFile: ProjectFileSnapshot = buildLocalSnapshot(draft, saved, [BIZ_B, BIZ_A], planner);
+    const asProjectFile: ProjectFile = hubFile; // one type: the hub's snapshot is a ProjectFile
+    expect(readProjectSnapshots(local)).toEqual(asProjectFile);
+    expect(asProjectFile).toMatchObject({ savedCount: 2, shortlistBusinessIds: [BIZ_B, BIZ_A], stage: 'frame' });
   });
 });
 

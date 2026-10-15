@@ -26,9 +26,11 @@ import { MEMBER_REGIONS } from '@/lib/constants/community';
 import { BUILD_STAGES } from '@/lib/stages';
 import { useCalendlyTracking } from '@/lib/analytics/calendly';
 import { collectProjectFile } from '@/lib/project-file/collect';
+import { mergeProjectFiles } from '@/lib/project-file/sanitize';
 import type { ProjectFile } from '@/lib/project-file/types';
 import { calendlyBookingUrl } from '@/lib/revenue/calendly';
 import { markConsultBooked, startConsultBooking, type BookingMode } from '@/lib/revenue/actions/booking';
+import { loadMyProjectFile } from '@/lib/revenue/actions/project-file';
 import ProjectFileSummary from './ProjectFileSummary';
 
 type Step = 'details' | 'calendly' | 'done';
@@ -82,10 +84,21 @@ export default function BookingSheet({ open, onClose, source, calendlyBase, foot
   const [pending, start] = useTransition();
   const hasCalendly = Boolean(calendlyBookingUrl(calendlyBase, source));
 
-  // A fresh read of the visitor's file every time the sheet opens.
+  // A fresh read of the visitor's file every time the sheet opens; a member's
+  // hub project then fills it in (it wins single facts, as on the server).
   useEffect(() => {
     if (!open) return;
-    setFile(collectProjectFile());
+    let live = true;
+    const local = collectProjectFile();
+    setFile(local);
+    loadMyProjectFile()
+      .then((member) => {
+        if (live && member) setFile(mergeProjectFiles(local, member));
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
   }, [open]);
 
   const close = useCallback(() => {
