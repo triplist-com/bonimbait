@@ -1,19 +1,23 @@
 import 'server-only';
 
 /**
- * Member conversation threads (advisor_threads / advisor_messages). Every
- * query runs as the signed-in member (anon key + session cookie), so RLS
- * keeps them owner-only. Anonymous visitors never reach the DB: their threads
- * live in localStorage (lib/advisor/client/storage.ts), and without an auth
- * cookie there is not even an auth round trip.
+ * Member conversation threads (advisor_threads / advisor_messages).
  *
- * The answer route saves each finished turn itself (the server knows the
- * answer it produced); the page lists and reopens threads through
- * /api/advisor/threads. Nothing here throws into the answer stream.
+ * - Reads and deletes run as the signed-in member (anon key + session
+ *   cookie), so RLS keeps them owner-only.
+ * - Writes come only from the answer route, with the service role and the
+ *   user id of the verified session: a member can't put words in the
+ *   advisor's mouth, so a reopened answer can be signed for sharing.
+ * - Anonymous visitors never reach the DB: their threads live in localStorage
+ *   (lib/advisor/client/storage.ts), and without an auth cookie there is not
+ *   even an auth round trip.
+ *
+ * Nothing here throws into the answer stream.
  */
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import { hasAuthCookie } from '@/lib/auth/cookie';
 import { withTimeout } from '@/lib/platform/db';
+import { createAdminClient, isServiceRoleConfigured } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import type { AdvisorDatabase, AdvisorMessageRow, AdvisorThreadRow } from './db-types';
@@ -55,9 +59,15 @@ export interface SavedTurn {
 
 /** Save one finished turn (question + answer) to the member's thread. Returns false on any failure. */
 export async function saveMemberTurn(member: Member, t: SavedTurn): Promise<boolean> {
-  if (!isThreadId(t.conversationId) || !t.question.trim() || !t.answer.trim()) return false;
+  if (!isThreadId(t.conversationId) || !t.question.trim() || !t.answer.trim() || !isServiceRoleConfigured()) return false;
   try {
-    const { db, user } = member;
+    const { user } = member;
+    // Service role: members have no write access. user_id comes from the verified session.
+    const db = createAdminClient() as unknown as AdvisorDb;
+    // A thread id that already belongs to someone else is never written to.
+    const existing = await withTimeout(db.from('advisor_threads').select('user_id').eq('id', t.conversationId).maybeSingle(), DB_TIMEOUT_MS, 'advisor thread owner');
+    if (existing.error) throw new Error(existing.error.message);
+    if (existing.data && existing.data.user_id !== user.id) return false;
     const thread = await withTimeout(
       db
         .from('advisor_threads')
@@ -125,6 +135,37 @@ export async function loadMemberThread(member: Member, id: string): Promise<{ th
   if (messages.error) throw new Error(messages.error.message);
   if (!thread.data) return null;
   return { thread: thread.data as ThreadSummary, messages: (messages.data ?? []) as ThreadMessage[] };
+}
+
+export interface RestoredTurn {
+  question: string;
+  answer: string;
+  sources: AdvisorSource[];
+  followups: string[];
+  at: string;
+  confidence?: number;
+}
+
+/** Pair each turn's question and answer (messages ordered by turn, then time). Pure. */
+export function messagesToTurns(messages: readonly ThreadMessage[]): RestoredTurn[] {
+  const byTurn = new Map<number, { q?: ThreadMessage; a?: ThreadMessage }>();
+  for (const m of messages) {
+    const slot = byTurn.get(m.turn) ?? {};
+    if (m.role === 'user' && !slot.q) slot.q = m;
+    if (m.role === 'assistant' && !slot.a) slot.a = m;
+    byTurn.set(m.turn, slot);
+  }
+  return Array.from(byTurn.entries())
+    .sort((a, b) => a[0] - b[0])
+    .filter(([, s]) => s.q && s.a)
+    .map(([, s]) => ({
+      question: s.q!.content,
+      answer: s.a!.content,
+      sources: Array.isArray(s.a!.sources) ? (s.a!.sources as unknown as AdvisorSource[]) : [],
+      followups: Array.isArray(s.a!.followups) ? (s.a!.followups as unknown[]).filter((f): f is string => typeof f === 'string') : [],
+      at: s.a!.created_at,
+      ...(typeof s.a!.confidence === 'number' ? { confidence: Number(s.a!.confidence) } : {}),
+    }));
 }
 
 export async function deleteMemberThread(member: Member, id: string): Promise<boolean> {

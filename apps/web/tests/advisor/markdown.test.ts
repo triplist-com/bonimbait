@@ -110,16 +110,20 @@ describe('inline emphasis', () => {
 });
 
 describe('splitNumbers', () => {
-  it('isolates prices, ranges, percentages and times', () => {
+  it('isolates numbers, ranges, percentages and times', () => {
     const nums = (s: string) => splitNumbers(s).filter((x) => x.num).map((x) => x.v);
-    expect(nums('בין 2,500–3,500 ₪ למ״ר')).toEqual(['2,500–3,500 ₪']);
-    expect(nums('כ-800,000 ₪ ב-2026')).toEqual(['800,000 ₪', '2026']);
+    expect(nums('בין 2,500–3,500 ₪ למ״ר')).toEqual(['2,500–3,500']);
+    expect(nums('כ-800,000-850,000 ₪ ב-2026')).toEqual(['800,000-850,000', '2026']);
     expect(nums('חריגה של 10%-15% מהתקציב')).toEqual(['10%-15%']);
     expect(nums('צפו מ-28:34')).toEqual(['28:34']);
-    expect(nums('₪1.3 מיליון')).toEqual(['₪1.3']);
+    expect(nums('12K למטר, 1.3M בסך הכול')).toEqual(['12K', '1.3M']);
   });
 
-  it('keeps Hebrew words out of the LTR run', () => {
+  it('keeps the currency sign and Hebrew words in the RTL flow', () => {
+    expect(splitNumbers('800,000 ₪')).toEqual([
+      { num: true, v: '800,000' },
+      { num: false, v: ' ₪' },
+    ]);
     expect(splitNumbers('200 מ״ר')).toEqual([
       { num: true, v: '200' },
       { num: false, v: ' מ״ר' },

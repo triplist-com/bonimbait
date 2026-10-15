@@ -8,7 +8,10 @@
 --                     taps "share" (POST /api/advisor/share checks an HMAC of the answer)
 --
 -- RLS
---   * threads / messages: owner-only (user_id = auth.uid()) for every operation.
+--   * threads / messages: a member reads and deletes only their own (user_id = auth.uid()).
+--     Only the server writes them (the answer route, service role, with the user id from
+--     the verified session), so every stored answer is one the advisor really gave and a
+--     reopened answer can be signed for sharing.
 --   * staff never read conversation text; they get aggregates through
 --     advisor_usage_daily() (security definer, staff or service role only).
 --   * advisor_shares: no API access at all. The service role writes after the HMAC
@@ -110,7 +113,7 @@ create trigger advisor_messages_touch_thread
   for each row execute function public.advisor_messages_touch_thread();
 
 -- ---------------------------------------------------------------------------
--- RLS: owner-only
+-- RLS: members read and delete their own; only the service role writes
 -- ---------------------------------------------------------------------------
 alter table public.advisor_threads enable row level security;
 alter table public.advisor_messages enable row level security;
@@ -118,14 +121,6 @@ alter table public.advisor_messages enable row level security;
 drop policy if exists advisor_threads_owner_select on public.advisor_threads;
 create policy advisor_threads_owner_select on public.advisor_threads
   for select to authenticated using (user_id = auth.uid());
-
-drop policy if exists advisor_threads_owner_insert on public.advisor_threads;
-create policy advisor_threads_owner_insert on public.advisor_threads
-  for insert to authenticated with check (user_id = auth.uid());
-
-drop policy if exists advisor_threads_owner_update on public.advisor_threads;
-create policy advisor_threads_owner_update on public.advisor_threads
-  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 drop policy if exists advisor_threads_owner_delete on public.advisor_threads;
 create policy advisor_threads_owner_delete on public.advisor_threads
@@ -135,23 +130,19 @@ drop policy if exists advisor_messages_owner_select on public.advisor_messages;
 create policy advisor_messages_owner_select on public.advisor_messages
   for select to authenticated using (user_id = auth.uid());
 
-drop policy if exists advisor_messages_owner_insert on public.advisor_messages;
-create policy advisor_messages_owner_insert on public.advisor_messages
-  for insert to authenticated with check (
-    user_id = auth.uid()
-    and exists (select 1 from public.advisor_threads t where t.id = thread_id and t.user_id = auth.uid())
-  );
-
 drop policy if exists advisor_messages_owner_delete on public.advisor_messages;
 create policy advisor_messages_owner_delete on public.advisor_messages
   for delete to authenticated using (user_id = auth.uid());
 
--- Messages are immutable: no update policy.
+-- No insert/update policies: members can't write answers into a thread.
+drop policy if exists advisor_threads_owner_insert on public.advisor_threads;
+drop policy if exists advisor_threads_owner_update on public.advisor_threads;
+drop policy if exists advisor_messages_owner_insert on public.advisor_messages;
 
-revoke all on table public.advisor_threads from anon;
-revoke all on table public.advisor_messages from anon;
-grant select, insert, update, delete on table public.advisor_threads to authenticated;
-grant select, insert, delete on table public.advisor_messages to authenticated;
+revoke all on table public.advisor_threads from anon, authenticated;
+revoke all on table public.advisor_messages from anon, authenticated;
+grant select, delete on table public.advisor_threads to authenticated;
+grant select, delete on table public.advisor_messages to authenticated;
 grant all on table public.advisor_threads to service_role;
 grant all on table public.advisor_messages to service_role;
 

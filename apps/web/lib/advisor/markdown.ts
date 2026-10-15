@@ -302,15 +302,18 @@ function inlineLines(text: string, opts: ParseOptions): Inline[] {
 }
 
 // ---------------------------------------------------------------------------
-// Numbers inside Hebrew: render LTR so ranges and prices never flip
+// Numbers inside Hebrew: isolate them LTR so a range never flips
 // ---------------------------------------------------------------------------
 
-const AMOUNT = String.raw`(?:[₪$€]\s?)?\d+(?:[.,:]\d+)*(?:\s?(?:%|[KkM₪$€])(?![A-Za-z֐-׿]))?`;
+// Digits with separators, an attached K/M or a %, and an optional range part.
+// The currency sign stays outside the isolate: in the RTL flow "800,000 ₪"
+// then shows the sign after the number (left of it), as he-IL formats prices.
+const AMOUNT = String.raw`\d+(?:[.,:]\d+)*(?:[KkM](?![A-Za-z])|\s?%)?`;
 const NUMBER_RE = new RegExp(String.raw`${AMOUNT}(?:\s?[-–—]\s?${AMOUNT})?`, 'g');
 
 export type NumberSegment = { num: boolean; v: string };
 
-/** Split text into plain runs and numeric expressions ("2,500–3,500 ₪", "12:34", "15%"). */
+/** Split text into plain runs and numeric expressions ("2,500–3,500", "12:34", "10%-15%"). */
 export function splitNumbers(text: string): NumberSegment[] {
   const out: NumberSegment[] = [];
   const re = new RegExp(NUMBER_RE.source, 'g');
