@@ -49,7 +49,25 @@ export const ADMIN_NAV: readonly AdminNavGroup[] = [
       { href: '/admin/directory/taxonomy/', label: 'תחומים ואזורים' },
     ],
   },
-  { id: 'leads', title: 'לידים', items: [{ href: '/admin/leads/', label: 'תיבת לידים' }] },
+  {
+    id: 'leads',
+    title: 'לידים',
+    items: [
+      { href: '/admin/leads/', label: 'תיבת לידים' },
+      { href: '/admin/consult-queue/', label: 'תור הייעוצים', flag: 'revenue' },
+      { href: '/admin/lead-routing/', label: 'כללי ניתוב', minRole: 'admin', flag: 'revenue' },
+    ],
+  },
+  {
+    id: 'partners',
+    title: 'שותפים',
+    items: [
+      { href: '/admin/partners/', label: 'בריאות שותפים', exact: true, flag: 'revenue' },
+      { href: '/admin/partners/campaigns/', label: 'קמפיינים', flag: 'revenue' },
+      { href: '/admin/partners/subscriptions/', label: 'מנויים', flag: 'revenue' },
+      { href: '/admin/partners/tiers/', label: 'מסלולי שותפות', minRole: 'admin', flag: 'revenue' },
+    ],
+  },
   {
     id: 'commerce',
     title: 'חנות ושירותים',
