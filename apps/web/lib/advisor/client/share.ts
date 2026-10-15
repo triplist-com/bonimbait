@@ -10,6 +10,8 @@ import type { AdvisorSharePayload } from '../types';
 
 const ID_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
 export const SHARE_ENDPOINT = '/api/advisor/share';
+/** A share id (the server's SHARE_ID_RE in lib/advisor/share.ts): the snapshot lives at /ask/a/<id>/. */
+export const SHARE_ID_PATTERN = /^[A-HJ-NP-Za-km-z2-9]{16}$/;
 
 export function newShareId(): string {
   const bytes = new Uint8Array(16);

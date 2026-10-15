@@ -4,6 +4,7 @@
  * derived from kind + ref (never taken from the client), so a saved item
  * can only ever point inside the site. Client-safe.
  */
+import { SHARE_ID_PATTERN } from '@/lib/advisor/client/share';
 import { aiHref } from '@/lib/nav';
 import { isSavedKind, type SavedKind } from './types';
 
@@ -63,7 +64,9 @@ export function savedHref(kind: SavedKind, ref: string, meta: Record<string, unk
     case 'business':
       return typeof meta.slug === 'string' && meta.slug ? `/business/${meta.slug}/` : '/recommended/';
     case 'answer':
-      return aiHref(ref);
+      // An answer saved from the advisor is its read-only snapshot (the ref is
+      // the share id); older items saved by question text re-ask it.
+      return SHARE_ID_PATTERN.test(ref) ? `/ask/a/${ref}/` : aiHref(ref);
   }
 }
 

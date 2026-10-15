@@ -14,9 +14,11 @@ export interface SharedAnswerViewProps {
   id: string;
   payload: AdvisorSharePayload;
   intent: AdvisorIntent;
+  /** "שמרו בבית שלי" (the server passes isEnabled('hub')). */
+  canSave?: boolean;
 }
 
-export default function SharedAnswerView({ id, payload, intent }: SharedAnswerViewProps) {
+export default function SharedAnswerView({ id, payload, intent, canSave = false }: SharedAnswerViewProps) {
   const [playing, setPlaying] = useState<PlayingMoment | null>(null);
   const turn: AdvisorTurn = {
     id: `shared-${id}`,
@@ -47,6 +49,7 @@ export default function SharedAnswerView({ id, payload, intent }: SharedAnswerVi
       headingLevel={1}
       sharePayload={payload}
       onShareId={() => undefined}
+      canSave={canSave}
     />
   );
 }

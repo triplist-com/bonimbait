@@ -14,11 +14,13 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ChevronDown, CornerDownLeft, RotateCcw, Search, Sparkles } from 'lucide-react';
+import SaveButton from '@/components/hub/SaveButton';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { track } from '@/lib/analytics/track';
 import { cn } from '@/lib/cn';
+import { newShareId, publishShare } from '@/lib/advisor/client/share';
 import { statsLine } from '@/lib/advisor/format';
 import type { AdvisorTurn } from '@/lib/advisor/client/useAdvisor';
 import type { AdvisorSharePayload, AdvisorSource, AdvisorVideoSource } from '@/lib/advisor/types';
@@ -50,6 +52,8 @@ export interface TurnViewProps {
   sharePayload?: AdvisorSharePayload | null;
   /** Lead moments under the answer (off in compact previews). */
   showLeads?: boolean;
+  /** "שמרו בבית שלי": save the answer (its /ask/a/<id>/ snapshot) to the hub. Pass isEnabled('hub'). */
+  canSave?: boolean;
   /** The question as a heading of this level. */
   headingLevel?: 1 | 2;
   className?: string;
@@ -118,6 +122,7 @@ export default function TurnView({
   onShareId,
   sharePayload,
   showLeads = true,
+  canSave = false,
   headingLevel = 2,
   className,
 }: TurnViewProps) {
@@ -169,6 +174,21 @@ export default function TurnView({
     },
     [turn.question],
   );
+
+  // Saving an answer saves its read-only snapshot (/ask/a/<id>/): the first
+  // save publishes it, exactly as sharing does, and reuses the id after that.
+  const canShare = Boolean(sharePayload && turn.signature && onShareId);
+  const saveable = canSave && !unanswered && !turn.degraded && (Boolean(turn.shareId) || canShare);
+  const ensureSnapshot = useCallback(async (): Promise<string | null> => {
+    if (turn.shareId) return turn.shareId;
+    if (!sharePayload || !turn.signature || !onShareId) return null;
+    const id = newShareId();
+    if (!(await publishShare(id, sharePayload, turn.signature))) return null;
+    onShareId(id);
+    return id;
+  }, [turn.shareId, turn.signature, sharePayload, onShareId]);
+  const firstVideo = turn.sources.find((s): s is AdvisorVideoSource => s.kind === 'video');
+  const saveMeta = firstVideo?.thumbnail_url?.startsWith('https://') ? { thumbnail: firstVideo.thumbnail_url } : undefined;
 
   const playingHere = playing && playing.turnId === turn.id ? playing : null;
   const playingSource = playingHere
@@ -225,15 +245,31 @@ export default function TurnView({
         {done && hasAnswer && (
           <>
             <p className="mt-5 border-t border-ink-100 pt-4 text-caption text-ink-500">{DISCLAIMER}</p>
-            {(onFeedback || (sharePayload && turn.signature && onShareId)) && (
+            {(onFeedback || canShare || saveable) && (
               <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
                 {onFeedback && !unanswered && !turn.degraded ? (
                   <FeedbackBar value={turn.feedback} onChange={onFeedback} query={turn.question} turn={index} conversationId={conversationId} />
                 ) : (
                   <span />
                 )}
-                {sharePayload && turn.signature && onShareId && (
-                  <ShareBar payload={sharePayload} signature={turn.signature} shareId={turn.shareId} onShareId={onShareId} turn={index} conversationId={conversationId} />
+                {(canShare || saveable) && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {saveable && (
+                      <SaveButton
+                        kind="answer"
+                        refId={turn.shareId ?? ''}
+                        title={turn.question}
+                        meta={saveMeta}
+                        prepare={ensureSnapshot}
+                        label="שמרו בבית שלי"
+                        savedLabel="נשמר בבית שלי"
+                        className="[&>button]:h-10"
+                      />
+                    )}
+                    {canShare && sharePayload && turn.signature && onShareId && (
+                      <ShareBar payload={sharePayload} signature={turn.signature} shareId={turn.shareId} onShareId={onShareId} turn={index} conversationId={conversationId} />
+                    )}
+                  </div>
                 )}
               </div>
             )}
