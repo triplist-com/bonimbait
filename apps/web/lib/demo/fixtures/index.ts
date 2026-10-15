@@ -4,10 +4,12 @@
  */
 import { commandDemo } from './command';
 import { foundationDemo } from './foundation';
+import { revenueDemo } from './revenue';
 
 export const DEMO_FIXTURES = {
   foundation: foundationDemo,
   command: commandDemo,
+  revenue: revenueDemo,
 } as const;
 
 export type DemoFixtureName = keyof typeof DEMO_FIXTURES;

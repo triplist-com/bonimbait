@@ -94,6 +94,7 @@ export default function PortalDashboard({
   dealAction,
   reportHref,
   notice,
+  demo = false,
 }: {
   view: PortalView;
   /** Server action for "שדרגו" (redirects to payment); omitted in the demo. */
@@ -102,6 +103,8 @@ export default function PortalDashboard({
   /** The monthly partner report, for subscribed partners. */
   reportHref?: string | null;
   notice?: 'upgraded' | 'checkout_failed' | null;
+  /** Fixture data (/platform/demo/pro/): no links to real pages. */
+  demo?: boolean;
 }) {
   const { kpis, metrics, peer, completeness, days } = view;
   const currentRank = view.subscription ? view.tiers.find((t) => t.slug === view.subscription!.tierSlug)?.rank ?? 0 : 0;
@@ -268,10 +271,12 @@ export default function PortalDashboard({
             ) : (
               <p className="text-sm text-ink-600">עוד אין חוות דעת. שלחו ללקוח מרוצה את הקישור לעמוד חוות הדעת שלכם.</p>
             )}
-            <Link href={`/business/${view.business.slug}/review/`} className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-primary-700 hover:underline">
-              הקישור לחוות דעת
-              <ArrowLeft aria-hidden="true" className="size-4 ltr:rotate-180" />
-            </Link>
+            {!demo && (
+              <Link href={`/business/${view.business.slug}/review/`} className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-primary-700 hover:underline">
+                הקישור לחוות דעת
+                <ArrowLeft aria-hidden="true" className="size-4 ltr:rotate-180" />
+              </Link>
+            )}
           </Panel>
         </aside>
       </div>
