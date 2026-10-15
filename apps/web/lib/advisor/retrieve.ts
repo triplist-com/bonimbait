@@ -141,19 +141,32 @@ function wordSlice(text: string, start: number, end: number): string {
 
 type Passage = { score: number; text: string; second: number | null; quote: string; order: number };
 
-function videoPassages(doc: VideoDoc, resolve: (seg: IndexedSegment, title: string) => ResolvedMoment): Passage[] {
+/** "Ask about this video / article": the focused document gets more of itself. */
+const MAX_PASSAGES_FOCUSED = 3;
+const SUMMARY_CHARS = 700;
+
+function videoPassages(doc: VideoDoc, resolve: (seg: IndexedSegment, title: string) => ResolvedMoment, max = MAX_PASSAGES_PER_VIDEO): Passage[] {
   const out: Passage[] = [];
-  for (const seg of doc.hits.slice(0, MAX_PASSAGES_PER_VIDEO + 1)) {
+  for (const seg of doc.hits.slice(0, max + 2)) {
     const m = resolve(seg, doc.video.title);
     if (out.some((p) => p.second !== null && Math.abs(p.second - m.second) < SAME_MOMENT_SECONDS)) continue;
     out.push({ score: seg.score, text: m.text, second: m.second, quote: m.quote, order: m.second });
-    if (out.length >= MAX_PASSAGES_PER_VIDEO) break;
+    if (out.length >= max) break;
   }
   return out;
 }
 
-function postPassages(doc: PostDoc, terms: string[], numeric: boolean): Passage[] {
-  return doc.hits.slice(0, MAX_PASSAGES_PER_POST).map((hit) => {
+/** The video's AI summary and key points (videos.json), when the question is about this video. */
+function summaryPassage(video: VideoRecord): Passage | null {
+  const points = Array.isArray(video.key_points) ? video.key_points.filter((p) => typeof p === 'string').slice(0, 5) : [];
+  const text = [video.summary?.trim(), ...points.map((p) => `- ${p}`)].filter(Boolean).join('\n');
+  if (!text) return null;
+  // Ordered first (-1), never a moment to play (no second).
+  return { score: Number.POSITIVE_INFINITY, text: `תקציר הסרטון: ${text.slice(0, SUMMARY_CHARS)}`, second: null, quote: '', order: -1 };
+}
+
+function postPassages(doc: PostDoc, terms: string[], numeric: boolean, max = MAX_PASSAGES_PER_POST): Passage[] {
+  return doc.hits.slice(0, max).map((hit) => {
     const body = postBody(hit, doc.title);
     const { start, end, anchor } = focusWindow(body, terms, POST_PASSAGE_CHARS, numeric);
     return {
@@ -175,16 +188,23 @@ function termCoverage(terms: string[], passages: Passage[]): number | undefined 
 }
 
 /** Build cards and prompt passages from the chosen documents. Pure (given the documents). */
-export function buildSources(query: string, docs: Doc[]): Omit<Retrieval, 'focusTitle'> {
+export function buildSources(query: string, docs: Doc[], { focusKey: fk = null }: { focusKey?: string | null } = {}): Omit<Retrieval, 'focusTitle'> {
   const terms = queryTerms(query);
   const numeric = wantsNumbers(query);
   const resolve = momentFinder(query);
-  const perDoc = docs.map((d) => (d.kind === 'video' ? videoPassages(d, resolve) : postPassages(d, terms, numeric)));
+  const perDoc = docs.map((d) => {
+    const focused = d.key === fk;
+    if (d.kind === 'post') return postPassages(d, terms, numeric, focused ? MAX_PASSAGES_FOCUSED : MAX_PASSAGES_PER_POST);
+    const moments = videoPassages(d, resolve, focused ? MAX_PASSAGES_FOCUSED : MAX_PASSAGES_PER_VIDEO);
+    const summary = focused ? summaryPassage(d.video) : null;
+    return summary ? [summary, ...moments] : moments;
+  });
 
-  // One passage per document first, then second passages while the budget lasts.
+  // One passage per document first, then more while the budget lasts.
   let budget = CONTEXT_CHAR_BUDGET;
   const kept: Passage[][] = perDoc.map(() => []);
-  for (let round = 0; round < Math.max(MAX_PASSAGES_PER_VIDEO, MAX_PASSAGES_PER_POST); round++) {
+  const rounds = Math.max(...perDoc.map((p) => p.length), 0);
+  for (let round = 0; round < rounds; round++) {
     perDoc.forEach((passages, i) => {
       const p = passages[round];
       if (!p) return;
@@ -201,7 +221,7 @@ export function buildSources(query: string, docs: Doc[]): Omit<Retrieval, 'focus
     const passages = kept[i];
     if (d.kind === 'video') {
       const v = d.video;
-      const moments: AdvisorMoment[] = passages.map((p) => ({ second: p.second ?? 0, quote: p.quote }));
+      const moments: AdvisorMoment[] = passages.filter((p) => p.second !== null).map((p) => ({ second: p.second ?? 0, quote: p.quote }));
       sources.push({
         kind: 'video',
         n,
@@ -256,7 +276,8 @@ export function buildSources(query: string, docs: Doc[]): Omit<Retrieval, 'focus
     sources,
     prompt,
     stats: {
-      moments: all.length,
+      // Moments and article sections; a video's summary is context, not a moment.
+      moments: all.filter((p) => p.order >= 0).length,
       videos: sources.filter((s) => s.kind === 'video').length,
       articles: sources.filter((s) => s.kind === 'post').length,
     },
@@ -275,7 +296,7 @@ export async function retrieve(query: string, opts: { focus?: AdvisorFocus } = {
   const docs = selectDocuments(groupDocuments(hits), opts.focus, { newestFirst: wantsNumbers(query) });
   const fk = focusKey(opts.focus);
   const focused = fk ? docs.find((d) => d.key === fk) : undefined;
-  const built = buildSources(query, docs);
+  const built = buildSources(query, docs, { focusKey: focused ? fk : null });
   return {
     ...built,
     focusTitle: focused ? (focused.kind === 'video' ? focused.video.title : focused.title) : null,

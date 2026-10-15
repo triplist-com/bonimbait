@@ -11,6 +11,7 @@ import { VideoGridSkeleton } from '@/components/Skeleton';
 import { getVideoDetail, getRelatedVideos } from '@/lib/api';
 import { formatTimestamp, thumbnailUrl as getThumbUrl } from '@/lib/types';
 import type { VideoDetail as VideoDetailType, Video } from '@/lib/types';
+import AskAbout from '@/components/advisor/AskAbout';
 
 interface InitialData {
   initialVideo?: VideoDetailType | null;
@@ -251,6 +252,14 @@ function VideoContent({ initialVideo, initialRelated }: InitialData) {
             )}
           </div>
         )}
+
+        {/* Ask the advisor about this video (components/advisor/AskAbout.tsx) */}
+        <AskAbout
+          kind="video"
+          id={video.youtube_id}
+          questions={video.costs_data && video.costs_data.length > 0 ? ['כמה זה עולה לפי הסרטון?', 'מה הנקודות הכי חשובות בסרטון?'] : undefined}
+          className="mb-10"
+        />
       </section>
 
       {/* Related Videos */}

@@ -61,6 +61,8 @@ export interface AdvisorTurn {
 export interface AskOptions {
   origin?: AdvisorOrigin;
   focus?: AdvisorFocus;
+  /** Start a new conversation with this question (e.g. every new /search/ query). */
+  fresh?: boolean;
 }
 
 export const MAX_HISTORY = 4;
@@ -152,7 +154,19 @@ export function useAdvisor({ initialThread = null, persist = true, endpoint }: U
   threadRef.current = threadId;
   const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => () => abortRef.current?.abort(), []);
+  // Stop the stream when the page goes away. React's StrictMode (development)
+  // unmounts and remounts at once: only a real unmount aborts.
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      const controller = abortRef.current;
+      setTimeout(() => {
+        if (!mounted.current) controller?.abort();
+      }, 0);
+    };
+  }, []);
 
   const busy = turns.some((t) => t.status === 'searching' || t.status === 'answering');
 
@@ -174,17 +188,25 @@ export function useAdvisor({ initialThread = null, persist = true, endpoint }: U
   }, [turns, persistNow]);
 
   const ask = useCallback(
-    async (question: string, { origin = 'typed', focus }: AskOptions = {}) => {
+    async (question: string, { origin = 'typed', focus, fresh = false }: AskOptions = {}) => {
       const q = question.replace(/\s+/g, ' ').trim();
       if (!q) return;
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
+      if (fresh) {
+        // A new conversation now (refs too: this call must already use the new id).
+        const nextId = newThreadId();
+        threadRef.current = nextId;
+        turnsRef.current = [];
+        setThreadId(nextId);
+        setTurns([]);
+      }
 
       const prior = turnsRef.current;
       const id = localId();
       const turnNumber = prior.length + 1;
-      const fresh: AdvisorTurn = {
+      const pendingTurn: AdvisorTurn = {
         id,
         question: q,
         origin,
@@ -201,8 +223,8 @@ export function useAdvisor({ initialThread = null, persist = true, endpoint }: U
         intent: null,
         at: new Date().toISOString(),
       };
-      setTurns((ts) => [...ts, fresh]);
-      pushRecentQuestion(q, fresh.at);
+      setTurns((ts) => [...ts, pendingTurn]);
+      pushRecentQuestion(q, pendingTurn.at);
 
       let pending = '';
       let frame = 0;

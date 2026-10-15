@@ -17,6 +17,7 @@ import { useSearchParams } from 'next/navigation';
 import { History, MessageSquarePlus, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { chipClasses } from '@/components/ui/Chip';
+import { IconButton } from '@/components/ui/IconButton';
 import { cn } from '@/lib/cn';
 import { EXAMPLE_QUESTIONS } from '@/lib/home/questions';
 import { whenLabel } from '@/lib/advisor/format';
@@ -193,16 +194,18 @@ export default function AdvisorExperience({ advisorLabel, libraryLine }: Advisor
   return (
     <>
       <div className="container-page max-w-[52rem] pb-44 pt-6 sm:pt-10">
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-6 flex items-center justify-between gap-3 sm:mb-8">
           <h1 className="eyebrow">
             <Sparkles aria-hidden="true" className="size-4" />
             {advisorLabel}
           </h1>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" iconStart={<History />} onClick={() => setThreadsOpen(true)}>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <IconButton label="השיחות שלי" icon={<History />} size="sm" className="sm:hidden" onClick={() => setThreadsOpen(true)} />
+            <IconButton label="שיחה חדשה" icon={<MessageSquarePlus />} size="sm" variant="outline" className="sm:hidden" onClick={startOver} />
+            <Button variant="ghost" size="sm" iconStart={<History />} className="hidden sm:inline-flex" onClick={() => setThreadsOpen(true)}>
               השיחות שלי
             </Button>
-            <Button variant="outline" size="sm" iconStart={<MessageSquarePlus />} onClick={startOver}>
+            <Button variant="outline" size="sm" iconStart={<MessageSquarePlus />} className="hidden sm:inline-flex" onClick={startOver}>
               שיחה חדשה
             </Button>
           </div>

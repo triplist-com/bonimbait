@@ -140,7 +140,7 @@ export default function SourceCard({ source, id, highlighted, playingSecond, onP
           </Link>
         </h3>
         {first.quote && (
-          <blockquote className="line-clamp-3 border-s-2 border-primary-300 ps-3 text-body-sm text-ink-600">{first.quote}</blockquote>
+          <blockquote className="line-clamp-2 border-s-2 border-primary-300 ps-3 text-body-sm text-ink-600 sm:line-clamp-3">{first.quote}</blockquote>
         )}
         {more.length > 0 && (
           <div className="mt-auto flex flex-wrap gap-1.5 pt-1">

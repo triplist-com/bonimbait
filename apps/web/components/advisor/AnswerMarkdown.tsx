@@ -25,7 +25,7 @@ function TextWithNumbers({ text }: { text: string }) {
     <>
       {splitNumbers(text).map((seg, i) =>
         seg.num ? (
-          <span key={i} dir="ltr" className="[unicode-bidi:isolate]">
+          <span key={i} dir="ltr" className="whitespace-nowrap [unicode-bidi:isolate]">
             {seg.v}
           </span>
         ) : (

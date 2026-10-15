@@ -1,17 +1,19 @@
 'use client';
 
 /**
- * One question and its answer: the question, what was found ("מצאנו 7 רגעים
- * ב-3 סרטונים ו-3 מאמרים"), the moments and articles (sources first: they
- * arrive before the answer), the exact moment playing inline, the answer with
- * its citations, then feedback, sharing, follow-ups and the lead moments.
+ * One question and its answer: the question and what was found ("מצאנו 7
+ * רגעים ב-3 סרטונים ו-3 מאמרים", a link down to the moments), the answer with
+ * its citations, the exact moment playing inline, the moments and articles,
+ * then follow-ups and the lead moments. The sources arrive first and show at
+ * once under the answer's placeholder; the answer then streams in above them,
+ * so on a phone the first screen is the answer, never just the cards.
  *
  * The same component renders the live advisor, a shared snapshot, the demo
  * replay and the /search/ preview, so the demo always shows the real UI.
  */
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, CornerDownLeft, RotateCcw, Search, Sparkles } from 'lucide-react';
+import { ArrowLeft, ChevronDown, CornerDownLeft, RotateCcw, Search, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { SkeletonText } from '@/components/ui/Skeleton';
@@ -55,7 +57,7 @@ export interface TurnViewProps {
 
 export const DISCLAIMER = 'נכתב בעזרת בינה מלאכותית, על בסיס הסרטונים, הפודקאסט והמאמרים של בונים בית. לא תחליף לייעוץ מקצועי.';
 
-function StatusLine({ turn }: { turn: AdvisorTurn }) {
+function StatusLine({ turn, onJump }: { turn: AdvisorTurn; onJump?: () => void }) {
   if (turn.status === 'searching') {
     return (
       <p className="flex items-center gap-2 text-body-sm text-ink-600">
@@ -71,10 +73,22 @@ function StatusLine({ turn }: { turn: AdvisorTurn }) {
   if (!line) return null;
   return (
     <div className="flex flex-col gap-0.5">
-      <p className="flex items-center gap-2 text-body-sm font-medium text-ink-700">
-        <Sparkles aria-hidden="true" className="size-4 text-primary-600" />
-        {line}
-      </p>
+      {onJump ? (
+        <button
+          type="button"
+          onClick={onJump}
+          className="group inline-flex items-center gap-2 self-start rounded-lg text-start text-body-sm font-medium text-ink-700 transition-colors hover:text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+        >
+          <Sparkles aria-hidden="true" className="size-4 shrink-0 text-primary-600" />
+          <span>{line}</span>
+          <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-ink-400 transition-transform group-hover:translate-y-0.5" />
+        </button>
+      ) : (
+        <p className="flex items-center gap-2 text-body-sm font-medium text-ink-700">
+          <Sparkles aria-hidden="true" className="size-4 text-primary-600" />
+          {line}
+        </p>
+      )}
       {turn.rewritten && turn.sq && (
         <p className="flex items-center gap-1.5 ps-6 text-caption text-ink-500">
           <Search aria-hidden="true" className="size-3" />
@@ -129,6 +143,11 @@ export default function TurnView({
     [cardId],
   );
 
+  const jumpToSources = useCallback(() => {
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    document.getElementById(`sources-${turn.id}`)?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  }, [turn.id]);
+
   const play = useCallback(
     (source: AdvisorVideoSource, second: number) => {
       onPlay({ turnId: turn.id, youtubeId: source.youtube_id, second });
@@ -165,37 +184,9 @@ export default function TurnView({
           {turn.question}
         </Heading>
         <div role="status">
-          <StatusLine turn={turn} />
+          <StatusLine turn={turn} onJump={turn.sources.length > 0 ? jumpToSources : undefined} />
         </div>
       </header>
-
-      {playingHere && playingSource && (
-        <MomentPlayer
-          youtubeId={playingSource.youtube_id}
-          title={playingSource.title}
-          second={playingHere.second}
-          quote={playingQuote}
-          n={playingSource.n}
-          onClose={() => onPlay(null)}
-        />
-      )}
-
-      {turn.sources.length > 0 && (
-        <ul aria-label="המקורות של התשובה" className="rail -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-3 lg:gap-4 lg:overflow-visible lg:px-0 lg:pb-0">
-          {turn.sources.map((s) => (
-            <li key={`${s.kind}-${s.n}`} className="w-[78%] max-w-[19rem] motion-safe:animate-slide-up sm:w-[45%] lg:w-auto lg:max-w-none">
-              <SourceCard
-                source={s}
-                id={cardId(s.n)}
-                highlighted={highlight === s.n}
-                playingSecond={s.kind === 'video' && playingHere?.youtubeId === s.youtube_id ? playingHere.second : null}
-                onPlay={play}
-                onOpen={open}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
 
       <section aria-label="התשובה" className="rounded-3xl border border-ink-100 bg-white p-5 shadow-card sm:p-7">
         <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -247,6 +238,34 @@ export default function TurnView({
           </>
         )}
       </section>
+
+      {playingHere && playingSource && (
+        <MomentPlayer
+          youtubeId={playingSource.youtube_id}
+          title={playingSource.title}
+          second={playingHere.second}
+          quote={playingQuote}
+          n={playingSource.n}
+          onClose={() => onPlay(null)}
+        />
+      )}
+
+      {turn.sources.length > 0 && (
+        <ul id={`sources-${turn.id}`} aria-label="המקורות של התשובה" className="scroll-mt-28 rail -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-3 lg:gap-4 lg:overflow-visible lg:px-0 lg:pb-0">
+          {turn.sources.map((s) => (
+            <li key={`${s.kind}-${s.n}`} className="w-[78%] max-w-[19rem] motion-safe:animate-slide-up sm:w-[45%] lg:w-auto lg:max-w-none">
+              <SourceCard
+                source={s}
+                id={cardId(s.n)}
+                highlighted={highlight === s.n}
+                playingSecond={s.kind === 'video' && playingHere?.youtubeId === s.youtube_id ? playingHere.second : null}
+                onPlay={play}
+                onOpen={open}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
 
       {done && turn.followups.length > 0 && (
         <nav aria-labelledby={`f-${turn.id}`} className="space-y-2">

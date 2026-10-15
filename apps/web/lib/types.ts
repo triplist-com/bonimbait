@@ -124,29 +124,6 @@ export interface ProsCta {
   region?: { slug: string; name: string } | null;
 }
 
-export interface AnswerResponse {
-  answer: string;
-  sources: AnswerSource[];
-  confidence: 'high' | 'medium' | 'low';
-}
-
-export interface PregeneratedAnswer {
-  answer: string;
-  sources: Array<{
-    video_id?: string;
-    youtube_id?: string;
-    title?: string;
-    timestamp?: number;
-  }>;
-  key_points: string[];
-  costs_data: Array<Record<string, unknown>>;
-  tips: string[];
-  warnings: string[];
-  confidence: number;
-  query: string;
-  pregenerated: boolean;
-}
-
 // --- Pagination ---
 
 export interface PaginatedVideos {
