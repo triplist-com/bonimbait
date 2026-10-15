@@ -18,6 +18,7 @@ import TrackEvent from '@/components/analytics/TrackEvent';
 import PartnerTierBadge from '@/components/revenue/PartnerTierBadge';
 import QuoteRequestButton from '@/components/revenue/QuoteRequestButton';
 import { loadPartnerBadges } from '@/lib/revenue/badges';
+import ShortlistButton from '@/components/hub/ShortlistButton';
 import { isEnabled } from '@/lib/flags';
 
 // Public data only (no cookies), so profiles are cached and refreshed every 5 minutes.
@@ -179,6 +180,16 @@ export default async function BusinessPage({ params }: Props) {
               <ShowPhoneButton businessId={business.id} businessName={business.name} />
               {/* Quote request with the visitor's project file (revenue; FLAG_REVENUE). */}
               {isEnabled('revenue') && <QuoteRequestButton businessId={business.id} businessName={business.name} />}
+              {isEnabled('hub') && (
+                <ShortlistButton
+                  businessId={business.id}
+                  slug={business.slug}
+                  name={business.name}
+                  specialty={specialties[0]?.name}
+                  source="business_page"
+                  className="[&>button]:w-full"
+                />
+              )}
               <a
                 href="#reviews"
                 className="rounded-xl border border-gray-200 px-5 py-3 text-center font-semibold text-gray-700 hover:border-primary"

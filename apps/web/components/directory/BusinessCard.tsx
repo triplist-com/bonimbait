@@ -5,6 +5,8 @@ import { businessHref } from '@/lib/directory/format';
 import { excerpt, htmlToText } from '@/lib/directory/html';
 import { listingHref } from '@/lib/directory/listing';
 import { buttonClasses } from '@/components/ui/Button';
+import ShortlistButton from '@/components/hub/ShortlistButton';
+import { isEnabled } from '@/lib/flags';
 import BusinessLogo from './BusinessLogo';
 import RatingBadge from './RatingBadge';
 import PartnerTierBadge from '@/components/revenue/PartnerTierBadge';
@@ -54,6 +56,16 @@ export default function BusinessCard({
             <PartnerTierBadge badge={badge} />
           </div>
         </div>
+        {isEnabled('hub') && (
+          <ShortlistButton
+            businessId={business.id}
+            slug={business.slug}
+            name={business.name}
+            specialty={specialtyRows[0]?.name}
+            source="business_card"
+            compact
+          />
+        )}
       </div>
 
       {specialtyRows.length > 0 && (

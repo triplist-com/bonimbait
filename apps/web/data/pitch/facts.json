@@ -1,0 +1,68 @@
+{
+  "generatedAt": "2026-10-15T00:22:35Z",
+  "parity": {
+    "source": "data/migration/parity_report.csv",
+    "checkedAt": "2026-09-29",
+    "total": 1214,
+    "passed": 1214,
+    "byType": {
+      "post": 807,
+      "video": 189,
+      "business": 159,
+      "page": 29,
+      "category": 14,
+      "category_product": 8,
+      "product": 3,
+      "author": 3,
+      "product_cat": 1,
+      "service": 1
+    },
+    "byResult": {
+      "200": 1203,
+      "301": 8,
+      "302": 3
+    },
+    "acceptedExceptions": 3
+  },
+  "channel": {
+    "source": "data/raw/channel_inventory.json",
+    "inventoriedAt": "2026-10-15",
+    "total": 994,
+    "hours": 316,
+    "byType": {
+      "video": {
+        "count": 844,
+        "hours": 211.9
+      },
+      "podcast": {
+        "count": 116,
+        "hours": 91.7
+      },
+      "live": {
+        "count": 14,
+        "hours": 12.2
+      },
+      "short": {
+        "count": 20,
+        "hours": 0.3
+      }
+    },
+    "answerableScope": 951,
+    "podcastLatestEpisode": 113,
+    "playlists": 40
+  },
+  "migration": {
+    "source": "data/migration/load_report.json",
+    "loadedAt": "2026-09-28",
+    "counts": {
+      "posts": 806,
+      "video_pages": 188,
+      "businesses": 158,
+      "reviews": 240,
+      "pages": 32,
+      "specialties": 91,
+      "post_categories": 14,
+      "products": 3
+    }
+  }
+}

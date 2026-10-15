@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import VideoPlayer from '@/components/VideoPlayer';
@@ -15,11 +15,13 @@ import type { VideoDetail as VideoDetailType, Video } from '@/lib/types';
 interface InitialData {
   initialVideo?: VideoDetailType | null;
   initialRelated?: Video[];
+  /** Hub slot: the "שמירה" button, rendered by the server page when the hub is on. */
+  saveSlot?: ReactNode;
   /** Sponsored partner offer rendered by the server page (revenue squad); shown after the summary. */
-  partnerSlot?: React.ReactNode;
+  partnerSlot?: ReactNode;
 }
 
-function VideoContent({ initialVideo, initialRelated, partnerSlot }: InitialData) {
+function VideoContent({ initialVideo, initialRelated, saveSlot, partnerSlot }: InitialData) {
   const params = useParams();
   const id = params.id as string;
   const hasInitial = Boolean(initialVideo);
@@ -167,6 +169,7 @@ function VideoContent({ initialVideo, initialRelated, partnerSlot }: InitialData
               </>
             )}
           </div>
+          {saveSlot && <div className="mt-4">{saveSlot}</div>}
         </div>
 
         {/* Content Summary — AI summary, key points, costs, tips, warnings */}

@@ -8,6 +8,8 @@ import { formatPrice, listMyOrders, listMyPaidServicePlans, listOrderItems } fro
 import type { OrderStatus } from '@/lib/db/types';
 import { commerceMetadata } from '@/lib/commerce/seo';
 import { ORDER_STATUS_LABELS } from '@/lib/commerce/order-status';
+import { AccountTabs } from '@/components/hub/AccountTabs';
+import { isEnabled } from '@/lib/flags';
 import ProfileForm from './ProfileForm';
 
 export const dynamic = 'force-dynamic';
@@ -38,6 +40,7 @@ export default async function AccountPage() {
 
   return (
     <div className="container-page py-8 sm:py-12">
+      {isEnabled('hub') && <AccountTabs current="account" />}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">החשבון שלי</h1>

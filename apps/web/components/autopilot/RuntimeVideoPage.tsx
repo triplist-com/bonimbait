@@ -4,7 +4,9 @@ import StructuredData from '@/components/StructuredData';
 import VideoGrid from '@/components/VideoGrid';
 import Breadcrumbs from '@/components/content/Breadcrumbs';
 import ConsultationCTA from '@/components/leads/ConsultationCTA';
+import SaveButton from '@/components/hub/SaveButton';
 import { stageLabel } from '@/lib/autopilot/summary';
+import { isEnabled } from '@/lib/flags';
 import type { RuntimeVideo } from '@/lib/autopilot/videos';
 import { formatHebrewDate } from '@/lib/content/seo';
 import { absoluteUrl } from '@/lib/site';
@@ -108,6 +110,7 @@ export default function RuntimeVideoPage({ video, related }: { video: RuntimeVid
               </>
             ) : null}
           </p>
+          {isEnabled('hub') && <SaveButton kind="video" refId={video.youtube_id} title={video.title} className="mt-4" />}
         </header>
 
         <Suspense fallback={<div className="skeleton aspect-video w-full rounded-2xl" />}>

@@ -1,0 +1,35 @@
+{
+  "measuredAt": "2026-10-15",
+  "tool": "Lighthouse 13.5.0",
+  "formFactor": "mobile",
+  "runs": 3,
+  "statistic": "median",
+  "old": {
+    "label": "bonimbayit.co.il",
+    "url": "https://bonimbayit.co.il/",
+    "lcpMs": {
+      "simulate": 5315,
+      "devtools": 3133
+    },
+    "performance": {
+      "simulate": 72,
+      "devtools": 73
+    },
+    "bytes": 995305,
+    "requests": 85
+  },
+  "new": {
+    "label": "האתר החדש, בניית production מקומית (next start)",
+    "url": "/",
+    "lcpMs": {
+      "simulate": 3012,
+      "devtools": 1666
+    },
+    "performance": {
+      "simulate": 94,
+      "devtools": 99
+    },
+    "bytes": 317481,
+    "requests": 32
+  }
+}
