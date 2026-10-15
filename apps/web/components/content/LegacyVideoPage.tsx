@@ -1,5 +1,8 @@
 import Link from 'next/link';
+import { ArrowLeft, Sparkles } from 'lucide-react';
 import StructuredData from '@/components/StructuredData';
+import { YouTubeFacade } from '@/components/ui/YouTubeFacade';
+import { Badge } from '@/components/ui/Badge';
 import type { VideoPageRow } from '@/lib/db/types';
 import { getCategoryMap } from '@/lib/content/queries';
 import { htmlToText, prepareContentHtml } from '@/lib/content/sanitize';
@@ -10,21 +13,6 @@ import ArticleBody from './ArticleBody';
 import Breadcrumbs from './Breadcrumbs';
 import ConsultationCTA from '@/components/leads/ConsultationCTA';
 import VideoPageCard from './VideoPageCard';
-
-function YouTubeEmbed({ id, title }: { id: string; title: string }) {
-  return (
-    <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-gray-900 shadow-card">
-      <iframe
-        src={`https://www.youtube-nocookie.com/embed/${id}?rel=0`}
-        title={title}
-        loading="lazy"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        allowFullScreen
-        className="absolute inset-0 w-full h-full border-0"
-      />
-    </div>
-  );
-}
 
 /** Legacy WordPress /video/<hebrew-slug>/ page (videos and podcast episodes). */
 export default async function LegacyVideoPage({ page }: { page: VideoPageRow }) {
@@ -71,7 +59,7 @@ export default async function LegacyVideoPage({ page }: { page: VideoPageRow }) 
 
         <header className="mt-6 mb-6">
           <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className="text-xs font-semibold text-white bg-secondary px-2.5 py-1 rounded-full">{kindLabel}</span>
+            <Badge tone="ink">{kindLabel}</Badge>
             {cats.map((c) =>
               postCategorySlugs.has(c.slug.normalize('NFC')) ? (
                 <Link
@@ -88,8 +76,8 @@ export default async function LegacyVideoPage({ page }: { page: VideoPageRow }) 
               ),
             )}
           </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">{page.title}</h1>
-          <p className="mt-3 text-sm text-gray-500 flex flex-wrap gap-x-4">
+          <h1 className="text-headline text-ink-900">{page.title}</h1>
+          <p className="mt-3 text-sm text-ink-500 flex flex-wrap gap-x-4">
             {page.author_name && <span>{page.author_name}</span>}
             {page.published_at && <time dateTime={page.published_at}>{formatHebrewDate(page.published_at)}</time>}
           </p>
@@ -98,7 +86,13 @@ export default async function LegacyVideoPage({ page }: { page: VideoPageRow }) 
         <div className="space-y-6">
           {(page.youtube_ids ?? []).length > 0 ? (
             page.youtube_ids.map((id, i) => (
-              <YouTubeEmbed key={id} id={id} title={i === 0 ? page.title : `${page.title} (${i + 1})`} />
+              <YouTubeFacade
+                key={id}
+                youtubeId={id}
+                title={i === 0 ? page.title : `${page.title} (${i + 1})`}
+                poster={i === 0 ? page.featured_image : null}
+                priority={i === 0}
+              />
             ))
           ) : thumb ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -109,17 +103,16 @@ export default async function LegacyVideoPage({ page }: { page: VideoPageRow }) 
         {indexedId && (
           <Link
             href={`/video/${indexedId}/`}
-            className="mt-6 flex items-center gap-4 rounded-2xl gradient-border p-5 hover:shadow-glow transition-shadow"
+            className="group mt-6 flex items-center gap-4 rounded-2xl gradient-border p-5 transition-shadow hover:shadow-card-hover"
           >
-            <span className="flex-shrink-0 w-11 h-11 rounded-xl bg-primary-50 text-primary flex items-center justify-center" aria-hidden="true">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-              </svg>
+            <span className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center" aria-hidden="true">
+              <Sparkles className="size-6" />
             </span>
-            <span>
-              <span className="block font-bold text-gray-900">סיכום AI עם חותמות זמן</span>
-              <span className="block text-sm text-gray-500">נקודות מפתח, עלויות וקפיצה ישירה לרגע הרלוונטי בסרטון</span>
+            <span className="flex-1">
+              <span className="block font-bold text-ink-900">סיכום הסרטון, עם חותמות זמן</span>
+              <span className="block text-sm text-ink-600">נקודות מפתח, עלויות וקפיצה ישירה לרגע הרלוונטי בסרטון</span>
             </span>
+            <ArrowLeft aria-hidden="true" className="size-5 shrink-0 text-ink-400 transition-transform group-hover:-translate-x-1 ltr:rotate-180" />
           </Link>
         )}
 
@@ -131,7 +124,7 @@ export default async function LegacyVideoPage({ page }: { page: VideoPageRow }) 
 
         {more.length > 0 && (
           <section className="mt-14" aria-labelledby="more-videos">
-            <h2 id="more-videos" className="text-2xl font-bold text-gray-900 mb-6">
+            <h2 id="more-videos" className="text-headline-sm text-ink-900 mb-6">
               סרטונים נוספים
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

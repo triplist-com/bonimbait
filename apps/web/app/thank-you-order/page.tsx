@@ -47,7 +47,7 @@ export default async function ThankYouOrderPage({ searchParams }: { searchParams
           מספר ההזמנה שלך הוא <strong>{orderNumber ?? '-'}</strong>.
         </p>
         {orderNumber !== null && !paid && (
-          <p className="mt-2 text-sm text-amber-700">התשלום עדיין בעיבוד. נעדכן אותך במייל ברגע שיאושר.</p>
+          <p className="mt-2 text-sm text-warning-700">התשלום עדיין בעיבוד. נעדכן אותך במייל ברגע שיאושר.</p>
         )}
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link href="/צור-קשר/" className="rounded-xl border border-primary px-5 py-2.5 font-semibold text-primary hover:bg-primary hover:text-white">

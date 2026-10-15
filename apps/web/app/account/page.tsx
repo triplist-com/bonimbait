@@ -182,7 +182,7 @@ function StatusBadge({ status }: { status: OrderStatus }) {
     status === 'paid'
       ? 'bg-green-50 text-green-800'
       : status === 'pending'
-        ? 'bg-amber-50 text-amber-800'
+        ? 'bg-warning-50 text-warning-800'
         : 'bg-gray-100 text-gray-700';
   return <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${tone}`}>{ORDER_STATUS_LABELS[status]}</span>;
 }

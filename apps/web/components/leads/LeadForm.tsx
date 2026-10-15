@@ -149,7 +149,7 @@ export default function LeadForm({
               href={state.invite.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-6 py-3 font-semibold text-white shadow hover:brightness-95"
+              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-whatsapp px-6 py-3 font-semibold text-ink-950 shadow hover:brightness-95"
             >
               הצטרפו לקבוצת WhatsApp – {state.invite.name}
             </a>

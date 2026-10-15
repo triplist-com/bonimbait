@@ -85,7 +85,7 @@ function SearchContent() {
       {query ? (
         <>
           {/* AI Answer with aria-live for screen reader announcements */}
-          <section className="pb-8 animate-slide-up" aria-label="תשובת AI">
+          <section className="pb-8 animate-slide-up" aria-label="תשובה מהשטח">
             <div aria-live="polite" aria-atomic="false">
               {isStreaming && !answer ? (
                 <AnswerShimmer />

@@ -7,7 +7,7 @@ export default function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
   return (
     <>
       <StructuredData data={breadcrumbJsonLd(crumbs)} />
-      <nav aria-label="פירורי לחם" className="text-sm text-gray-500">
+      <nav aria-label="פירורי לחם" className="text-sm text-ink-500">
         <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
           {crumbs.map((c, i) => {
             const last = i === crumbs.length - 1;
@@ -18,7 +18,7 @@ export default function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
                     {c.label}
                   </span>
                 ) : (
-                  <Link href={c.href} className="hover:text-primary transition-colors">
+                  <Link href={c.href} className="inline-flex min-h-6 items-center transition-colors hover:text-primary-700">
                     {c.label}
                   </Link>
                 )}

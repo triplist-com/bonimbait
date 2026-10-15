@@ -207,7 +207,7 @@ export default async function PartnerPortalPage({ searchParams }: { searchParams
       </header>
 
       {!canEdit && (
-        <p className="rounded-2xl bg-amber-50 p-4 text-amber-800">
+        <p className="rounded-2xl bg-warning-50 p-4 text-warning-800">
           {selected.status === 'suspended'
             ? 'העסק מושהה. לפרטים צרו קשר עם צוות בונים בית.'
             : 'הפרופיל ממתין לאישור צוות בונים בית. לאחר האישור תוכלו לערוך את הפרטים, להעלות תמונות ולראות פניות.'}
