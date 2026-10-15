@@ -76,7 +76,8 @@ const { semanticSearch, semanticSearchSegments, groupByVideo } = await import(
 );
 
 const MAX_DOCS = 5;
-const MAX_POST_DOCS = 3;
+// The route's article cap (3); MAX_POST_DOCS=2 measures the alternative.
+const MAX_POST_DOCS = Number(process.env.MAX_POST_DOCS || 3);
 const docKey = (h) => (h.kind === 'video' ? `v:${h.youtube_id}` : `p:${h.slug}`);
 const brief = (h) => ({
   key: docKey(h),
