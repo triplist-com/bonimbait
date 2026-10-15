@@ -315,7 +315,7 @@ export default function TurnView({
         </nav>
       )}
 
-      {done && showLeads && !turn.degraded && <LeadMoments intent={turn.intent} pros={turn.pros} unanswered={unanswered} />}
+      {done && showLeads && !turn.degraded && <LeadMoments intent={turn.intent} pros={turn.pros} offer={turn.offer} unanswered={unanswered} />}
       <span className="sr-only" aria-live="polite">
         {done && hasAnswer ? 'התשובה מוכנה.' : ''}
       </span>

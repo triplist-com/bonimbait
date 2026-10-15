@@ -124,6 +124,13 @@ export const EVENT_CATALOG = {
       focus: z.enum(['video', 'post']).optional(),
       origin: text(20).optional(),
       first_token_ms: count.optional(),
+      // The builder's project file (bb.hub.draft or the member's hub project / profile):
+      // the partner portal counts askers in a partner's own regions.
+      region: text(40).optional(), // regions.slug
+      stage: text(40).optional(), // lib/stages.ts id
+      // A sponsored partner offer was shown under the answer (lib/revenue/offers-server.ts).
+      has_offer: z.boolean().optional(),
+      offer_partner: text(120).optional(), // the partner's business id
       ...advisorTurn,
     }),
   ),

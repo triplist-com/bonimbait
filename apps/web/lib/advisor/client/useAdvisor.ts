@@ -24,8 +24,9 @@ import type {
   AdvisorSource,
   AdvisorStats,
 } from '../types';
+import type { PartnerOffer } from '@/lib/revenue/types';
 import { streamAdvisor } from './sse';
-import { draftRegion, pushRecentQuestion, saveThread, sharePayloadOf, type StoredThread, type StoredTurn } from './storage';
+import { draftRegion, draftStage, pushRecentQuestion, saveThread, sharePayloadOf, type StoredThread, type StoredTurn } from './storage';
 
 export type TurnStatus = 'searching' | 'answering' | 'done' | 'error';
 
@@ -44,6 +45,8 @@ export interface AdvisorTurn {
   answer: string;
   followups: string[];
   pros: AdvisorPros | null;
+  /** The sponsored partner offer that fits this answer (live answers only). */
+  offer?: PartnerOffer | null;
   intent: AdvisorIntent | null;
   degraded?: AdvisorDegraded;
   refused?: AdvisorRefusal;
@@ -250,6 +253,7 @@ export function useAdvisor({ initialThread = null, persist = true, endpoint }: U
             origin,
             ...(focus ? { focus } : {}),
             ...(draftRegion() ? { region: draftRegion() } : {}),
+            ...(draftStage() ? { stage: draftStage() } : {}),
           },
           {
             signal: controller.signal,
@@ -283,6 +287,7 @@ export function useAdvisor({ initialThread = null, persist = true, endpoint }: U
                     sources: evt.sources,
                     followups: evt.followups,
                     pros: evt.pros,
+                    offer: evt.offer ?? null,
                     intent: evt.intent,
                     confidence: evt.confidence_detail ?? t.confidence,
                     degraded: evt.degraded,

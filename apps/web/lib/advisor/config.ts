@@ -52,3 +52,5 @@ export const MAX_QUERY_CHARS = 300;
 
 /** How long `done` waits for the pros match after the answer ends. */
 export const PROS_WAIT_MS = 4000;
+/** How long `done` waits for the partner offer (campaigns are cached per instance for a minute). */
+export const OFFER_WAIT_MS = 1500;
