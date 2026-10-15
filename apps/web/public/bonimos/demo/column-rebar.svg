@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="איור: ברזל עמודים לפני יציקה">
+  <defs>
+    <linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FBF8F3"/><stop offset="1" stop-color="#EFE7DA"/></linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#s)"/>
+  <path d="M0 300 Q160 262 320 292 T640 278 T800 296 V480 H0Z" fill="#EBE1D1"/>
+  <rect y="470" width="800" height="130" fill="#C8B08E"/>
+  <path d="M100 420 L700 420 L760 490 L40 490Z" fill="#CFC8C2"/>
+  <path d="M40 490 L760 490 L760 512 L40 512Z" fill="#958D87"/>
+  <g transform="translate(150 0)">
+    <g stroke="#362B20" stroke-width="5" stroke-linecap="round"><path d="M0 440 V196 M28 440 V196"/></g>
+    <g stroke="#51412F" stroke-width="2.5"><path d="M-4 230 h36 M-4 270 h36 M-4 310 h36 M-4 350 h36 M-4 390 h36"/></g>
+    <rect x="-8" y="184" width="16" height="15" rx="5" fill="#E61559"/><rect x="20" y="184" width="16" height="15" rx="5" fill="#E61559"/>
+  </g>
+  <g transform="translate(560 0)">
+    <g stroke="#362B20" stroke-width="5" stroke-linecap="round"><path d="M0 440 V196 M28 440 V196"/></g>
+    <g stroke="#51412F" stroke-width="2.5"><path d="M-4 230 h36 M-4 270 h36 M-4 310 h36 M-4 350 h36 M-4 390 h36"/></g>
+    <rect x="-8" y="184" width="16" height="15" rx="5" fill="#E61559"/><rect x="20" y="184" width="16" height="15" rx="5" fill="#E61559"/>
+  </g>
+  <g transform="translate(355 0)">
+    <rect x="-14" y="200" width="70" height="240" fill="#DDCDB4"/>
+    <rect x="-14" y="200" width="70" height="240" fill="none" stroke="#AE916B" stroke-width="3"/>
+    <g stroke="#AE916B" stroke-width="2"><path d="M-14 260 h70 M-14 320 h70 M-14 380 h70"/></g>
+    <g fill="#46403D"><rect x="-22" y="250" width="86" height="8" rx="2"/><rect x="-22" y="350" width="86" height="8" rx="2"/></g>
+    <path d="M-20 300 L-118 444" stroke="#46403D" stroke-width="7" stroke-linecap="round"/>
+    <path d="M62 300 L160 444" stroke="#46403D" stroke-width="7" stroke-linecap="round"/>
+    <g stroke="#362B20" stroke-width="5" stroke-linecap="round"><path d="M8 200 V168 M34 200 V168"/></g>
+    <rect x="0" y="156" width="16" height="15" rx="5" fill="#E61559"/><rect x="26" y="156" width="16" height="15" rx="5" fill="#E61559"/>
+  </g>
+</svg>

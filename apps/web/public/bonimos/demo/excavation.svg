@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="איור: חפירה ליסודות">
+  <defs>
+    <linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FBF8F3"/><stop offset="1" stop-color="#EFE7DA"/></linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#s)"/>
+  <path d="M0 292 Q130 246 260 282 T520 266 T800 286 V380 H0Z" fill="#EBE1D1"/>
+  <path d="M0 330 Q170 300 340 326 T660 312 T800 328 V400 H0Z" fill="#DDCDB4"/>
+  <rect y="398" width="800" height="202" fill="#C8B08E"/>
+  <path d="M0 398 H800 V412 H0Z" fill="#AE916B" opacity=".55"/>
+  <path d="M120 404 L640 404 L590 528 L170 528Z" fill="#8E7354"/>
+  <path d="M120 404 L150 404 L196 516 L170 528Z M640 404 L612 404 L566 516 L590 528Z" fill="#6F5940" opacity=".55"/>
+  <path d="M196 516 L566 516 L590 528 L170 528Z" fill="#AE916B"/>
+  <g fill="#6F5940" opacity=".35"><circle cx="260" cy="470" r="6"/><circle cx="420" cy="452" r="5"/><circle cx="500" cy="490" r="7"/><circle cx="330" cy="500" r="4"/></g>
+  <path d="M600 404 Q672 300 770 404Z" fill="#AE916B"/>
+  <path d="M640 404 Q690 340 740 404Z" fill="#8E7354" opacity=".45"/>
+  <path d="M96 382 L664 382" stroke="#46403D" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <g fill="#46403D"><rect x="92" y="368" width="6" height="40" rx="1"/><rect x="660" y="368" width="6" height="40" rx="1"/></g>
+  <g fill="#E61559"><path d="M98 370 l22 7 l-22 7z"/><path d="M666 370 l22 7 l-22 7z"/></g>
+  <g transform="translate(470 252)">
+    <rect x="0" y="120" width="176" height="30" rx="15" fill="#322D2C"/>
+    <g fill="#5C5551"><circle cx="18" cy="135" r="9"/><circle cx="88" cy="135" r="9"/><circle cx="158" cy="135" r="9"/></g>
+    <rect x="16" y="68" width="138" height="54" rx="7" fill="#46403D"/>
+    <rect x="16" y="98" width="138" height="7" fill="#E61559"/>
+    <path d="M92 16 h52 a7 7 0 0 1 7 7 v47 h-59z" fill="#5C5551"/>
+    <rect x="100" y="25" width="40" height="30" rx="3" fill="#F1EEEB" opacity=".85"/>
+    <path d="M44 84 L-74 -6 L-60 -18 L58 72Z" fill="#46403D"/>
+    <path d="M-74 -6 L-136 214 L-120 220 L-58 -2Z" fill="#46403D"/>
+    <circle cx="-66" cy="-10" r="10" fill="#322D2C"/>
+    <path d="M-158 208 h50 l-10 32 h-32z" fill="#322D2C"/>
+    <path d="M-150 240 l4 8 M-138 240 l2 9 M-126 240 l0 9" stroke="#322D2C" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>
