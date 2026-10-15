@@ -127,7 +127,7 @@ export async function markConsultBooked(input: MarkBookedInput): Promise<{ ok: b
 
     const at = new Date().toISOString();
     const details = calendlyScheduledDetails(input.calendly);
-    const booking: Record<string, Json> = { method: 'calendly', at };
+    const booking: Record<string, Json> = { status: 'booked', method: 'calendly', at };
     if (details.event) booking.calendly_event = details.event;
     if (details.invitee) booking.calendly_invitee = details.invitee;
     const base = lead.payload && typeof lead.payload === 'object' && !Array.isArray(lead.payload) ? lead.payload : {};

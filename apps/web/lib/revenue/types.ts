@@ -32,6 +32,8 @@ export type PartnerTierRow = {
   billing_period: 'month';
   /** string[] of Hebrew benefit lines. */
   benefits: Json;
+  /** Viewable impressions per 30 days the tier promises (partner health pace); null = no target. */
+  monthly_impression_target: number | null;
   is_active: boolean;
   sort_order: number;
 } & Timestamps;

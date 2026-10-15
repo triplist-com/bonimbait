@@ -23,7 +23,7 @@ export const runConsultAction = adminAction('editor', async ({ db }, id: string,
   const next = applyConsultAction(lead, action, now);
   const patch: { status: typeof next.status; booked_at: string | null; payload?: Json } = { status: next.status, booked_at: next.booked_at };
   const payload = lead.payload && typeof lead.payload === 'object' && !Array.isArray(lead.payload) ? lead.payload : {};
-  if (action === 'book' && !lead.booked_at) patch.payload = { ...payload, booking: { method: 'phone', at: now.toISOString() } };
+  if (action === 'book' && !lead.booked_at) patch.payload = { ...payload, booking: { status: 'booked', method: 'phone', at: now.toISOString() } };
   if (action === 'requeue' && 'booking' in payload) {
     const rest = { ...payload };
     delete rest.booking;

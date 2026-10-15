@@ -52,6 +52,17 @@ function eventsByDay(events: readonly DailyEventCount[], name: string, measure: 
   return map;
 }
 
+/** Consultation leads booked per Israel day (by booking time; spam excluded). */
+export function bookedConsultsByDay(leads: readonly LeadFact[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const l of leads) {
+    if (l.type !== 'consultation' || !l.bookedAt || !isCountableLead(l)) continue;
+    const day = israelDay(l.bookedAt);
+    map.set(day, (map.get(day) ?? 0) + 1);
+  }
+  return map;
+}
+
 function sortHotLeads(a: LeadFact, b: LeadFact): number {
   const sa = a.score ?? -1;
   const sb = b.score ?? -1;
@@ -185,8 +196,13 @@ export function buildCommandCenter(inputs: CommandInputs, opts: BuildOptions = {
   const curLeads = inputs.leads.filter((l) => isCountableLead(l) && inRange(l.createdAt, window.from, window.to));
   const prevLeads = inputs.leads.filter((l) => isCountableLead(l) && inRange(l.createdAt, window.prevFrom, window.prevTo));
 
-  // Consultations: Calendly bookings (one per visitor per day) plus consultation leads.
-  const booked = dailyTotals(window, eventsByDay(inputs.events, 'consult_booked', 'visitors'), share);
+  // Consultations: requests = consultation leads created in the period; booked =
+  // consultation leads booked in the period (leads.booked_at, set by the booking
+  // sheet on Calendly's event_scheduled or by the consult team). Data without
+  // booking times (older leads, fixtures) falls back to Calendly's consult_booked
+  // events, one per visitor per day.
+  const bookedLeads = bookedConsultsByDay(inputs.leads);
+  const booked = dailyTotals(window, bookedLeads.size > 0 ? bookedLeads : eventsByDay(inputs.events, 'consult_booked', 'visitors'), share);
   const requests = periodDelta(
     curLeads.filter((l) => l.type === 'consultation').length,
     prevLeads.filter((l) => l.type === 'consultation').length,

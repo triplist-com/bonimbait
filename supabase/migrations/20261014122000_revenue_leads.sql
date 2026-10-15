@@ -12,7 +12,7 @@
 --   project_file   the ProjectFile (docs/platform/PROGRAM.md §6)
 --   project_score  { version, score, band, reasons[], missing[] }
 --   routing        the routing decision { rule_id, rule_name, target, business_id, campaign_id }
---   booking        { method, at, calendly_event, calendly_invitee }
+--   booking        { status: 'booked', method: 'calendly' | 'phone', at, calendly_event, calendly_invitee }
 -- Untrusted writers (anon and members via PostgREST) can't set score,
 -- booked_at, project_score, routing or booking: the guard strips them on
 -- insert and keeps the stored values on update. `routing` grants a business

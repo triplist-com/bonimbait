@@ -61,27 +61,41 @@ create table if not exists public.partner_tiers (
   price_agorot   integer not null check (price_agorot between 0 and 100000000),
   billing_period text not null default 'month' check (billing_period = 'month'),
   benefits       jsonb not null default '[]'::jsonb check (jsonb_typeof(benefits) = 'array'),
+  -- Viewable impressions a partner on this tier should get per 30 days (partner health pace).
+  monthly_impression_target integer check (monthly_impression_target is null or monthly_impression_target >= 0),
   is_active      boolean not null default true,
   sort_order     smallint not null default 0,
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now()
 );
 
+alter table public.partner_tiers add column if not exists monthly_impression_target integer;
+alter table public.partner_tiers drop constraint if exists partner_tiers_monthly_impression_target_check;
+alter table public.partner_tiers add constraint partner_tiers_monthly_impression_target_check
+  check (monthly_impression_target is null or monthly_impression_target >= 0);
+
 comment on column public.partner_tiers.rank is 'Priority weight (1 = חברים ... 3 = שגרירים): ordering within relevance on /recommended/ and the pros boost in answers.';
+comment on column public.partner_tiers.monthly_impression_target is 'Viewable impressions per 30 days the tier promises (partner health in the command center and the partner report).';
 
 drop trigger if exists partner_tiers_set_updated_at on public.partner_tiers;
 create trigger partner_tiers_set_updated_at
   before update on public.partner_tiers
   for each row execute function public.set_updated_at();
 
-insert into public.partner_tiers (slug, name, badge_label, rank, price_agorot, benefits, sort_order) values
-  ('members', 'חברים', 'חבר בונים בית', 1, 49000,
+insert into public.partner_tiers (slug, name, badge_label, rank, price_agorot, monthly_impression_target, benefits, sort_order) values
+  ('members', 'חברים', 'חבר בונים בית', 1, 49000, 1500,
    '["פרופיל מורחב בנבחרת המומלצים", "תג חבר בונים בית בכרטיס העסק", "דוח חשיפות ופניות חודשי", "הטבה ייעודית בעמוד ההטבות"]'::jsonb, 1),
-  ('partners', 'שותפים', 'שותף בונים בית', 2, 149000,
+  ('partners', 'שותפים', 'שותף בונים בית', 2, 149000, 5000,
    '["כל מה שבמסלול חברים", "קדימות בסדר ההופעה בנבחרת המומלצים", "קדימות בהמלצות על בעלי מקצוע בתשובות באתר", "באנרים בעמודי הבלוג והעמודים העסקיים", "מאמר תוכן מקצועי"]'::jsonb, 2),
-  ('ambassadors', 'שגרירים', 'שגריר בונים בית', 3, 299000,
+  ('ambassadors', 'שגרירים', 'שגריר בונים בית', 3, 299000, 12000,
    '["כל מה שבמסלול שותפים", "קדימות עליונה בנבחרת ובתשובות באתר", "פרק פודקאסט וסרטון ייעודי", "באנר בעמוד הבית", "הפניה פרונטלית בפגישות תקציב ובשטח"]'::jsonb, 3)
 on conflict (slug) do nothing;
+
+-- Tiers created before the target column: fill the default targets once.
+update public.partner_tiers t
+   set monthly_impression_target = v.target
+  from (values ('members', 1500), ('partners', 5000), ('ambassadors', 12000)) as v(slug, target)
+ where t.slug = v.slug and t.monthly_impression_target is null;
 
 -- Subscriptions ---------------------------------------------------------------
 
