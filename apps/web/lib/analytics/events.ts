@@ -241,6 +241,20 @@ export const EVENT_CATALOG = {
       estimate_id: text(64).optional(),
     }),
   ),
+  planner_step_completed: event(
+    'client',
+    'A budget planner question was answered (the funnel between planner_started and planner_completed).',
+    z.object({ step: count, question: text(20), source: text(60).optional() }),
+  ),
+  planner_shared: event(
+    'client',
+    'A budget planner result was shared (WhatsApp, link copy or the native share sheet).',
+    z.object({
+      channel: z.enum(['whatsapp', 'copy', 'native']),
+      placement: text(60).optional(), // 'planner_result' | 'planner_report' | ...
+      estimate_id: text(64).optional(),
+    }),
+  ),
 
   // --- Directory --------------------------------------------------------------
   pro_profile_view: event(

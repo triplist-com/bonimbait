@@ -1,128 +1,83 @@
 // ============================================================
-// 20 pre-defined construction cost calculator scenarios for SEO
-// Each scenario maps to a /calculator/[slug] page
+// 20 pre-defined budget scenarios, one per /calculator/[slug] page (SEO).
+// Each runs through the budget planner (lib/planner/engine.ts) with the current
+// price book, so the numbers follow the owner's 2026 figures and any admin edit.
+// Slugs and titles are stable (they are indexed URLs).
 // ============================================================
+
+import type { PlannerInput } from '@/lib/planner/types';
 
 export interface CalculatorScenario {
   slug: string;
   title: string; // Hebrew SEO title
   description: string; // Hebrew meta description
-  answers: {
-    house_size: string;
-    floors: string;
-    construction_method: string;
-    finishing_level: string;
-    region: string;
-    basement: string;
-    special_features: string[];
-    timeline: string;
-  };
+  input: PlannerInput;
+  /** What this scenario shows, in the owner's words (sourced). */
+  note?: string;
+  /** The owner's article to read next. */
+  readMore?: { title: string; href: string };
   /** Slugs of 3-4 related scenarios for internal linking */
   relatedSlugs: string[];
 }
+
+const base = { floors: 2, regionSlug: 'center', finishLevel: 'standard', extras: [] } as const;
+
+function input(sizeM2: number, patch: Partial<PlannerInput> = {}): PlannerInput {
+  return { ...base, extras: [], sizeM2, ...patch } as PlannerInput;
+}
+
+const FLOORS_NOTE =
+  'בית בקומה אחת יקר יותר בשלד מבית של שתי קומות באותו שטח: יותר יסודות, יותר רצפה ויותר גג. לבית של 300 מ״ר המטר הקבלני הוא 450 בקומה אחת, 375 בשתי קומות ו-350 בשלוש.';
+const METHOD_NOTE =
+  'המחשבון מתמחר לפי מ״ר, רמת גמר ואזור. שיטת הבנייה משנה בעיקר את משך השלד ואת המחיר שלו, ואת ההפרש המדויק בודקים בהצעות מחיר מול תוכניות סגורות.';
+const REGION_NOTE =
+  'אין "מחיר אזורי" אחד: הטווח של ±15% מכסה את ההבדלים בין רוב האזורים. החריג הבולט היום הוא הדרום, שבו בגלל מצוקת כוח אדם המחירים גבוהים יותר מבשרון.';
 
 export const SCENARIOS: CalculatorScenario[] = [
   // --- Vary by size ---
   {
     slug: 'beit-100-meter-standard',
     title: 'עלות בניית בית 100 מ״ר - סטנדרט',
-    description:
-      'כמה עולה לבנות בית פרטי של 100 מ״ר בגימור סטנדרטי? מחשבון עלויות בנייה מפורט לפי שלבי בנייה, מבוסס על נתונים מ-900+ סרטוני בנייה.',
-    answers: {
-      house_size: 'up_to_100',
-      floors: '1',
-      construction_method: 'blocks',
-      finishing_level: 'standard',
-      region: 'center',
-      basement: 'no',
-      special_features: [],
-      timeline: 'normal',
-    },
+    description: 'כמה עולה לבנות בית פרטי של 100 מ״ר בגמר סטנדרטי ב-2026? טווח עלות לתכנון ובנייה לפי 7 שלבי הבנייה, לפי הנתונים של בונים בית.',
+    input: input(100, { floors: 1 }),
+    note: FLOORS_NOTE,
     relatedSlugs: ['beit-120-meter-standard', 'beit-150-meter-standard', 'beit-120-taksiv-namuch'],
   },
   {
     slug: 'beit-120-meter-standard',
     title: 'עלות בניית בית 120 מ״ר - סטנדרט',
-    description:
-      'כמה עולה לבנות בית פרטי של 120 מ״ר בגימור סטנדרטי? פירוט עלויות בנייה לפי שלבים כולל יסודות, שלד, גמר, חשמל ואינסטלציה.',
-    answers: {
-      house_size: '100_150',
-      floors: '1',
-      construction_method: 'blocks',
-      finishing_level: 'standard',
-      region: 'center',
-      basement: 'no',
-      special_features: [],
-      timeline: 'normal',
-    },
+    description: 'כמה עולה לבנות בית פרטי של 120 מ״ר בגמר סטנדרטי? פירוט לפי שלבים: תכנון ואגרות, שלד, תשתיות וגמרים. נכון ל-2026.',
+    input: input(120, { floors: 1 }),
     relatedSlugs: ['beit-100-meter-standard', 'beit-150-meter-standard', 'beit-120-taksiv-namuch', 'beit-plada-120'],
   },
   {
     slug: 'beit-150-meter-standard',
     title: 'עלות בניית בית 150 מ״ר - סטנדרט',
-    description:
-      'מחשבון עלויות בנייה לבית 150 מ״ר בגימור סטנדרטי. פירוט מלא של עלויות לפי שלבי בנייה: יסודות, שלד, גמר פנים, גג ועוד.',
-    answers: {
-      house_size: '150_200',
-      floors: '1',
-      construction_method: 'blocks',
-      finishing_level: 'standard',
-      region: 'center',
-      basement: 'no',
-      special_features: [],
-      timeline: 'normal',
-    },
+    description: 'מחשבון עלויות בנייה לבית 150 מ״ר בגמר סטנדרטי: טווח לתכנון ובנייה, פירוק לפי שלבים ומה לא כלול. נכון ל-2026.',
+    input: input(150),
     relatedSlugs: ['beit-150-koma-achat', 'beit-150-merkaz', 'beit-beton-150', 'beit-180-meter-gavoa'],
   },
   {
     slug: 'beit-180-meter-gavoa',
     title: 'עלות בניית בית 180 מ״ר - גימור גבוה',
-    description:
-      'כמה עולה לבנות בית 180 מ״ר בגימור גבוה? הערכת עלויות מפורטת כולל חומרים איכותיים, ריצוף, חלונות ודלתות ברמה גבוהה.',
-    answers: {
-      house_size: '150_200',
-      floors: '2',
-      construction_method: 'blocks',
-      finishing_level: 'high',
-      region: 'center',
-      basement: 'no',
-      special_features: [],
-      timeline: 'normal',
-    },
+    description: 'כמה עולה לבנות בית 180 מ״ר בגמר גבוה? ויטרינות, נגרות בהתאמה ומערכות מתקדמות: טווח עלות לפי שלבים, נכון ל-2026.',
+    input: input(180, { finishLevel: 'high' }),
     relatedSlugs: ['beit-200-meter-standard', 'beit-250-meter-yokra', 'beit-yokra-im-breicha', 'beit-150-meter-standard'],
   },
   {
     slug: 'beit-200-meter-standard',
     title: 'עלות בניית בית 200 מ״ר - סטנדרט',
-    description:
-      'הערכת עלויות בנייה לבית פרטי 200 מ״ר בגימור סטנדרטי. פירוט מחירים לכל שלב: יסודות, שלד, גמר, חשמל, אינסטלציה, גג ופיתוח חוץ.',
-    answers: {
-      house_size: '200_250',
-      floors: '2',
-      construction_method: 'blocks',
-      finishing_level: 'standard',
-      region: 'center',
-      basement: 'no',
-      special_features: [],
-      timeline: 'normal',
-    },
+    description: 'כמה עולה לבנות בית פרטי של 200 מ״ר ב-2026? לפי בונים בית: כ-12–14 אלף ₪ למ״ר לתכנון ובנייה, ושלד של כ-800 אלף. הטווח המלא לפי שלבים.',
+    input: input(200),
+    note: 'זה הבית שתומר וצורי משתמשים בו כדוגמה: 200 מ״ר כפול 13 אלף ₪ למ״ר הם 2.6 מיליון לתכנון ובנייה, לפני מע״מ, לפני מגרש ולפני אכלוס. השלד לבד בממוצע כ-800 אלף.',
+    readMore: { title: 'כמה עולה לבנות בית פרטי ב-2026? תכנון, שלד, גמרים ומה לא כלול', href: '/cost-build-private-house-2026/' },
     relatedSlugs: ['beit-200-shtei-komot', 'beit-200-im-martef', 'beit-200-kol-hatosfot', 'beit-180-meter-gavoa'],
   },
   {
     slug: 'beit-250-meter-yokra',
     title: 'עלות בניית בית 250 מ״ר - יוקרה',
-    description:
-      'כמה עולה לבנות בית יוקרה של 250 מ״ר? מחשבון מפורט הכולל גימור יוקרתי, חומרים פרימיום ועלויות מיוחדות.',
-    answers: {
-      house_size: '250_plus',
-      floors: '2',
-      construction_method: 'concrete',
-      finishing_level: 'luxury',
-      region: 'center',
-      basement: 'no',
-      special_features: [],
-      timeline: 'normal',
-    },
+    description: 'כמה עולה לבנות בית יוקרה של 250 מ״ר? בבתים יוקרתיים העלות מגיעה ל-18 אלף ₪ למ״ר ויותר. טווח מלא לפי שלבים, נכון ל-2026.',
+    input: input(250, { finishLevel: 'luxury' }),
     relatedSlugs: ['beit-yokra-im-breicha', 'beit-200-kol-hatosfot', 'beit-180-meter-gavoa', 'beit-200-meter-standard'],
   },
 
@@ -130,52 +85,27 @@ export const SCENARIOS: CalculatorScenario[] = [
   {
     slug: 'beit-150-koma-achat',
     title: 'עלות בניית בית קומה אחת 150 מ״ר',
-    description:
-      'כמה עולה לבנות בית קומה אחת בשטח 150 מ״ר? יתרונות וחסרונות של בנייה בקומה אחת ופירוט עלויות מלא.',
-    answers: {
-      house_size: '150_200',
-      floors: '1',
-      construction_method: 'blocks',
-      finishing_level: 'standard',
-      region: 'center',
-      basement: 'no',
-      special_features: [],
-      timeline: 'normal',
-    },
+    description: 'כמה עולה לבנות בית קומה אחת של 150 מ״ר? למה השלד בקומה אחת יקר יותר, ופירוט עלויות מלא לפי שלבים. נכון ל-2026.',
+    input: input(150, { floors: 1 }),
+    note: FLOORS_NOTE,
+    readMore: { title: 'מה משפיע על עלויות הבנייה? מטר קבלן, חומרים ועבודה', href: '/factors-affecting-construction-costs/' },
     relatedSlugs: ['beit-200-shtei-komot', 'beit-150-meter-standard', 'beit-200-im-martef'],
   },
   {
     slug: 'beit-200-shtei-komot',
     title: 'עלות בניית בית 2 קומות 200 מ״ר',
-    description:
-      'עלות בניית בית דו-קומתי 200 מ״ר. פירוט מלא של עלויות בנייה לבית שתי קומות כולל שלד, גמר, מדרגות ועוד.',
-    answers: {
-      house_size: '200_250',
-      floors: '2',
-      construction_method: 'blocks',
-      finishing_level: 'standard',
-      region: 'center',
-      basement: 'no',
-      special_features: [],
-      timeline: 'normal',
-    },
+    description: 'עלות בניית בית דו-קומתי של 200 מ״ר ב-2026: טווח לתכנון ובנייה, השלד, התשתיות והגמרים, ומה לא נכנס לסכום.',
+    input: input(200),
+    note: FLOORS_NOTE,
     relatedSlugs: ['beit-150-koma-achat', 'beit-200-im-martef', 'beit-200-meter-standard'],
   },
   {
     slug: 'beit-200-im-martef',
     title: 'עלות בניית בית עם מרתף 200 מ״ר',
-    description:
-      'כמה עולה לבנות בית 200 מ״ר עם מרתף? חישוב עלויות כולל חפירה, בנייה תת-קרקעית ואיטום מרתף.',
-    answers: {
-      house_size: '200_250',
-      floors: '2_basement',
-      construction_method: 'concrete',
-      finishing_level: 'standard_high',
-      region: 'center',
-      basement: 'yes',
-      special_features: [],
-      timeline: 'normal',
-    },
+    description: 'כמה עולה לבנות בית 200 מ״ר עם מרתף? מרתף מוסיף 700–800 אלף ₪, ויכול להפוך ליחידה מניבה. טווח מלא לפי שלבים, נכון ל-2026.',
+    input: input(200, { extras: ['basement'] }),
+    note: 'מרתף מוסיף 700–800 אלף ₪ לעלויות הבנייה. אם יש ביקוש לשכירות ביישוב, יחידת דיור מניבה 4,000–5,000 ₪ בחודש, שמכסים את המשכנתא הנוספת. בודקים קודם: ביקוש, סוג קרקע ואפשרות מימון.',
+    readMore: { title: 'בניית מרתף – חפירה, הכנות ועלויות אמיתיות מהשטח', href: '/basement-construction-costs/' },
     relatedSlugs: ['beit-200-shtei-komot', 'beit-200-kol-hatosfot', 'beit-200-meter-standard', 'beit-yokra-im-breicha'],
   },
 
@@ -183,52 +113,28 @@ export const SCENARIOS: CalculatorScenario[] = [
   {
     slug: 'beit-beton-150',
     title: 'עלות בניית בית בטון 150 מ״ר',
-    description:
-      'כמה עולה לבנות בית בטון יצוק 150 מ״ר? השוואת עלויות בנייה בבטון מול בלוקים, יתרונות וחסרונות.',
-    answers: {
-      house_size: '150_200',
-      floors: '1',
-      construction_method: 'concrete',
-      finishing_level: 'standard',
-      region: 'center',
-      basement: 'no',
-      special_features: [],
-      timeline: 'normal',
-    },
+    description: 'כמה עולה לבנות בית בטון של 150 מ״ר? טווח עלות לתכנון ובנייה לפי שלבים, ומה שיטת הבנייה משנה. נכון ל-2026.',
+    input: input(150, { floors: 1 }),
+    note: METHOD_NOTE,
+    readMore: { title: 'בטון לבית פרטי 2026: סוגים, מחירים, מה לבקש מהקבלן וטעויות שעולות עשרות אלפים', href: '/concrete-home-2026-types-prices-mistakes/' },
     relatedSlugs: ['beit-tromi-180', 'beit-plada-120', 'beit-150-meter-standard'],
   },
   {
     slug: 'beit-tromi-180',
     title: 'עלות בניית בית טרומי 180 מ״ר',
-    description:
-      'כמה עולה לבנות בית טרומי 180 מ״ר? עלויות בנייה טרומית מפורטות כולל יתרונות בזמני ביצוע ואיכות.',
-    answers: {
-      house_size: '150_200',
-      floors: '2',
-      construction_method: 'precast',
-      finishing_level: 'standard_high',
-      region: 'center',
-      basement: 'no',
-      special_features: [],
-      timeline: 'normal',
-    },
+    description: 'כמה עולה לבנות בית טרומי של 180 מ״ר? טווח עלות לתכנון ובנייה לפי שלבים, ומה שיטת הבנייה משנה בזמנים. נכון ל-2026.',
+    input: input(180),
+    note: METHOD_NOTE,
+    readMore: { title: 'בנייה מתקדמת לבית פרטי 2026: עלויות, שיטות, בידוד ומה באמת ההבדל', href: '/advanced-home-construction-2026/' },
     relatedSlugs: ['beit-beton-150', 'beit-plada-120', 'beit-180-meter-gavoa'],
   },
   {
     slug: 'beit-plada-120',
     title: 'עלות בניית בית שלד פלדה 120 מ״ר',
-    description:
-      'כמה עולה לבנות בית בשלד פלדה 120 מ״ר? עלויות בנייה קלה בפלדה, יתרונות במהירות הקמה ועמידות.',
-    answers: {
-      house_size: '100_150',
-      floors: '1',
-      construction_method: 'steel',
-      finishing_level: 'standard',
-      region: 'center',
-      basement: 'no',
-      special_features: [],
-      timeline: 'normal',
-    },
+    description: 'כמה עולה לבנות בית בשלד פלדה של 120 מ״ר? טווח עלות לתכנון ובנייה, ולמה שלד פלדה עולה בשבועות במקום חודשים. נכון ל-2026.',
+    input: input(120, { floors: 1 }),
+    note: `${METHOD_NOTE} בשלד פלדה דקת דופן השלד עולה תוך שבועיים, מול 3–6 חודשים בבנייה רגילה.`,
+    readMore: { title: 'שלד פלדה דקת דופן – סיור בבית של 200 מ"ר שהוקם בשבועיים', href: '/steel-frame-house-built-two-weeks/' },
     relatedSlugs: ['beit-beton-150', 'beit-tromi-180', 'beit-120-meter-standard'],
   },
 
@@ -236,69 +142,33 @@ export const SCENARIOS: CalculatorScenario[] = [
   {
     slug: 'beit-150-merkaz',
     title: 'עלות בניית בית 150 מ״ר באזור המרכז',
-    description:
-      'עלויות בנייה לבית 150 מ״ר באזור המרכז. מחירי עבודה וחומרים באזור גוש דן, השרון והשפלה.',
-    answers: {
-      house_size: '150_200',
-      floors: '1',
-      construction_method: 'blocks',
-      finishing_level: 'standard',
-      region: 'center',
-      basement: 'no',
-      special_features: [],
-      timeline: 'normal',
-    },
+    description: 'עלויות בנייה לבית 150 מ״ר באזור המרכז ב-2026: טווח לתכנון ובנייה לפי שלבים, ומה ההבדל מול הצפון, הדרום וירושלים.',
+    input: input(150),
+    note: REGION_NOTE,
     relatedSlugs: ['beit-150-tsfon', 'beit-150-darom', 'beit-150-yerushalayim', 'beit-150-meter-standard'],
   },
   {
     slug: 'beit-150-tsfon',
     title: 'עלות בניית בית 150 מ״ר בצפון',
-    description:
-      'כמה עולה לבנות בית 150 מ״ר בצפון הארץ? השוואת מחירי בנייה בצפון מול המרכז, עלויות עבודה וחומרים.',
-    answers: {
-      house_size: '150_200',
-      floors: '1',
-      construction_method: 'blocks',
-      finishing_level: 'standard',
-      region: 'north',
-      basement: 'no',
-      special_features: [],
-      timeline: 'normal',
-    },
+    description: 'כמה עולה לבנות בית 150 מ״ר בצפון? טווח עלות לתכנון ובנייה לפי שלבים, נכון ל-2026, והשוואה למרכז ולדרום.',
+    input: input(150, { regionSlug: 'lower-galilee' }),
+    note: REGION_NOTE,
     relatedSlugs: ['beit-150-merkaz', 'beit-150-darom', 'beit-150-yerushalayim'],
   },
   {
     slug: 'beit-150-darom',
     title: 'עלות בניית בית 150 מ״ר בדרום',
-    description:
-      'עלויות בנייה לבית 150 מ״ר בדרום הארץ. מחירים נמוכים יותר מהמרכז — פירוט מלא לפי שלבי בנייה.',
-    answers: {
-      house_size: '150_200',
-      floors: '1',
-      construction_method: 'blocks',
-      finishing_level: 'standard',
-      region: 'south',
-      basement: 'no',
-      special_features: [],
-      timeline: 'normal',
-    },
+    description: 'כמה עולה לבנות בית 150 מ״ר בדרום ב-2026? בגלל מצוקת כוח אדם המחירים בדרום היום גבוהים יותר מבשרון. טווח מלא לפי שלבים.',
+    input: input(150, { regionSlug: 'south' }),
+    note: REGION_NOTE,
     relatedSlugs: ['beit-150-merkaz', 'beit-150-tsfon', 'beit-150-yerushalayim'],
   },
   {
     slug: 'beit-150-yerushalayim',
     title: 'עלות בניית בית 150 מ״ר בירושלים',
-    description:
-      'כמה עולה לבנות בית 150 מ״ר בירושלים? עלויות בנייה גבוהות יחסית — פירוט מלא כולל דרישות ייחודיות.',
-    answers: {
-      house_size: '150_200',
-      floors: '1',
-      construction_method: 'blocks',
-      finishing_level: 'standard',
-      region: 'jerusalem',
-      basement: 'no',
-      special_features: [],
-      timeline: 'normal',
-    },
+    description: 'כמה עולה לבנות בית 150 מ״ר באזור ירושלים? טווח עלות לתכנון ובנייה לפי שלבים, נכון ל-2026.',
+    input: input(150, { regionSlug: 'jerusalem' }),
+    note: REGION_NOTE,
     relatedSlugs: ['beit-150-merkaz', 'beit-150-tsfon', 'beit-150-darom'],
   },
 
@@ -306,69 +176,34 @@ export const SCENARIOS: CalculatorScenario[] = [
   {
     slug: 'beit-yokra-im-breicha',
     title: 'עלות בניית בית יוקרה עם בריכה',
-    description:
-      'כמה עולה לבנות בית יוקרה עם בריכת שחייה? פירוט עלויות לבית 250 מ״ר ברמת גימור יוקרתית כולל בריכה ומרפסת גדולה.',
-    answers: {
-      house_size: '250_plus',
-      floors: '2',
-      construction_method: 'concrete',
-      finishing_level: 'luxury',
-      region: 'center',
-      basement: 'no',
-      special_features: ['pool', 'large_balcony'],
-      timeline: 'normal',
-    },
+    description: 'כמה עולה לבנות בית יוקרה עם בריכת שחייה? בית 250 מ״ר בגמר יוקרתי עם בריכה: טווח מלא לפי שלבים, נכון ל-2026.',
+    input: input(250, { finishLevel: 'luxury', extras: ['pool'] }),
+    note: 'בריכת סקימר פרטית עולה 150–250 אלף ₪, ואת גוף הבריכה בונה קבלן השלד. תכננו אותה יחד עם השלד, לא אחריו.',
+    readMore: { title: 'בריכת גלישה מול בריכת סקימר – מה ההבדל, כמה זה עולה ומה עדיף', href: '/overflow-vs-skimmer-pool-guide/' },
     relatedSlugs: ['beit-250-meter-yokra', 'beit-200-kol-hatosfot', 'beit-180-meter-gavoa'],
   },
   {
     slug: 'beit-200-kol-hatosfot',
     title: 'עלות בניית בית 200 מ״ר עם כל התוספות',
-    description:
-      'כמה עולה לבנות בית 200 מ״ר עם מרתף, בריכה, מעלית, חניה תת-קרקעית, מרפסת גדולה ומערכת סולארית?',
-    answers: {
-      house_size: '200_250',
-      floors: '2_basement',
-      construction_method: 'concrete',
-      finishing_level: 'luxury',
-      region: 'center',
-      basement: 'yes',
-      special_features: ['pool', 'elevator', 'underground_parking', 'large_balcony', 'solar'],
-      timeline: 'normal',
-    },
+    description: 'כמה עולה לבנות בית 200 מ״ר עם מרתף, בריכה, פיתוח כבד, מיזוג VRF ובית חכם? טווח מלא לפי שלבים, נכון ל-2026.',
+    input: input(200, { finishLevel: 'luxury', extras: ['basement', 'pool', 'slope', 'vrf', 'smart_home'] }),
     relatedSlugs: ['beit-yokra-im-breicha', 'beit-250-meter-yokra', 'beit-200-im-martef'],
   },
   {
     slug: 'koteg-du-mishpahti-150',
     title: 'עלות בניית קוטג׳ דו-משפחתי 150 מ״ר',
-    description:
-      'כמה עולה לבנות קוטג׳ דו-משפחתי 150 מ״ר? הערכת עלויות ליחידה אחת בבנייה דו-משפחתית כולל שלד וגמר.',
-    answers: {
-      house_size: '150_200',
-      floors: '2',
-      construction_method: 'blocks',
-      finishing_level: 'standard_high',
-      region: 'center',
-      basement: 'no',
-      special_features: [],
-      timeline: 'normal',
-    },
+    description: 'כמה עולה לבנות קוטג׳ דו-משפחתי של 150 מ״ר? הערכה ליחידה אחת: תכנון, שלד, תשתיות וגמרים. נכון ל-2026.',
+    input: input(150),
+    note: 'ההערכה היא ליחידה אחת, לפי השטח שלה. גם בבית דו-משפחתי כל משפחה משלמת על התכנון, האגרות והגמרים שלה.',
     relatedSlugs: ['beit-150-meter-standard', 'beit-200-shtei-komot', 'beit-180-meter-gavoa'],
   },
   {
     slug: 'beit-120-taksiv-namuch',
     title: 'עלות בניית בית 120 מ״ר בתקציב נמוך',
-    description:
-      'כמה עולה לבנות בית 120 מ״ר בתקציב מינימלי? טיפים לחיסכון בעלויות בנייה עם גימור סטנדרטי בדרום הארץ.',
-    answers: {
-      house_size: '100_150',
-      floors: '1',
-      construction_method: 'blocks',
-      finishing_level: 'standard',
-      region: 'south',
-      basement: 'no',
-      special_features: [],
-      timeline: 'flexible',
-    },
+    description: 'כמה עולה לבנות בית 120 מ״ר בתקציב מינימלי? טווח עלות בגמר בסיסי, ואיפה אפשר לחסוך בלי לשלם על זה אחר כך. נכון ל-2026.',
+    input: input(120, { finishLevel: 'basic', floors: 1 }),
+    note: 'חוסכים בתכנון, לא בשטח: בית סימטרי, גובה קומה סטנדרטי, דלתות בגובה 2.10 מ׳, מיני מרכזי בסלון ופחות משטחים יצוקים בחוץ. ועל טיח טוב לא מוותרים.',
+    readMore: { title: 'עלויות ביצוע בית פרטי 2026: שלד, טיח, ריצוף, אלומיניום ומיזוג', href: '/private-home-construction-costs-2026/' },
     relatedSlugs: ['beit-100-meter-standard', 'beit-120-meter-standard', 'beit-plada-120'],
   },
 ];
