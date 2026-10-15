@@ -18,8 +18,10 @@
 import { isChecklistItemId } from './content';
 import { parsePlannerEstimate } from './estimate';
 import {
-  SAVED_KEY,
-  SHORTLIST_KEY,
+  CHECKLIST_KEY,
+  DRAFT_KEY,
+  PLANNER_KEY,
+  clearLocalHubKeys,
   readJson,
   readSaved,
   readShortlist,
@@ -30,8 +32,11 @@ import { normalizeDraft } from './onboarding';
 import type { HubDraft, PlannerEstimate } from './types';
 
 export {
+  CHECKLIST_KEY,
+  DRAFT_KEY,
   HUB_CHANGE_EVENT,
   LOCAL_SAVED_MAX,
+  PLANNER_KEY,
   SAVED_KEY,
   SHORTLIST_KEY,
   isLocallySaved,
@@ -45,9 +50,6 @@ export {
   type LocalSavedItem,
 } from './local-saved';
 
-export const DRAFT_KEY = 'bb.hub.draft';
-export const CHECKLIST_KEY = 'bb.hub.checklist';
-export const PLANNER_KEY = 'bb.planner.last';
 export const ADVISOR_KEY = 'bb.advisor.recent';
 
 // --- Draft --------------------------------------------------------------------
@@ -115,5 +117,5 @@ export function hasLocalHubData(snapshot: LocalHubSnapshot = readLocalHub()): bo
 
 /** After a successful import into the member's project. */
 export function clearLocalHub(): void {
-  for (const key of [DRAFT_KEY, SAVED_KEY, SHORTLIST_KEY, CHECKLIST_KEY]) writeJson(key, null);
+  clearLocalHubKeys();
 }

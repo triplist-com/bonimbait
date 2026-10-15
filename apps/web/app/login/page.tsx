@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import AuthCard from '@/components/auth/AuthCard';
 import { PAGE_ERRORS } from '@/lib/auth/messages';
 import { safeNextPath } from '@/lib/auth/roles';
+import { isEnabled } from '@/lib/flags';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import LoginForm from './LoginForm';
 
@@ -15,7 +16,8 @@ export default function LoginPage({
 }: {
   searchParams: { next?: string; error?: string };
 }) {
-  const next = safeNextPath(searchParams.next);
+  // Members land in "הבית שלי" unless they came from somewhere specific.
+  const next = safeNextPath(searchParams.next, isEnabled('hub') ? '/my-home/' : '/');
   const errorKey = searchParams.error;
   const initialError = errorKey ? PAGE_ERRORS[errorKey] ?? PAGE_ERRORS.callback : null;
 
@@ -24,7 +26,7 @@ export default function LoginPage({
       {isSupabaseConfigured() ? (
         <LoginForm next={next} initialError={initialError} />
       ) : (
-        <p className="text-center text-gray-500">{PAGE_ERRORS.unavailable}</p>
+        <p className="text-center text-ink-500">{PAGE_ERRORS.unavailable}</p>
       )}
     </AuthCard>
   );

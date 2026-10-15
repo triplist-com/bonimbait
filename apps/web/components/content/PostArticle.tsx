@@ -14,6 +14,8 @@ import ArticleBody from './ArticleBody';
 import Breadcrumbs from './Breadcrumbs';
 import CommunityCTA from './CommunityCTA';
 import ConsultationCTA from '@/components/leads/ConsultationCTA';
+import SaveButton from '@/components/hub/SaveButton';
+import { isEnabled } from '@/lib/flags';
 import { PostGrid } from './PostCard';
 import { TocInline, TocSidebar } from './TableOfContents';
 
@@ -103,6 +105,7 @@ export default async function PostArticle({ post }: { post: PostRow }) {
               <Clock3 aria-hidden="true" className="size-4 text-ink-400" />
               <span className="num">{minutes}</span> דקות קריאה
             </span>
+            {isEnabled('hub') && <SaveButton kind="post" refId={post.slug} title={post.title} />}
           </div>
         </div>
       </header>

@@ -10,6 +10,9 @@ import { isSavedKind, type SavedKind } from './types';
 
 export const SHORTLIST_KEY = 'bb.shortlist';
 export const SAVED_KEY = 'bb.hub.saved';
+export const DRAFT_KEY = 'bb.hub.draft';
+export const CHECKLIST_KEY = 'bb.hub.checklist';
+export const PLANNER_KEY = 'bb.planner.last';
 export const HUB_CHANGE_EVENT = 'bb-hub-change';
 export const LOCAL_SAVED_MAX = 200;
 
@@ -119,6 +122,35 @@ export function toggleLocalSaved(item: Omit<LocalSavedItem, 'at'>, saved: boolea
 export function isLocallySaved(kind: SavedKind, ref: string): boolean {
   if (kind === 'business' && readShortlist().includes(ref)) return true;
   return readSaved().some((i) => i.kind === kind && i.ref === ref);
+}
+
+/**
+ * The whole anonymous workspace as stored, for the import on signup/login.
+ * Not validated here on purpose (the server re-validates everything), so the
+ * auth pages don't ship the hub's content and validation code.
+ */
+export function readLocalHubRaw(): { draft: unknown; saved: unknown[]; shortlist: unknown[]; checklist: unknown[]; planner: unknown } {
+  const saved = readJson(SAVED_KEY);
+  const checklist = readJson(CHECKLIST_KEY);
+  const shortlist = readJson(SHORTLIST_KEY);
+  return {
+    draft: readJson(DRAFT_KEY),
+    saved: saved && typeof saved === 'object' && Array.isArray((saved as { items?: unknown }).items) ? (saved as { items: unknown[] }).items : [],
+    shortlist: Array.isArray(shortlist) ? shortlist : [],
+    checklist:
+      checklist && typeof checklist === 'object' && Array.isArray((checklist as { done?: unknown }).done) ? (checklist as { done: unknown[] }).done : [],
+    planner: readJson(PLANNER_KEY),
+  };
+}
+
+export function hasLocalHubRaw(raw = readLocalHubRaw()): boolean {
+  const draft = raw.draft && typeof raw.draft === 'object' ? Object.keys(raw.draft as object).length : 0;
+  return draft > 0 || raw.saved.length > 0 || raw.shortlist.length > 0 || raw.checklist.length > 0;
+}
+
+/** Forget the anonymous workspace (after it moved into the account). */
+export function clearLocalHubKeys(): void {
+  for (const key of [DRAFT_KEY, SAVED_KEY, SHORTLIST_KEY, CHECKLIST_KEY]) writeJson(key, null);
 }
 
 /** Subscribe to hub storage changes (this tab and others). Returns an unsubscribe. */

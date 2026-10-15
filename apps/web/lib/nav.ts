@@ -123,11 +123,14 @@ export function aiHref(question?: string, entry: { href: string; queryParam: str
   return `${entry.href}?${entry.queryParam}=${encodeURIComponent(q)}`;
 }
 
-/** Account area. "הבית שלי" is the Builder Hub slot (Wave B), today /account/. */
+/**
+ * Account area. "הבית שלי" is the Builder Hub (/my-home/; it redirects to
+ * /account/ while FLAG_HUB is off). Orders and profile stay at /account/.
+ */
 export const ACCOUNT_NAV = {
   login: { label: 'התחברות', href: '/login/' },
   signup: { label: 'הרשמה', href: '/signup/' },
-  home: { label: 'הבית שלי', href: '/account/' },
+  home: { label: 'הבית שלי', href: '/my-home/' },
   cart: { label: 'סל הקניות', href: '/cart/' },
   signOutAction: '/auth/signout/',
 } as const;
@@ -136,7 +139,8 @@ export const ACCOUNT_NAV = {
 export const AUTH_LINKS = {
   login: ACCOUNT_NAV.login.href,
   signup: ACCOUNT_NAV.signup.href,
-  account: ACCOUNT_NAV.home.href,
+  // The account page (profile and orders), not the hub.
+  account: '/account/',
   cart: ACCOUNT_NAV.cart.href,
 } as const;
 
