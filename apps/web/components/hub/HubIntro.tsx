@@ -50,7 +50,7 @@ export function HubIntro({ signedIn, savedCount = 0 }: { signedIn: boolean; save
               </ButtonLink>
             )}
           </div>
-          <p className="mt-3 text-caption text-ink-600">בלי הרשמה כדי להתחיל. נשמור את המפה כשתרצו.</p>
+          {!signedIn && <p className="mt-3 text-caption text-ink-600">בלי הרשמה כדי להתחיל. נשמור את המפה כשתרצו.</p>}
         </div>
         <div className="rounded-3xl border border-ink-100 bg-white p-5 shadow-lift sm:p-6">
           <p className="text-caption font-semibold text-ink-600">שבעת השלבים של בונים בית</p>

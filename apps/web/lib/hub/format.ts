@@ -8,6 +8,9 @@
 const LRI = '⁦';
 const PDI = '⁩';
 
+/** En dash plus a word joiner: a range like "4–12" never breaks across lines. */
+export const RANGE_DASH = '–⁠';
+
 /** Plain text with the number isolated LTR. */
 export function isolateLtr(text: string): string {
   return `${LRI}${text}${PDI}`;
@@ -62,7 +65,7 @@ export function moneyRangeParts(min: number, max: number): MoneyParts {
   const lo = unit === 'plain' ? formatNumberHe(min) : compactNumber(min, unit);
   const hi = unit === 'plain' ? formatNumberHe(max) : compactNumber(max, unit);
   if (lo === hi) return { value: lo, unit: UNIT_LABEL[unit] };
-  return { value: `${lo}–${hi}`, unit: UNIT_LABEL[unit] };
+  return { value: `${lo}${RANGE_DASH}${hi}`, unit: UNIT_LABEL[unit] };
 }
 
 /** "2.4–2.8 מיליון ₪" as plain text (LTR-isolated number), "עד 1.5 מיליון ₪" for open ranges. */

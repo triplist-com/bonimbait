@@ -10,7 +10,7 @@
  * of the current stage (lib/hub/roadmap.ts).
  */
 import { BUILD_STAGES, type BuildStage } from '@/lib/stages';
-import { isolateLtr } from './format';
+import { RANGE_DASH, isolateLtr } from './format';
 import type { StageId } from './types';
 
 export interface ChecklistItem {
@@ -534,5 +534,5 @@ export function findChecklistItem(id: string): (ChecklistItem & { stage: StageId
 export function durationLabel(stage: StageId): string {
   const { minMonths, maxMonths } = STAGE_CONTENT[stage].duration;
   if (minMonths === maxMonths) return minMonths === 1 ? 'כחודש' : `כ-${minMonths} חודשים`;
-  return `${isolateLtr(`${minMonths}–${maxMonths}`)} חודשים`;
+  return `${isolateLtr(`${minMonths}${RANGE_DASH}${maxMonths}`)} חודשים`;
 }

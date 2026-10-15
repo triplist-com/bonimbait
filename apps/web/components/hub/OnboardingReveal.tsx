@@ -42,10 +42,11 @@ export function OnboardingReveal({
   const days = draft.targetMoveIn ? daysUntilMonth(draft.targetMoveIn, today) : null;
 
   return (
-    <div data-floating-cta="hide" className="relative isolate min-h-[calc(100dvh-var(--bb-header-h))] overflow-hidden bg-ink-950 text-white">
+    // -mb-20 runs the dark band into the footer's top margin (no light seam between two dark bands).
+    <div data-floating-cta="hide" className="relative isolate -mb-20 min-h-[calc(100dvh-var(--bb-header-h))] overflow-hidden bg-ink-950 text-white">
       <span aria-hidden="true" className="bg-blueprint-dark absolute inset-0 -z-10" />
       <span aria-hidden="true" className="absolute -top-40 end-[-6rem] -z-10 size-[28rem] rounded-full bg-primary-600/25 blur-3xl" />
-      <div className="mx-auto w-full max-w-2xl px-4 pb-16 pt-8 sm:pt-14">
+      <div className="mx-auto w-full max-w-2xl px-4 pb-32 pt-8 sm:pt-14">
         <div className="motion-safe:animate-slide-up">
           <p className="eyebrow !text-primary-300">הבית שלי</p>
           <h1 ref={headingRef} tabIndex={-1} className="mt-2 text-display text-white outline-none">

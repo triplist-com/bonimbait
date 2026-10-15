@@ -60,7 +60,7 @@ describe('stage content', () => {
   });
 
   it('labels durations in Hebrew, with the range isolated LTR', () => {
-    expect(durationLabel('planning')).toBe('⁦3–8⁩ חודשים');
+    expect(durationLabel('planning')).toBe('⁦3–⁠8⁩ חודשים');
   });
 });
 

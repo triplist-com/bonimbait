@@ -52,7 +52,8 @@ describe('money and dates', () => {
     expect(moneyParts(2_600_000)).toEqual({ value: '2.6', unit: 'מיליון ₪' });
     expect(moneyParts(820_000)).toEqual({ value: '820', unit: 'אלף ₪' });
     expect(moneyParts(6_900)).toEqual({ value: '6,900', unit: '₪' });
-    expect(moneyRangeParts(2_400_000, 2_800_000)).toEqual({ value: '2.4–2.8', unit: 'מיליון ₪' });
+    // En dash + word joiner: the range never breaks across lines.
+    expect(moneyRangeParts(2_400_000, 2_800_000)).toEqual({ value: '2.4–⁠2.8', unit: 'מיליון ₪' });
     expect(formatMoneyRange(0, 1_500_000)).toBe('עד ⁦1.5⁩ מיליון ₪');
     expect(varianceParts(-30_000)).toEqual({ value: '30', unit: 'אלף ₪', sign: '−' });
   });
