@@ -10,6 +10,8 @@ import { buildContentMetadata, canonicalPath } from '@/lib/content/seo';
 import { YOUTUBE_ID, loadVideoPage, videoThumb } from '@/lib/content/videos';
 import { absoluteUrl } from '@/lib/site';
 import type { Video } from '@/lib/types';
+import SaveButton from '@/components/hub/SaveButton';
+import { isEnabled } from '@/lib/flags';
 import VideoPageClient from './VideoPageClient';
 import { loadIndexedVideoDetail, loadRelatedIndexedVideos } from '@/lib/content/indexed-video';
 
@@ -146,5 +148,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
   // player poster is in the first HTML (LCP), not fetched after hydration.
   const initialVideo = loadIndexedVideoDetail(decodeSlug(params.id));
   const initialRelated = initialVideo ? loadRelatedIndexedVideos(initialVideo) : [];
-  return <VideoPageClient initialVideo={initialVideo} initialRelated={initialRelated} />;
+  const saveSlot =
+    isEnabled('hub') && initialVideo ? <SaveButton kind="video" refId={initialVideo.youtube_id} title={initialVideo.title} /> : null;
+  return <VideoPageClient initialVideo={initialVideo} initialRelated={initialRelated} saveSlot={saveSlot} />;
 }

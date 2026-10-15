@@ -12,6 +12,8 @@ import { absoluteUrl } from '@/lib/site';
 import ArticleBody from './ArticleBody';
 import Breadcrumbs from './Breadcrumbs';
 import ConsultationCTA from '@/components/leads/ConsultationCTA';
+import SaveButton from '@/components/hub/SaveButton';
+import { isEnabled } from '@/lib/flags';
 import VideoPageCard from './VideoPageCard';
 
 /** Legacy WordPress /video/<hebrew-slug>/ page (videos and podcast episodes). */
@@ -81,6 +83,7 @@ export default async function LegacyVideoPage({ page }: { page: VideoPageRow }) 
             {page.author_name && <span>{page.author_name}</span>}
             {page.published_at && <time dateTime={page.published_at}>{formatHebrewDate(page.published_at)}</time>}
           </p>
+          {isEnabled('hub') && <SaveButton kind="video_page" refId={page.legacy_slug} title={page.title} className="mt-4" />}
         </header>
 
         <div className="space-y-6">

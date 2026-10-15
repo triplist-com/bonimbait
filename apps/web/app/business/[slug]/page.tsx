@@ -15,6 +15,8 @@ import Gallery from '@/components/directory/Gallery';
 import { ContactBusinessForm, ShowPhoneButton } from '@/components/directory/ContactLead';
 import { ReviewList, ScoreSummary } from '@/components/directory/Reviews';
 import TrackEvent from '@/components/analytics/TrackEvent';
+import ShortlistButton from '@/components/hub/ShortlistButton';
+import { isEnabled } from '@/lib/flags';
 
 // Public data only (no cookies), so profiles are cached and refreshed every 5 minutes.
 export const revalidate = 300;
@@ -171,6 +173,16 @@ export default async function BusinessPage({ params }: Props) {
             </div>
             <div className="flex flex-col gap-2 sm:flex-row md:flex-col">
               <ShowPhoneButton businessId={business.id} businessName={business.name} />
+              {isEnabled('hub') && (
+                <ShortlistButton
+                  businessId={business.id}
+                  slug={business.slug}
+                  name={business.name}
+                  specialty={specialties[0]?.name}
+                  source="business_page"
+                  className="[&>button]:w-full"
+                />
+              )}
               <a
                 href="#reviews"
                 className="rounded-xl border border-gray-200 px-5 py-3 text-center font-semibold text-gray-700 hover:border-primary"

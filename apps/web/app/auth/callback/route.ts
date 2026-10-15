@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { applySignupExtras, syncProfile } from '@/lib/auth/session';
 import { safeNextPath } from '@/lib/auth/roles';
+import { recordSignupCompleted } from '@/lib/hub/signup';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,6 +50,8 @@ export async function GET(request: NextRequest) {
       stage: url.searchParams.get('stage'),
       region: url.searchParams.get('region'),
     });
+    // Email confirmation or a first Google login: signup_completed (once per account).
+    await recordSignupCompleted(user);
   }
 
   return NextResponse.redirect(new URL(next, request.url));

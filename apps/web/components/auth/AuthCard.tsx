@@ -4,7 +4,12 @@ import { buttonClasses } from '@/components/ui/Button';
 import { Logo } from '@/components/ui/Logo';
 import { COMMUNITY_STATS } from '@/lib/brand';
 
-const PERKS = ['תוכן והמלצות לפי השלב והאזור שלכם', 'הטבות בלעדיות לחברי הקהילה', 'קבוצות WhatsApp אזוריות של בונים כמוכם'];
+const PERKS = [
+  'הבית שלי: מפת דרך, תקציב ומסמכים במקום אחד',
+  'תוכן והמלצות לפי השלב והאזור שלכם',
+  'הטבות בלעדיות לחברי הקהילה',
+  'קבוצות WhatsApp אזוריות של בונים כמוכם',
+];
 
 /** Shared frame for the login/signup pages: the form, and a brand panel on desktop. */
 export default function AuthCard({
