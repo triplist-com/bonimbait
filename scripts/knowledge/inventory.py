@@ -23,6 +23,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import re
 from collections import Counter
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -96,6 +97,53 @@ def in_index_scope(kind: str, duration: float | None) -> bool:
     return duration >= MIN_INDEX_SECONDS
 
 
+# The owner's own markers on a replaced upload: "(ישן ...)", a trailing "ישן",
+# "לא לפרסום" (not for publication), "ניתן למחוק" (can be deleted).
+OWNER_SKIP_MARKERS = re.compile(r"לא\s*לפרסום|ניתן\s*למחוק|למחיקה|\(\s*ישן|\sישן\s*$")
+
+
+def title_key(title: str | None) -> str:
+    """Comparable form of a title: its words only (punctuation and spacing ignored)."""
+    return " ".join(re.sub(r"[^\w]+", " ", title or "").split())
+
+
+def superseded_copies(rows: list[dict]) -> dict[str, str]:
+    """Unlisted uploads that a public video replaces: {id: reason}.
+
+    An upload missing from every channel tab (reachable only through a playlist)
+    stays out of the index and the catalog when its title carries the owner's
+    "old / not for publication / can be deleted" marker, or when a public video
+    has the same title (a re-upload that left the first copy unlisted).
+    """
+    public = {title_key(r["title"]): r["id"] for r in rows if r["tabs"] and r.get("title")}
+    out: dict[str, str] = {}
+    for r in rows:
+        if r["tabs"] or not r.get("title"):
+            continue
+        if OWNER_SKIP_MARKERS.search(r["title"]):
+            out[r["id"]] = "marked old / not for publication"
+        elif twin := public.get(title_key(r["title"])):
+            out[r["id"]] = f"unlisted copy of {twin}"
+    return out
+
+
+def exclusion_reason(kind: str, duration: int | None, caption_status: str | None, superseded: str | None) -> str | None:
+    """Why a video stays out of the AI index and the catalog (None: it is in scope)."""
+    if not in_index_scope(kind, duration):
+        return "short" if kind == "short" else f"under {MIN_INDEX_SECONDS} seconds"
+    if caption_status == "unavailable":
+        return "unavailable (private or removed)"
+    return superseded
+
+
+def out_of_scope_ids() -> set[str]:
+    """Inventory ids kept out of the AI index and the catalog (see exclusion_reason)."""
+    p = inventory_path()
+    if not p.exists():
+        return set()
+    return {r["id"] for r in json.loads(p.read_text(encoding="utf-8"))["videos"] if not r.get("index_scope")}
+
+
 def build() -> dict:
     L = listings_dir()
     records: dict[str, dict] = {}
@@ -166,6 +214,10 @@ def build() -> dict:
             }
         )
     out.sort(key=lambda r: (r["upload_date"] or "", r["id"]), reverse=True)
+    replaced = superseded_copies(out)
+    for r in out:
+        r["excluded"] = exclusion_reason(r["type"], r["duration"], r["caption_status"], replaced.get(r["id"]))
+        r["index_scope"] = r["excluded"] is None
 
     def hours(rows: list[dict]) -> float:
         return round(sum(r["duration"] or 0 for r in rows) / 3600, 1)
@@ -177,7 +229,7 @@ def build() -> dict:
         "hours": hours(out),
         "by_type": {k: {"count": len(v), "hours": hours(v)} for k, v in by_type.items()},
         "index_scope": {"count": len(scope), "hours": hours(scope)},
-        "excluded_short": len(out) - len(scope),
+        "excluded": dict(Counter(r["excluded"] for r in out if r["excluded"])),
         "indexed": {"count": sum(r["indexed"] for r in out), "hours": hours([r for r in out if r["indexed"]])},
         "caption_status": dict(Counter(r["caption_status"] or "not_fetched" for r in scope)),
         "playlists": len(playlist_titles),

@@ -54,6 +54,7 @@ from scripts.knowledge.embeddings import (  # noqa: E402
     uncaptioned_videos,
     video_titles,
 )
+from scripts.knowledge.inventory import out_of_scope_ids  # noqa: E402
 from scripts.knowledge.paths import WEB_DATA, load_env, segments_dir, transcripts_dir  # noqa: E402
 
 
@@ -146,7 +147,9 @@ def main() -> int:
     seeded = cache.seed_from_index()
     print(f"Embedding cache: {len(cache)} vectors ({seeded} seeded from the committed index)")
 
-    rows = [with_title(r, titles, args.title_context) for r in load_segments()]
+    # Shorts, unavailable videos and unlisted copies a public video replaces stay out.
+    skip = out_of_scope_ids()
+    rows = [with_title(r, titles, args.title_context) for r in load_segments() if r["youtube_id"] not in skip]
     # Videos without captions: one title-level row each (findable in search, no moments).
     segmented = {r["youtube_id"] for r in rows}
     for vid, meta in sorted(uncaptioned_videos(segmented).items()):

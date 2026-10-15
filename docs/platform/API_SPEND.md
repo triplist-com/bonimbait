@@ -15,5 +15,8 @@ Log every paid run here: amounts and volumes only, never keys.
 | 2026-10-14 | knowledge | Title-context embeddings of every video segment (178 indexed + 38 new) | 1,468 segments, 2,937,014 tokens | 0.0587 |
 | 2026-10-14 | knowledge | Segment embeddings, second batch (6 videos) | 20 segments, 38,357 tokens | 0.0008 |
 | 2026-10-14 | knowledge | AI summaries + key moments, Claude Haiku 5.5 via the Batches API (50%) | 97 videos, 1,242,801 in / 115,763 out tokens | 0.0911 |
+| 2026-10-15 | knowledge | Final embeddings: 329 segments of the last captioned videos + title-level rows of the uncaptioned videos | 1,002 rows, 667,861 tokens | 0.0134 |
+| 2026-10-15 | knowledge | AI summaries top-up (newest, most viewed, legacy-linked), Claude Haiku 5.5 via the Batches API (50%) | 60 videos, 511,704 in / 59,855 out tokens | 0.0405 |
+| 2026-10-15 | knowledge | 2 real AI answers for the demo screenshots (desktop, mobile; production build), Sonnet 4.6 + Haiku 4.5 pros classifier, read from the local `ai_usage` table | 20,746 in / 513 out tokens | 0.0639 |
 
-**Running total:** ~$0.27 (autopilot ~$0.09 of $0.75; knowledge $0.161 of $1.50)
+**Running total:** ~$0.39 (autopilot ~$0.09 of $0.75; knowledge $0.279 of $1.50)

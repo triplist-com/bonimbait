@@ -89,8 +89,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const { getCategories, getVideos } = await import('./api/_lib/data');
     for (const c of getCategories()) indexed.push(entry(`/category/${c.slug}/`, 0.6, 'weekly', now));
-    for (const v of getVideos({ limit: 5000 }).videos) {
-      indexed.push(entry(`/video/${v.youtube_id}/`, 0.5, 'monthly', v.published_at || null));
+    // getVideos caps a page at 100 videos; the catalog has ~950, so walk every page.
+    for (let page = 1, pages = 1; page <= pages; page++) {
+      const result = getVideos({ page, limit: 100 });
+      pages = result.pages;
+      for (const v of result.videos) {
+        indexed.push(entry(`/video/${v.youtube_id}/`, 0.5, 'monthly', v.published_at || null));
+      }
     }
   } catch {
     // Static index unavailable: skip.
