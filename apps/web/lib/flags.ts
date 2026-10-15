@@ -49,6 +49,12 @@ export const FLAGS = {
   },
   programmaticSeo: { default: false, owner: 'growth', description: 'P6 specialty x region landing pages.' },
   autopilot: { default: false, owner: 'autopilot', description: 'P5 content autopilot ingest.' },
+  bonimos: {
+    default: false,
+    owner: 'bonimos',
+    description:
+      'P7 Bonim.Os: /manage/ (managers and managed clients), /admin/bonimos/ and the band on /my-home/ (needs migrations 20261014126000-126100).',
+  },
 } as const satisfies Record<string, FlagDef>;
 
 export type FlagName = keyof typeof FLAGS;
