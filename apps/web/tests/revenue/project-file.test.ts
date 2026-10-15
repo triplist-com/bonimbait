@@ -217,8 +217,9 @@ describe('Hebrew formatting', () => {
     expect(formatNisShort(2_600_000)).toBe('2.6 מיליון ₪');
     expect(formatNisShort(850_000)).toBe('850 אלף ₪');
     expect(formatNisShort(12_000_000)).toBe('12 מיליון ₪');
-    expect(formatBudgetRange([2_400_000, 2_800_000])).toBe('2.4–2.8 מיליון ₪');
-    expect(formatBudgetRange([900_000, 1_200_000])).toBe('900 אלף–1.2 מיליון ₪');
+    // LRM marks keep a same-unit range in reading order inside Hebrew text.
+    expect(formatBudgetRange([2_400_000, 2_800_000])).toBe('2.4‎–‎2.8 מיליון ₪');
+    expect(formatBudgetRange([900_000, 1_200_000])).toBe('900 אלף – 1.2 מיליון ₪');
     expect(formatBudgetRange([2_000_000, 2_000_000])).toBe('2 מיליון ₪');
   });
 

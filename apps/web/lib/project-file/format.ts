@@ -2,8 +2,11 @@
  * Hebrew display helpers for project files (booking sheet, consult queue,
  * portal, reports). Pure and client-safe.
  *
- * Amounts follow the site's he-IL currency style ("6,900 ₪"); render them
- * inside `.num` (LTR isolate) when they sit in Hebrew text.
+ * Amounts follow the site's he-IL currency style ("6,900 ₪"). The strings
+ * here are for plain text (labels, emails): a numeric range keeps its LTR
+ * order through LRM marks around the dash. In JSX, isolate only the digits
+ * (components/revenue/Amounts.tsx): wrapping "220 מ״ר" whole in `.num` puts
+ * the unit on the wrong side.
  */
 import { getStage } from '@/lib/stages';
 import { REGIONS } from '@/lib/constants/community';
@@ -21,29 +24,33 @@ function trimDecimal(n: number, digits: number): string {
   return String(Number(n.toFixed(digits)));
 }
 
-type Short = { value: string; unit: 'מיליון' | 'אלף' | '' };
+export type ShortAmount = { value: string; unit: 'מיליון' | 'אלף' | '' };
 
-function shortParts(n: number): Short {
+/** 2600000 -> { value: '2.6', unit: 'מיליון' }. */
+export function nisShortParts(n: number): ShortAmount {
   const abs = Math.abs(n);
   if (abs >= 1_000_000) return { value: trimDecimal(n / 1_000_000, abs >= 10_000_000 ? 0 : 1), unit: 'מיליון' };
   if (abs >= 1_000) return { value: trimDecimal(n / 1_000, 0), unit: 'אלף' };
   return { value: String(Math.round(n)), unit: '' };
 }
 
+/** Left-to-right mark: keeps "2.4–2.8" in reading order inside Hebrew text. */
+export const LRM = '‎';
+
 /** 2600000 -> "2.6 מיליון ₪", 850000 -> "850 אלף ₪". */
 export function formatNisShort(n: number): string {
-  const p = shortParts(n);
+  const p = nisShortParts(n);
   return p.unit ? `${p.value} ${p.unit} ₪` : `${p.value} ₪`;
 }
 
-/** [2400000, 2800000] -> "2.4–2.8 מיליון ₪"; equal ends -> one amount. */
+/** [2400000, 2800000] -> "2.4–2.8 מיליון ₪" (LRM-guarded dash); equal ends -> one amount. */
 export function formatBudgetRange(range: readonly [number, number]): string {
   const [lo, hi] = range;
   if (lo === hi) return formatNisShort(lo);
-  const a = shortParts(lo);
-  const b = shortParts(hi);
-  if (a.unit === b.unit) return `${a.value}–${b.value}${b.unit ? ` ${b.unit}` : ''} ₪`;
-  return `${a.value}${a.unit ? ` ${a.unit}` : ''}–${b.value}${b.unit ? ` ${b.unit}` : ''} ₪`;
+  const a = nisShortParts(lo);
+  const b = nisShortParts(hi);
+  if (a.unit === b.unit) return `${a.value}${LRM}–${LRM}${b.value}${b.unit ? ` ${b.unit}` : ''} ₪`;
+  return `${a.value}${a.unit ? ` ${a.unit}` : ''} – ${b.value}${b.unit ? ` ${b.unit}` : ''} ₪`;
 }
 
 /** Midpoint of a budget range (whole shekels). */

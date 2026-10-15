@@ -1,22 +1,41 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { bookingToken, verifyBookingToken } from '@/lib/revenue/booking-token';
+import { calendlyBookingUrl, calendlyScheduledDetails } from '@/lib/revenue/calendly';
+import { markConsultBooked, startConsultBooking } from '@/lib/revenue/actions/booking';
 import { fakeDb, type FakeDb } from './fake-db';
 
 const LEAD_ID = '00000000-0000-4000-8000-00000000c0de';
 
-const state: { db: FakeDb | null; submit: ReturnType<typeof vi.fn> } = { db: null, submit: vi.fn() };
+// vi.mock factories are hoisted above the imports; they read this at call time.
+const state = vi.hoisted(() => ({
+  db: null as unknown,
+  submit: null as unknown as (input: Record<string, unknown>) => Promise<unknown>,
+  calls: [] as Array<Record<string, unknown>>,
+}));
 
 vi.mock('next/headers', () => ({ headers: () => new Headers({ referer: 'http://localhost:3113/%D7%91%D7%9C%D7%95%D7%92/' }) }));
 vi.mock('@/lib/auth/session', () => ({ getUser: async () => null }));
 vi.mock('@/lib/guard/rateLimit', () => ({ rateLimit: async () => ({ ok: true }) }));
-vi.mock('@/lib/leads/submit', () => ({ submitLead: (...args: unknown[]) => state.submit(...args) }));
+vi.mock('@/lib/leads/submit', () => ({
+  submitLead: (input: Record<string, unknown>) => {
+    state.calls.push(input);
+    return state.submit(input);
+  },
+}));
 vi.mock('@/lib/revenue/db', () => ({
   isServiceRoleConfigured: () => true,
   revenueAdminDb: () => state.db,
 }));
 
-const { bookingToken, verifyBookingToken } = await import('@/lib/revenue/booking-token');
-const { calendlyBookingUrl, calendlyScheduledDetails } = await import('@/lib/revenue/calendly');
-const { markConsultBooked, startConsultBooking } = await import('@/lib/revenue/actions/booking');
+type SubmitResult = Record<string, unknown>;
+const submitReturns = (value: SubmitResult) => {
+  state.submit = async () => value;
+};
+const lastSubmit = () => state.calls[state.calls.length - 1] as {
+  payload: Record<string, unknown>;
+  projectFile: Record<string, unknown>;
+} & Record<string, unknown>;
+const currentDb = () => state.db as FakeDb;
 
 describe('Calendly URL and messages', () => {
   const base = 'https://calendly.com/tzuri-galili-bonimbayit/demo45min';
@@ -73,10 +92,12 @@ describe('booking tokens', () => {
 });
 
 describe('startConsultBooking', () => {
-  beforeEach(() => state.submit.mockReset());
+  beforeEach(() => {
+    state.calls.length = 0;
+  });
 
   it('creates the consultation lead with the file before Calendly, mapping the stage', async () => {
-    state.submit.mockResolvedValue({
+    submitReturns({
       ok: true,
       lead: { id: LEAD_ID, ref: 'BB-26-000777', payload: { project_score: { score: 82 } } },
       notification: null,
@@ -92,7 +113,7 @@ describe('startConsultBooking', () => {
       mode: 'calendly',
     });
     expect(res).toEqual({ status: 'created', ref: 'BB-26-000777', token: bookingToken(LEAD_ID), score: 82 });
-    const input = state.submit.mock.calls[0][0];
+    const input = lastSubmit();
     expect(input).toMatchObject({
       type: 'consultation',
       payload: { full_name: 'דנה', phone: '050-1234567', email: 'dana@example.com', region: 'sharon', construction_stage: 'tender' },
@@ -103,23 +124,34 @@ describe('startConsultBooking', () => {
   });
 
   it('keeps the visitor moving when leads are unavailable, and reports field errors', async () => {
-    state.submit.mockResolvedValue({ ok: false, error: 'unavailable', message: 'לא ניתן לשלוח' });
+    submitReturns({ ok: false, error: 'unavailable', message: 'לא ניתן לשלוח' });
     expect(await startConsultBooking({ fullName: 'x', phone: '0501234567', source: 'site', mode: 'calendly' })).toEqual({
       status: 'unavailable',
       message: 'לא ניתן לשלוח',
     });
-    state.submit.mockResolvedValue({ ok: false, error: 'validation', message: 'נא לתקן', fieldErrors: { phone: 'טלפון' } });
+    submitReturns({ ok: false, error: 'validation', message: 'נא לתקן', fieldErrors: { phone: 'טלפון' } });
     expect(await startConsultBooking({ fullName: 'x', phone: '1', source: 'site', mode: 'callback' })).toEqual({
       status: 'error',
       message: 'נא לתקן',
       fieldErrors: { phone: 'טלפון' },
     });
     // The 'infrastructure' stage has no profile stage: only the file keeps it.
-    state.submit.mockResolvedValue({ ok: true, lead: null, notification: null });
+    submitReturns({ ok: true, lead: null, notification: null });
     expect((await startConsultBooking({ fullName: 'x', phone: '0501234567', stage: 'infrastructure', source: 'site', mode: 'calendly' })).status).toBe('unavailable');
-    const input = state.submit.mock.calls.at(-1)![0];
-    expect(input.payload.construction_stage).toBeUndefined();
-    expect(input.projectFile.stage).toBe('infrastructure');
+    expect(lastSubmit().payload.construction_stage).toBeUndefined();
+    expect(lastSubmit().projectFile.stage).toBe('infrastructure');
+  });
+
+  it('fills the lead\'s stage and region from the file when the sheet did not ask', async () => {
+    submitReturns({ ok: true, lead: { id: LEAD_ID, ref: 'BB-26-000778', payload: {} }, notification: null });
+    await startConsultBooking({
+      fullName: 'x',
+      phone: '0501234567',
+      projectFile: { stage: 'frame', regionSlug: 'south' },
+      source: 'site',
+      mode: 'calendly',
+    });
+    expect(lastSubmit().payload).toMatchObject({ construction_stage: 'frame', region: 'south' });
   });
 });
 
@@ -141,7 +173,7 @@ describe('markConsultBooked', () => {
       calendly: { event: 'calendly.event_scheduled', payload: { event: { uri: 'https://api.calendly.com/scheduled_events/E1' } } },
     });
     expect(res).toEqual({ ok: true });
-    const write = state.db.writes.find((w) => w.table === 'leads' && w.op === 'update')!;
+    const write = currentDb().writes.find((w) => w.table === 'leads' && w.op === 'update')!;
     expect(write.values).toMatchObject({
       booked_at: expect.any(String),
       payload: { project_file: { version: 1 }, booking: { method: 'calendly', calendly_event: 'https://api.calendly.com/scheduled_events/E1' } },
@@ -156,6 +188,6 @@ describe('markConsultBooked', () => {
     expect(await markConsultBooked({ ref: 'BB-26-000777', token: bookingToken(LEAD_ID) })).toEqual({ ok: false });
     state.db = fakeDb({ leads: [leadRow({ booked_at: '2026-10-14T10:00:00Z' })] });
     expect(await markConsultBooked({ ref: 'BB-26-000777', token: bookingToken(LEAD_ID) })).toEqual({ ok: true });
-    expect(state.db.writes).toHaveLength(0);
+    expect(currentDb().writes).toHaveLength(0);
   });
 });

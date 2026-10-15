@@ -22,6 +22,7 @@ import { clientIpFromHeaders, hashIp } from '@/lib/leads/spam';
 import { rateLimit } from '@/lib/guard/rateLimit';
 import type { Json } from '@/lib/db/types';
 import { getStage, type BuildStage } from '@/lib/stages';
+import { MEMBER_REGIONS } from '@/lib/constants/community';
 import { sanitizeProjectFile } from '@/lib/project-file/sanitize';
 import { bookingToken, verifyBookingToken } from '../booking-token';
 import { isServiceRoleConfigured, revenueAdminDb } from '../db';
@@ -51,6 +52,10 @@ export type StartBookingResult =
   | { status: 'unavailable'; message: string }
   | { status: 'error'; message: string; fieldErrors?: Record<string, string> };
 
+function isMemberRegion(slug: string): boolean {
+  return MEMBER_REGIONS.some((r) => r.slug === slug);
+}
+
 function pathOf(referer: string | null): string | null {
   if (!referer) return null;
   try {
@@ -71,17 +76,20 @@ export async function startConsultBooking(input: StartBookingInput): Promise<Sta
     }
   }
   // The sheet asks the owner's 7 stages; the lead column keeps the profile stage
-  // (none for תשתיות), and the file keeps the stage id itself.
-  const stage = getStage(String(input.stage ?? '') as BuildStage['id']);
+  // (none for תשתיות), and the file keeps the stage id itself. When the file
+  // already knows the stage and region (so the sheet didn't ask), the lead's own
+  // columns are filled from it, so the inbox and dashboards see them too.
   const file = sanitizeProjectFile(input.projectFile);
+  const stage = getStage(String(input.stage ?? '') as BuildStage['id']) ?? (file.stage ? getStage(file.stage) : undefined);
   if (stage) file.stage = stage.id;
+  const region = input.region || (file.regionSlug && isMemberRegion(file.regionSlug) ? file.regionSlug : undefined);
   const result = await submitLead({
     type: 'consultation',
     payload: {
       full_name: input.fullName,
       phone: input.phone,
       email: input.email,
-      region: input.region,
+      region,
       construction_stage: stage?.profileStage ?? undefined,
     },
     context: { cta_source: String(input.source ?? 'site').slice(0, 60), booking_mode: input.mode === 'callback' ? 'callback' : 'calendly' },
