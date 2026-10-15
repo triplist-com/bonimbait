@@ -14,6 +14,8 @@ import SaveButton from '@/components/hub/SaveButton';
 import { isEnabled } from '@/lib/flags';
 import VideoPageClient from './VideoPageClient';
 import { loadIndexedVideoDetail, loadRelatedIndexedVideos } from '@/lib/content/indexed-video';
+import StructuredData from '@/components/StructuredData';
+import { TITLE_ONLY_ROBOTS, isTitleOnlyVideo, staticVideoJsonLd } from '@/lib/seo/video-pages';
 
 /**
  * /video/<param>/ accepts two forms (PARITY_PLAN URL rule 3):
@@ -74,6 +76,8 @@ export async function generateMetadata({ params }: VideoPageProps): Promise<Meta
   return {
     title: video.title,
     description,
+    // Title-only catalog entries (no transcript): reachable, but kept out of the index.
+    ...(isTitleOnlyVideo(video) ? { robots: TITLE_ONLY_ROBOTS } : {}),
     alternates: { canonical: absoluteUrl(`/video/${params.id}/`) },
     openGraph: {
       title: video.title,
@@ -150,5 +154,12 @@ export default async function VideoPage({ params }: VideoPageProps) {
   const initialRelated = initialVideo ? loadRelatedIndexedVideos(initialVideo) : [];
   const saveSlot =
     isEnabled('hub') && initialVideo ? <SaveButton kind="video" refId={initialVideo.youtube_id} title={initialVideo.title} /> : null;
-  return <VideoPageClient initialVideo={initialVideo} initialRelated={initialRelated} saveSlot={saveSlot} />;
+  const record = safeGetVideo(params.id);
+  return (
+    <>
+      {/* VideoObject + key moments (Clip, or SeekToAction); none for title-only videos. */}
+      {record && <StructuredData data={staticVideoJsonLd(record, absoluteUrl(`/video/${record.youtube_id}/`))} />}
+      <VideoPageClient initialVideo={initialVideo} initialRelated={initialRelated} saveSlot={saveSlot} />
+    </>
+  );
 }

@@ -25,6 +25,11 @@ export const DEFAULT_TYPE_VALUES: Record<LeadType, TypeDefault> = {
     closeRate: 0.35,
     note: 'פגישת הייעוץ החינמית מובילה בעיקר למסלול בונים תקציב.',
   },
+  budget_report: {
+    dealNis: 6_900,
+    closeRate: 0.25,
+    note: 'בונה שביקש את דוח התקציב הראשוני: מועמד חם למסלול בונים תקציב.',
+  },
   service_plan: {
     dealNis: 29_000,
     closeRate: 0.2,

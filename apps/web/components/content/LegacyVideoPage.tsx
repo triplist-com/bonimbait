@@ -15,6 +15,18 @@ import ConsultationCTA from '@/components/leads/ConsultationCTA';
 import SaveButton from '@/components/hub/SaveButton';
 import { isEnabled } from '@/lib/flags';
 import VideoPageCard from './VideoPageCard';
+import DeepLinkFacade from '@/components/video/DeepLinkFacade';
+import { getStaticVideo } from '@/app/api/_lib/data';
+import { legacyVideoJsonLd } from '@/lib/seo/video-pages';
+
+/** The static index record of a YouTube id, or null (index unavailable). */
+function staticRecord(youtubeId: string) {
+  try {
+    return getStaticVideo(youtubeId);
+  } catch {
+    return null;
+  }
+}
 
 /** Legacy WordPress /video/<hebrew-slug>/ page (videos and podcast episodes). */
 export default async function LegacyVideoPage({ page }: { page: VideoPageRow }) {
@@ -30,22 +42,24 @@ export default async function LegacyVideoPage({ page }: { page: VideoPageRow }) 
   const thumb = videoThumb(page);
   const description = page.seo_description || htmlToText(page.excerpt || page.body_html, 200) || page.title;
   const kindLabel = page.kind === 'podcast' ? 'פודקאסט' : 'וידאו';
+  const firstVideo = page.youtube_ids?.[0];
 
   return (
     <div className="pb-16">
-      <StructuredData
-        data={{
-          '@context': 'https://schema.org',
-          '@type': 'VideoObject',
-          name: page.title,
-          description,
-          thumbnailUrl: thumb ? [thumb] : undefined,
-          uploadDate: page.published_at ?? page.created_at,
-          embedUrl: page.youtube_ids?.[0] ? `https://www.youtube.com/embed/${page.youtube_ids[0]}` : undefined,
-          url: absoluteUrl(canonicalPath(page, path)),
-          inLanguage: 'he-IL',
-        }}
-      />
+      {firstVideo && (
+        <StructuredData
+          data={legacyVideoJsonLd({
+            youtubeId: firstVideo,
+            title: page.title,
+            description,
+            thumbnailUrl: thumb,
+            uploadDate: page.published_at ?? page.created_at,
+            pageUrl: absoluteUrl(path),
+            canonicalUrl: absoluteUrl(canonicalPath(page, path)),
+            record: staticRecord(firstVideo),
+          })}
+        />
+      )}
       {jsonLd.map((node, i) => (
         <StructuredData key={i} data={node} />
       ))}
@@ -88,15 +102,19 @@ export default async function LegacyVideoPage({ page }: { page: VideoPageRow }) 
 
         <div className="space-y-6">
           {(page.youtube_ids ?? []).length > 0 ? (
-            page.youtube_ids.map((id, i) => (
-              <YouTubeFacade
-                key={id}
-                youtubeId={id}
-                title={i === 0 ? page.title : `${page.title} (${i + 1})`}
-                poster={i === 0 ? page.featured_image : null}
-                priority={i === 0}
-              />
-            ))
+            page.youtube_ids.map((id, i) => {
+              // The first player honours ?t= (key-moment and SeekToAction links point here).
+              const Facade = i === 0 ? DeepLinkFacade : YouTubeFacade;
+              return (
+                <Facade
+                  key={id}
+                  youtubeId={id}
+                  title={i === 0 ? page.title : `${page.title} (${i + 1})`}
+                  poster={i === 0 ? page.featured_image : null}
+                  priority={i === 0}
+                />
+              );
+            })
           ) : thumb ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={thumb} alt={page.title} className="w-full rounded-2xl shadow-card" />

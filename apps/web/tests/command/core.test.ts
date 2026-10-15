@@ -99,7 +99,7 @@ describe('pipeline value', () => {
 
   it('lists plans by their order, then every lead type', () => {
     expect(defaults.slice(0, 3).map((d) => d.key)).toEqual(['plan:bonim-budget', 'plan:bonim-bait-plus', 'plan:bonim-bait-turnkey']);
-    expect(defaults.filter((d) => d.group === 'type')).toHaveLength(10);
+    expect(defaults.filter((d) => d.group === 'type')).toHaveLength(11); // includes growth's budget_report
     const budget = defaults.find((d) => d.key === 'plan:bonim-budget')!;
     expect(expectedValueAgorot(budget)).toBe(276_000); // ₪6,900 x 40%
     const consult = defaults.find((d) => d.key === 'type:consultation')!;

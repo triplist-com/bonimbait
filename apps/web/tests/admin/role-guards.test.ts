@@ -65,11 +65,12 @@ beforeEach(() => {
 });
 
 describe('admin server actions refuse non-staff', () => {
+  // First test to import every action module: under a full parallel run that takes > 5s.
   it('discovers the action modules', async () => {
     const actions = await loadActions();
     expect(modules.length).toBeGreaterThanOrEqual(6);
     expect(actions.length).toBeGreaterThanOrEqual(30);
-  });
+  }, 30_000);
 
   it.each([
     ['signed out', null, SIGNED_OUT_MESSAGE],

@@ -4,11 +4,13 @@
  */
 import { commandDemo } from './command';
 import { foundationDemo } from './foundation';
+import { growthDemo } from './growth';
 import { hubDemo } from './hub';
 
 export const DEMO_FIXTURES = {
   foundation: foundationDemo,
   command: commandDemo,
+  growth: growthDemo,
   hub: hubDemo,
 } as const;
 

@@ -63,6 +63,7 @@ export const ADMIN_NAV: readonly AdminNavGroup[] = [
     ],
   },
   { id: 'leads', title: 'לידים', items: [{ href: '/admin/leads/', label: 'תיבת לידים' }] },
+  { id: 'growth', title: 'צמיחה', items: [{ href: '/admin/planner/', label: 'מחירון מתכנן התקציב' }] },
   {
     id: 'commerce',
     title: 'חנות ושירותים',

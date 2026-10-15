@@ -41,7 +41,12 @@ export const FLAGS = {
   hub: { default: false, owner: 'hub', description: 'P2 "הבית שלי" builder workspace.' },
   revenue: { default: false, owner: 'revenue', description: 'P3 lead scoring/routing and the pro portal stats.' },
   commandCenter: { default: false, owner: 'command', description: 'P4 owner command center in /admin.' },
-  budgetPlanner: { default: false, owner: 'growth', description: 'P6 budget planner lead magnet.' },
+  budgetPlanner: {
+    default: false,
+    owner: 'growth',
+    description:
+      'P6: the planner report\'s "שלחו לי את הדוח" lead capture (budget_report leads; needs migration 20261014124100). The planner itself is always on.',
+  },
   programmaticSeo: { default: false, owner: 'growth', description: 'P6 specialty x region landing pages.' },
   autopilot: { default: false, owner: 'autopilot', description: 'P5 content autopilot ingest.' },
 } as const satisfies Record<string, FlagDef>;

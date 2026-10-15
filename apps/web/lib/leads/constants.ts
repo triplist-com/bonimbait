@@ -14,6 +14,7 @@ export const LEAD_TYPES: readonly LeadType[] = [
   'whatsapp_join',
   'service_plan',
   'claim_business',
+  'budget_report',
 ];
 
 /** Hebrew labels for notifications and the Wave 3 admin. */
@@ -28,6 +29,7 @@ export const LEAD_TYPE_LABELS: Record<LeadType, string> = {
   whatsapp_join: 'הצטרפות לקבוצת WhatsApp',
   service_plan: 'מסלול ניהול בנייה',
   claim_business: 'בקשת ניהול עסק',
+  budget_report: 'דוח תקציב מהמחשבון',
 };
 
 /** Strategic-partners form categories (live /strategic-partners/ select). */

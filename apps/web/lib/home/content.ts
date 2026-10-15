@@ -64,12 +64,12 @@ export const HUB_TEASER = {
 
 export const BUDGET_TEASER = {
   title: 'כמה יעלה הבית שלכם?',
-  subtitle: 'תקציב ראשוני ב-3 דקות: גודל, קומות, שיטת בנייה, רמת גמר ואזור.',
+  subtitle: 'תקציב ראשוני ב-3 דקות: גודל, קומות, אזור, רמת גמר ותוספות.',
   cta: 'למחשבון התקציב',
   href: '/calculator/',
   /** Example inputs for the preview (run through lib/calculator.ts). */
   example: {
-    label: 'בית של כ-225 מ״ר, 2 קומות, בלוקים, גמר בינוני-גבוה, שפלה',
+    label: 'בית של כ-225 מ״ר, 2 קומות, גמר סטנדרטי-טוב, שפלה',
     answers: {
       house_size: '200_250',
       floors: '2',
