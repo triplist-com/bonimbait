@@ -29,12 +29,11 @@ const STATUS: Record<MilestoneStatus, { label: string; tone: 'success' | 'brand'
 
 const GRID = 'md:grid-cols-[14rem_minmax(0,1fr)]';
 
-/** "ינו׳ 27" in January, "אוק׳" otherwise (three letters; מרץ and מאי are whole). */
-function monthShort(month: string): string {
-  const m = Number(month.slice(5, 7));
-  const name = HEBREW_MONTHS[m - 1] ?? '';
+/** "אוק׳" (three letters; מרץ and מאי are whole), with "26" when the year is new on the axis. */
+function monthShort(month: string, withYear: boolean): string {
+  const name = HEBREW_MONTHS[Number(month.slice(5, 7)) - 1] ?? '';
   const short = name.length > 3 ? `${name.slice(0, 3)}׳` : name;
-  return m === 1 ? `${short} ${month.slice(2, 4)}` : short;
+  return withYear ? `${short} ${month.slice(2, 4)}` : short;
 }
 
 /** "19.7–19.8" (day.month, the way dates are written on site). */
@@ -200,17 +199,17 @@ function MonthAxis({ range }: { range: TimelineRange }) {
             היום
           </span>
         )}
-        {range.months.map((mo, i) =>
-          i % stride === 0 ? (
+        {range.months
+          .filter((_, i) => i % stride === 0)
+          .map((mo, i, shown) => (
             <span
               key={mo.month}
               className="absolute bottom-0 whitespace-nowrap border-s border-ink-200 ps-1 leading-4"
               style={{ insetInlineStart: `${mo.startPct}%` }}
             >
-              {monthShort(mo.month)}
+              {monthShort(mo.month, i === 0 || shown[i - 1].month.slice(0, 4) !== mo.month.slice(0, 4))}
             </span>
-          ) : null,
-        )}
+          ))}
       </div>
     </div>
   );
@@ -243,9 +242,11 @@ function MilestoneRow({ m, range, today, isManager }: { m: MilestoneView; range:
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-body-sm font-semibold text-ink-900">
             <span className="min-w-0">{m.title}</span>
-            <Badge size="sm" tone={meta.tone} icon={status === 'done' ? <CircleCheck /> : status === 'late' ? <TriangleAlert /> : status === 'in_progress' ? <Clock /> : undefined}>
-              {meta.label}
-            </Badge>
+            {status !== 'upcoming' && (
+              <Badge size="sm" tone={meta.tone} icon={status === 'done' ? <CircleCheck /> : status === 'late' ? <TriangleAlert /> : status === 'in_progress' ? <Clock /> : undefined}>
+                {meta.label}
+              </Badge>
+            )}
           </p>
           <p className="mt-0.5 text-caption text-ink-600">
             {m.actualEnd ? 'בוצע ' : 'מתוכנן '}

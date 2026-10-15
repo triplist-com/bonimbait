@@ -32,7 +32,7 @@ export function BonimosShell({
   return (
     <div className="flex min-h-screen flex-col bg-paper" data-shell="bonimos">
       <header className="sticky top-0 z-40 border-b border-ink-100 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85">
-        <div className="container-page flex items-center gap-3 py-2.5 sm:gap-5">
+        <div className="container-page flex items-center gap-2 py-2.5 sm:gap-5">
           <Link href={homeHref} prefetch={false} className="flex shrink-0 items-center gap-2 rounded-lg py-1 text-ink-900" aria-label="Bonim.Os: הפרויקטים">
             <Logo accent className="h-7 w-auto sm:h-8" />
             <span dir="ltr" className="rounded-md bg-ink-900 px-1.5 py-0.5 text-[0.6875rem] font-extrabold tracking-wide text-white">
@@ -71,9 +71,10 @@ export function BonimosShell({
             <Link
               href="/"
               prefetch={false}
-              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-ink-600 transition-colors hover:bg-ink-100 hover:text-ink-900"
+              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-sm font-medium text-ink-600 transition-colors hover:bg-ink-100 hover:text-ink-900 sm:px-3"
             >
-              לאתר בונים בית
+              <span className="sm:hidden">לאתר</span>
+              <span className="hidden sm:inline">לאתר בונים בית</span>
               <ArrowLeft aria-hidden="true" className="size-4 ltr:rotate-180" />
             </Link>
           </div>
