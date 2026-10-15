@@ -259,6 +259,10 @@ def main() -> int:
         if chapters and not rec.get("chapters"):
             rec["chapters"] = chapters
             changed = True
+        kind = (inventory.get(vid) or {}).get("type")
+        if not rec.get("kind") and kind in ("video", "podcast", "live"):
+            rec["kind"] = kind  # 2026-03 records predate the field
+            changed = True
         if changed:
             updated.append(vid)
 
