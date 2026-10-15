@@ -29,10 +29,14 @@ export const ANSWER_COST_ESTIMATE_USD = 0.035;
 export const REWRITE_COST_ESTIMATE_USD = 0.001;
 export const REWRITE_TIMEOUT_MS = 2500;
 
-/** Documents fed to the model and shown as source cards. */
-export const MAX_SOURCES = 5;
-/** Article chunks are cleaner text and outrank transcripts: cap them so video moments stay in. */
-export const MAX_POST_SOURCES = 2;
+/**
+ * Documents fed to the model and shown as source cards: up to 3 articles
+ * (knowledge's blind eval: 2 articles instead of 3 lowered answer quality,
+ * 5.37 -> 4.90) and the rest video moments, so a cost question gets both the
+ * articles and the podcast moments. The character budget below bounds the cost.
+ */
+export const MAX_SOURCES = 6;
+export const MAX_POST_SOURCES = 3;
 export const MAX_PASSAGES_PER_VIDEO = 2;
 export const MAX_PASSAGES_PER_POST = 2;
 export const POST_PASSAGE_CHARS = 900;

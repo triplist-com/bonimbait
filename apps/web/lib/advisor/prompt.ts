@@ -4,8 +4,11 @@
  * goes in the user turn, sources first and the question last.
  */
 import { stripCitations } from './citations';
+import { HE_MONTHS, clock, publishedLabel } from './format';
 import { FOLLOWUPS_MARKER } from './trailer';
 import type { AdvisorFocus, AdvisorHistoryTurn } from './types';
+
+export { clock, publishedLabel };
 
 export const SYSTEM_PROMPT = `You are the advisor of "בונים בית" (Bonim Bait), Israel's community for families who build their own private home. Bonim Bait was founded by Tomer Chen Rihana (תומר חן ריחאנה), a construction manager who shares what he sees on building sites in his YouTube videos, the "בונים בית" podcast and hundreds of articles. Families ask you questions while they plan or build, usually on a phone and in the middle of a decision.
 
@@ -59,31 +62,12 @@ After the answer, write a line with exactly ${FOLLOWUPS_MARKER} and then up to 3
 - not repeat the question that was just asked.
 </followups>`;
 
-const HE_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
-
-/** "ביולי 2026" from an ISO date; null when unknown. */
-export function publishedLabel(iso: string | null | undefined): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return `ב${HE_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
-}
-
 /** "15 באוקטובר 2026" in Israel time. */
 export function todayLabel(now = new Date()): string {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: 'numeric', day: 'numeric' })
     .formatToParts(now)
     .reduce<Record<string, string>>((acc, p) => ({ ...acc, [p.type]: p.value }), {});
   return `${Number(parts.day)} ב${HE_MONTHS[Number(parts.month) - 1]} ${parts.year}`;
-}
-
-/** "28:34" / "1:02:05". */
-export function clock(seconds: number): string {
-  const s = Math.max(0, Math.floor(seconds));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = String(s % 60).padStart(2, '0');
-  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
 }
 
 export interface PromptPassage {
