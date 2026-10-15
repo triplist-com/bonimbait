@@ -20,7 +20,7 @@ from scripts.knowledge.catalog import (
     title_category,
 )
 from scripts.knowledge.fetch_captions import BLOCK_PATTERNS, UNAVAILABLE_PATTERNS, pick_track
-from scripts.knowledge.inventory import classify, in_index_scope, interpolate_dates
+from scripts.knowledge.inventory import classify, exclusion_reason, in_index_scope, interpolate_dates, superseded_copies
 from scripts.knowledge.summarize import mmss, select, to_record, transcript_with_markers
 
 TEMPLATE = "📌 מתכננים לבנות בית? קבעו עכשיו פגישת ייעוץ » https://tinyurl.com/x\n\nשלכם,\nתומר חן ריחאנה וצוות בונים בית 🏠"
@@ -176,6 +176,31 @@ class InventoryTests(unittest.TestCase):
         self.assertTrue(in_index_scope("video", 90))
         self.assertFalse(in_index_scope("short", None))
         self.assertTrue(in_index_scope("video", None))
+
+    def test_unlisted_copies_of_public_videos_are_superseded(self) -> None:
+        rows = [
+            {"id": "pub109", "tabs": ["videos"], "title": "פודקאסט פרק 109 - עלויות בניה בשנת 2026"},
+            {"id": "old109", "tabs": [], "title": "עלויות בניה בשנת 2026 - ממה הכל מורכב וכמה ?! (ישן- ניתן למחוק)"},
+            {"id": "old106", "tabs": [], "title": "פודקאסט פרק 106 - חומרי בנין ! (ישן - לא לפרסום)"},
+            {"id": "oldcn", "tabs": [], "title": "ייבוא מסין - תאורה לבית ! (פרק 6)  ישן"},
+            {"id": "pubalu", "tabs": ["videos"], "title": "אלומיניום לבית: מערכות מינימליסטיות"},
+            {"id": "twinalu", "tabs": [], "title": "אלומיניום לבית - מערכות מינימליסטיות!"},
+            {"id": "unique", "tabs": [], "title": "הטיפים הקריטיים לפני שבונים גג רעפים"},
+            {"id": "boiler", "tabs": ["videos"], "title": "תיקון והחלפת דוד שמש ישן - טיפים! (2023)"},
+            {"id": "gone", "tabs": [], "title": ""},
+        ]
+        out = superseded_copies(rows)
+        self.assertEqual(set(out), {"old109", "old106", "oldcn", "twinalu"})
+        self.assertEqual(out["twinalu"], "unlisted copy of pubalu")
+        # A public upload is never dropped, even with an "old" word in the title.
+        self.assertNotIn("boiler", out)
+
+    def test_exclusion_reason(self) -> None:
+        self.assertEqual(exclusion_reason("short", 40, None, None), "short")
+        self.assertEqual(exclusion_reason("video", 60, None, None), "under 90 seconds")
+        self.assertEqual(exclusion_reason("podcast", None, "unavailable", None), "unavailable (private or removed)")
+        self.assertEqual(exclusion_reason("video", 600, "none", "unlisted copy of x"), "unlisted copy of x")
+        self.assertIsNone(exclusion_reason("video", 600, "auto_he", None))
 
     def test_interpolates_between_known_dates(self) -> None:
         ids = ["a", "b", "c", "d", "e"]

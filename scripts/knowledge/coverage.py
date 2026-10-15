@@ -101,9 +101,10 @@ def main() -> int:
 
     # Caption status vs the video's language setting (YouTube makes ASR only for a set language).
     language_vs_status: Counter = Counter()
-    for vid, st in status.items():
-        meta_path = metadata_dir() / f"{vid}.json"
-        if meta_path.exists():
+    for r in scope:
+        st = status.get(r["id"])
+        meta_path = metadata_dir() / f"{r['id']}.json"
+        if st and meta_path.exists():
             lang = json.loads(meta_path.read_text(encoding="utf-8")).get("language") or "not set"
             language_vs_status[f"{st.get('status')} / language {lang}"] += 1
 
@@ -119,7 +120,8 @@ def main() -> int:
             "hours": hours(r["id"] for r in rows),
             "by_type": by_type,
             "in_scope": {"count": len(scope), "hours": hours(r["id"] for r in scope)},
-            "excluded_short": len(rows) - len(scope),
+            # Shorts, clips under 90 s, unavailable videos, unlisted copies of public videos.
+            "excluded": dict(Counter(r.get("excluded") or "out of scope" for r in rows if not r["index_scope"])),
         },
         "captions_in_scope": {k: {"videos": v, "hours": round(cap_hours[k], 1)} for k, v in cap.most_common()},
         "index": {

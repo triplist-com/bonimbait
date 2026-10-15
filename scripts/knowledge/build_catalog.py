@@ -175,7 +175,11 @@ def main() -> int:
     new_ids = sorted(
         vid
         for vid in segments
-        if vid not in by_id and vid in metas and (metas[vid].get("duration") or 0) >= MIN_INDEX_SECONDS
+        if vid not in by_id
+        and vid in metas
+        and (metas[vid].get("duration") or 0) >= MIN_INDEX_SECONDS
+        # Shorts, unavailable videos and unlisted copies a public video replaces stay out.
+        and inventory.get(vid, {}).get("index_scope", True)
     )
     # Videos without captions: title-level records (findable, related videos; no moments).
     title_only_ids = sorted(vid for vid in uncaptioned if vid not in by_id)
