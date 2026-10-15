@@ -11,6 +11,7 @@ import { YOUTUBE_ID, loadVideoPage, videoThumb } from '@/lib/content/videos';
 import { absoluteUrl } from '@/lib/site';
 import type { Video } from '@/lib/types';
 import VideoPageClient from './VideoPageClient';
+import { loadIndexedVideoDetail, loadRelatedIndexedVideos } from '@/lib/content/indexed-video';
 
 /**
  * /video/<param>/ accepts two forms (PARITY_PLAN URL rule 3):
@@ -141,5 +142,9 @@ export default async function VideoPage({ params }: VideoPageProps) {
     if (!runtime) notFound();
     return <RuntimeVideoPage video={runtime} related={relatedVideos(runtime.category_slug)} />;
   }
-  return <VideoPageClient />;
+  // Server-rendered initial data (same static index as /api/videos/[id]) so the
+  // player poster is in the first HTML (LCP), not fetched after hydration.
+  const initialVideo = loadIndexedVideoDetail(decodeSlug(params.id));
+  const initialRelated = initialVideo ? loadRelatedIndexedVideos(initialVideo) : [];
+  return <VideoPageClient initialVideo={initialVideo} initialRelated={initialRelated} />;
 }

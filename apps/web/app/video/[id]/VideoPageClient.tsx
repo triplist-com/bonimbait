@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import VideoPlayer from '@/components/VideoPlayer';
 import VideoGrid from '@/components/VideoGrid';
@@ -12,19 +12,37 @@ import { getVideoDetail, getRelatedVideos } from '@/lib/api';
 import { formatTimestamp, thumbnailUrl as getThumbUrl } from '@/lib/types';
 import type { VideoDetail as VideoDetailType, Video } from '@/lib/types';
 
-function VideoContent() {
-  const params = useParams();
-  const searchParams = useSearchParams();
-  const id = params.id as string;
-  const startTime = parseInt(searchParams.get('t') || '0', 10);
+interface InitialData {
+  initialVideo?: VideoDetailType | null;
+  initialRelated?: Video[];
+}
 
-  const [video, setVideo] = useState<VideoDetailType | null>(null);
-  const [related, setRelated] = useState<Video[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+function VideoContent({ initialVideo, initialRelated }: InitialData) {
+  const params = useParams();
+  const id = params.id as string;
+  const hasInitial = Boolean(initialVideo);
+
+  const [video, setVideo] = useState<VideoDetailType | null>(initialVideo ?? null);
+  const [related, setRelated] = useState<Video[]>(initialRelated ?? []);
+  const [isLoading, setIsLoading] = useState(!hasInitial);
   const [openTranscript, setOpenTranscript] = useState(false);
-  const [playerTime, setPlayerTime] = useState(startTime);
+  const [playerTime, setPlayerTime] = useState(0);
+  const [playRequested, setPlayRequested] = useState(false);
+  const seek = (seconds: number) => {
+    setPlayerTime(seconds);
+    setPlayRequested(true);
+  };
+
+  // Deep link (?t=157, from an AI answer): read after mount, not via
+  // useSearchParams, so the statically rendered page keeps its server HTML.
+  useEffect(() => {
+    const t = parseInt(new URLSearchParams(window.location.search).get('t') || '0', 10);
+    if (t > 0) setPlayerTime(t);
+  }, [id]);
 
   useEffect(() => {
+    // Server-rendered data: nothing to fetch.
+    if (hasInitial) return;
     let cancelled = false;
     setIsLoading(true);
 
@@ -40,7 +58,7 @@ function VideoContent() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, hasInitial]);
 
   if (isLoading) {
     return (
@@ -71,7 +89,7 @@ function VideoContent() {
   const thumb = video.thumbnail_url || getThumbUrl(video.youtube_id);
 
   return (
-    <div className="container-page">
+    <div className="container-page max-w-5xl">
       {/* VideoObject structured data */}
       <StructuredData
         data={{
@@ -109,12 +127,14 @@ function VideoContent() {
           youtubeId={video.youtube_id}
           title={video.title}
           startTime={playerTime}
+          playing={playRequested}
+          poster={video.thumbnail_url}
         />
 
         {/* Video Info */}
         <div className="mt-6 mb-8">
           <div className="flex items-start justify-between gap-4 mb-3">
-            <h1 className="text-2xl font-bold text-gray-900">{video.title}</h1>
+            <h1 className="text-headline-sm text-ink-900">{video.title}</h1>
             <Link
               href={`/category/${video.category_slug}/`}
               className="inline-block text-sm bg-primary-50 text-primary-700 font-medium px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-primary-100 transition-colors flex-shrink-0"
@@ -149,12 +169,12 @@ function VideoContent() {
           tips={video.tips}
           warnings={video.warnings}
           variant="full"
-          onTimestampClick={(seconds) => setPlayerTime(seconds)}
+          onTimestampClick={seek}
         />
 
         {/* Transcript Accordion */}
         {video.segments && video.segments.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-8">
+          <div className="bg-white border border-ink-100 rounded-2xl shadow-card overflow-hidden mb-8">
             <button
               onClick={() => setOpenTranscript(!openTranscript)}
               className="w-full flex items-center justify-between p-6 hover:bg-gray-50 transition-colors"
@@ -180,7 +200,7 @@ function VideoContent() {
                 {video.segments.map((seg) => (
                   <button
                     key={seg.id}
-                    onClick={() => setPlayerTime(seg.start_time)}
+                    onClick={() => seek(seg.start_time)}
                     className="w-full flex items-start gap-3 py-2 px-3 rounded-lg hover:bg-primary-50 transition-colors text-right group"
                     aria-label={`דלג לדקה ${formatTimestamp(seg.start_time)}: ${seg.text.substring(0, 50)}`}
                   >
@@ -208,7 +228,7 @@ function VideoContent() {
   );
 }
 
-export default function VideoPageClient() {
+export default function VideoPageClient(props: InitialData) {
   return (
     <Suspense
       fallback={
@@ -220,7 +240,7 @@ export default function VideoPageClient() {
         </div>
       }
     >
-      <VideoContent />
+      <VideoContent {...props} />
     </Suspense>
   );
 }

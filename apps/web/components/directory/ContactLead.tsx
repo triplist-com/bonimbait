@@ -86,7 +86,7 @@ function PersonFields({ state, prefill }: { state: LeadFormState; prefill: Prefi
 function Revealed({ state, businessName }: { state: Extract<LeadFormState, { status: 'revealed' }>; businessName: string }) {
   if (!state.phone && state.otherPhones.length === 0) {
     return (
-      <p className="rounded-xl bg-amber-50 p-4 text-amber-800">
+      <p className="rounded-xl bg-warning-50 p-4 text-warning-800">
         תודה! הפרטים שלכם הועברו, וצוות בונים בית יחבר אתכם ל{businessName} בהקדם.
       </p>
     );
@@ -110,7 +110,7 @@ function Revealed({ state, businessName }: { state: Extract<LeadFormState, { sta
           href={state.whatsapp}
           target="_blank"
           rel="noopener noreferrer"
-          className="block rounded-xl bg-[#25D366] px-4 py-3 font-semibold text-white hover:opacity-90"
+          className="block rounded-xl bg-whatsapp px-4 py-3 font-semibold text-ink-950 hover:brightness-95"
         >
           שליחת הודעה בוואטסאפ
         </a>

@@ -48,7 +48,7 @@ export default async function CheckoutPage() {
     <div className="container-page py-8 sm:py-12">
       <h1 className="text-3xl font-bold text-gray-900">תשלום</h1>
       {priced.unavailable.length > 0 && (
-        <p role="status" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
+        <p role="status" className="mt-4 rounded-xl border border-warning-200 bg-warning-50 px-4 py-3 text-warning-800">
           חלק מהפריטים בסל אינם זמינים עוד.{' '}
           <Link href="/cart/" className="underline">
             עדכנו את הסל

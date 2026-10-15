@@ -1,4 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#2563EB"/>
-  <text x="16" y="24" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white" text-anchor="middle">ב</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <rect width="48" height="48" rx="12" fill="#E61559"/>
+  <g transform="translate(-182.835 -4.3)" fill="#FFFFFF">
+    <path d="M192.42 34.1801H210.6V26.1401C210.6 23.3301 209.68 22.5701 206.98 22.5701H193.07V14.3501H206.98C216.01 14.3501 218.82 17.0501 218.82 26.1401V34.1801H221.25V42.3001H192.42V34.1801Z"/>
+    <path d="M201.94 30.01C202.989 30.01 203.84 29.1593 203.84 28.11C203.84 27.0606 202.989 26.21 201.94 26.21C200.891 26.21 200.04 27.0606 200.04 28.11C200.04 29.1593 200.891 30.01 201.94 30.01Z"/>
+  </g>
 </svg>

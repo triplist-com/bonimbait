@@ -10,7 +10,7 @@ function TocList({ items }: { items: TocItem[] }) {
         <li key={item.id} className={item.level === 3 ? 'ps-4' : ''}>
           <a
             href={`#${item.id}`}
-            className={`block leading-snug py-0.5 transition-colors hover:text-primary ${
+            className={`block leading-snug py-1 transition-colors hover:text-primary-700 ${
               item.level === 2 ? 'text-gray-700 font-medium' : 'text-gray-500'
             }`}
           >
@@ -42,7 +42,7 @@ export function TocInline({ items }: { items: TocItem[] }) {
 export function TocSidebar({ items }: { items: TocItem[] }) {
   if (items.length < TOC_MIN_ITEMS) return null;
   return (
-    <nav aria-label="תוכן העניינים" className="hidden lg:block sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto rounded-2xl border border-gray-100 bg-white p-5 shadow-card">
+    <nav aria-label="תוכן העניינים" className="hidden lg:block sticky top-28 max-h-[calc(100vh-8rem)] overflow-y-auto rounded-2xl border border-gray-100 bg-white p-5 shadow-card">
       <p className="font-bold text-gray-900 mb-3">תוכן העניינים</p>
       <TocList items={items} />
     </nav>
