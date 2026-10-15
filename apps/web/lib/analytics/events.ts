@@ -213,6 +213,26 @@ export const EVENT_CATALOG = {
     'A builder saved an item to the hub (video, article, pro, checklist...).',
     z.object({ item_type: text(40), item_id: text(200) }),
   ),
+  hub_checklist_item_done: event(
+    'both',
+    'A builder ticked an item on a stage checklist (ids from lib/hub/content.ts).',
+    z.object({ stage: text(40), item_id: text(80) }),
+  ),
+  hub_task_added: event(
+    'server',
+    'A builder added a task in the hub (typed, or the suggested ones for the stage).',
+    z.object({ stage: text(40).optional(), has_due_date: z.boolean().optional(), source: text(20).optional() }),
+  ),
+  hub_budget_item_added: event(
+    'server',
+    'A builder recorded a quote or a payment in the hub budget (never the amount).',
+    z.object({ kind: z.enum(['quote', 'actual']), category: text(40), stage: text(40).optional() }),
+  ),
+  hub_document_uploaded: event(
+    'server',
+    'A builder uploaded a document to the hub (plans, permit, quote, contract, photo...).',
+    z.object({ category: text(40), mime_type: text(60).optional(), size_kb: count.optional() }),
+  ),
 
   // --- Growth (P6) ------------------------------------------------------------
   planner_started: event(
