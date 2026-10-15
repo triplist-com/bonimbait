@@ -25,7 +25,20 @@ export type AdminNavItem = {
 export type AdminNavGroup = { id: string; title?: string; items: AdminNavItem[] };
 
 export const ADMIN_NAV: readonly AdminNavGroup[] = [
-  { id: 'home', items: [{ href: '/admin/', label: 'לוח בקרה', exact: true }] },
+  { id: 'home', items: [{ href: '/admin/', label: 'חדר הבקרה', exact: true }] },
+  {
+    // P4 Command Center (command squad). Flagged screens appear with FLAG_COMMAND_CENTER.
+    id: 'insights',
+    title: 'תובנות',
+    items: [
+      { href: '/admin/insights/', label: 'שאלות בלי תשובה', exact: true, flag: 'commandCenter' },
+      { href: '/admin/insights/leads/', label: 'ניתוח לידים', flag: 'commandCenter' },
+      { href: '/admin/insights/content/', label: 'ביצועי תוכן', flag: 'commandCenter' },
+      { href: '/admin/digest/', label: 'סיכום שבועי', flag: 'commandCenter' },
+      { href: '/admin/search-stats/', label: 'חיפושים ותשובות', minRole: 'admin' },
+      { href: '/admin/insights/pipeline/', label: 'ערך צפוי לליד', minRole: 'admin', flag: 'commandCenter' },
+    ],
+  },
   {
     id: 'content',
     title: 'תוכן',
@@ -66,7 +79,6 @@ export const ADMIN_NAV: readonly AdminNavGroup[] = [
     items: [
       { href: '/admin/redirects/', label: 'הפניות (301)' },
       { href: '/admin/members/', label: 'משתמשים והרשאות', minRole: 'admin' },
-      { href: '/admin/search-stats/', label: 'סטטיסטיקות חיפוש', minRole: 'admin' },
     ],
   },
 ];
