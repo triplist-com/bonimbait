@@ -67,10 +67,8 @@ export const ADMIN_NAV: readonly AdminNavGroup[] = [
     // P7 Bonim.Os (bonimos squad): managed clients and their project managers.
     id: 'bonimos',
     title: 'Bonim.Os',
-    items: [
-      { href: '/admin/bonimos/', label: 'לקוחות ליווי ומנהלים', minRole: 'admin', flag: 'bonimos' },
-      { href: '/manage/', label: 'הפרויקטים שלי', flag: 'bonimos' },
-    ],
+    // The managers' own workspace is /manage/ (linked from that screen), outside /admin/.
+    items: [{ href: '/admin/bonimos/', label: 'לקוחות ליווי ומנהלים', minRole: 'admin', flag: 'bonimos' }],
   },
   { id: 'growth', title: 'צמיחה', items: [{ href: '/admin/planner/', label: 'מחירון מתכנן התקציב' }] },
   {

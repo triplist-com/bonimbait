@@ -72,10 +72,10 @@ describe('the activity log', () => {
 
   it('says each event in neutral Hebrew', () => {
     expect(strip(describeActivity({ action: 'payment.requested', body: null, meta: { number: 3, contractor: 'קבלן שלד', amount_agorot: 9_600_000, title: 'תשלום 3' } }).text)).toBe(
-      'נרשמה בקשת תשלום #3 מקבלן שלד: 96 אלף ₪',
+      'נרשמה בקשת תשלום #3 של קבלן שלד: 96,000 ₪',
     );
     expect(strip(describeActivity({ action: 'payment.review_approve', body: null, meta: { number: 3, amount_agorot: 9_000_000, note: 'חסרים 2 עמודים' } }).text)).toBe(
-      'בקשה #3 נבדקה ועברה לאישור הלקוח (90 אלף ₪)',
+      'בקשה #3 נבדקה ועברה לאישור הלקוח (90,000 ₪)',
     );
     expect(describeActivity({ action: 'payment.review_approve', body: null, meta: { number: 3, note: 'חסרים 2 עמודים' } }).detail).toBe('חסרים 2 עמודים');
     expect(describeActivity({ action: 'milestone.completed', body: null, meta: { title: 'רצפה', slip_days: 3 } })).toEqual({
