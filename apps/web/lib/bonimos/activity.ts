@@ -5,7 +5,7 @@
  * shown next to the line, not inside it. Pure and client-safe.
  */
 import { budgetCategory } from '@/lib/hub/budget';
-import { dayMonthLabel, formatMoney } from '@/lib/hub/format';
+import { dayMonthLabel, formatMoneyExact } from '@/lib/hub/format';
 import { isStageId } from '@/lib/hub/types';
 import { getStage } from '@/lib/stages';
 import type { ActivityKind, ActivityView, PersonView, ProjectRole } from './types';
@@ -46,9 +46,10 @@ function stageLabel(value: string | null): string | null {
   return value && isStageId(value) ? getStage(value)?.label ?? null : null;
 }
 
+/** Payment amounts are exact in the log: "14,500 ₪", never rounded. */
 function agorotMoney(meta: Record<string, unknown>, key: string): string | null {
   const a = num(meta, key);
-  return a == null ? null : formatMoney(Math.round(a / 100));
+  return a == null ? null : formatMoneyExact(Math.round(a / 100));
 }
 
 function plural(n: number, one: string, many: string): string {
@@ -68,7 +69,7 @@ export function describeActivity(a: Pick<ActivityView, 'action' | 'body' | 'meta
       return { text: a.body ?? '', detail: null };
     case 'payment.requested':
       return {
-        text: `נרשמה בקשת תשלום ${req}${str(m, 'contractor') ? ` מ${str(m, 'contractor')}` : ''}${money ? `: ${money}` : ''}`,
+        text: `נרשמה בקשת תשלום ${req}${str(m, 'contractor') ? ` של ${str(m, 'contractor')}` : ''}${money ? `: ${money}` : ''}`,
         detail: title,
       };
     case 'payment.review_approve':
