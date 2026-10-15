@@ -56,3 +56,24 @@ Verify each hand-off end to end on the local stack, and fix what's missing.
   - the launch flags and their migrations;
   - a hosted deploy checklist: migrations in order, env vars, cron, post-deploy smoke steps.
 - Run every charter gate. Take screenshots of the full demo path, mobile first.
+
+## Known gaps reported by the squads (fold into the checklist)
+
+**From revenue**
+- The pitch site links to `/admin/command/`, which returns 404. The command center is `/admin/`.
+- `components/admin/DataTable.tsx`: screen-reader-only header text pushes the page sideways on phones. Add `relative` to the scroll container.
+- The advisor doesn't call `rankPros()` or `getContextualOffers()` yet (checklist item 1).
+- The booking sheet doesn't prefill a signed-in member's name and phone.
+- Members without a hub project: put their `profiles` stage and region into the project file.
+- `FLAG_REVENUE` must be on by default (checklist item 7).
+
+**From advisor**
+- Answer events don't carry the builder's region. Add `regionSlug` from `bb.hub.draft` or the member profile, so the partner portal's "builders asking about your trade in your areas" counts by region, not only by topic.
+- Align the meaning of `top_similarity` between advisor and command. The advisor emits the best cosine among the sources sent to the answer. Make command's comment and logic match.
+- Local advisor threads aren't imported into the DB on sign-in. This is a Should.
+
+**From growth**
+- The homepage teaser and the style guide use seeded planner numbers, not the live price book. Read the price book where it's cheap to do so.
+
+**From knowledge**
+- Legacy video pages show the "וידאו" badge twice.
