@@ -34,7 +34,7 @@ export default function PartnerOfferCard({
           <PartnerTierBadge badge={offer.tier ? { tierSlug: offer.tier.slug, tierName: offer.tier.name, badgeLabel: offer.tier.badgeLabel, rank: offer.tier.rank } : null} />
         </div>
         <div className="mt-3 flex items-start gap-3.5">
-          <Avatar name={offer.businessName} src={offer.logoUrl} size="lg" shape="rounded" fit="contain" className="bg-white ring-1 ring-sand-200" />
+          <Avatar name={offer.businessName} src={offer.logoUrl} size="lg" shape="rounded" fit="contain" className="ring-1 ring-sand-200" />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-ink-700">{offer.businessName}</p>
             <h3 className="mt-0.5 text-title text-ink-900">{offer.headline}</h3>
