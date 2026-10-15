@@ -18,5 +18,8 @@ Log every paid run here: amounts and volumes only, never keys.
 | 2026-10-15 | knowledge | Final embeddings: 329 segments of the last captioned videos + title-level rows of the uncaptioned videos | 1,002 rows, 667,861 tokens | 0.0134 |
 | 2026-10-15 | knowledge | AI summaries top-up (newest, most viewed, legacy-linked), Claude Haiku 5.5 via the Batches API (50%) | 60 videos, 511,704 in / 59,855 out tokens | 0.0405 |
 | 2026-10-15 | knowledge | 2 real AI answers for the demo screenshots (desktop, mobile; production build), Sonnet 4.6 + Haiku 4.5 pros classifier, read from the local `ai_usage` table | 20,746 in / 513 out tokens | 0.0639 |
+| 2026-10-15 | command | Content-gap calibration: embeddings of 84 labelled test questions and their topic texts (3 rounds), text-embedding-3-small | 7,667 tokens | 0.0002 |
+| 2026-10-15 | command | Content-gap engine e2e on local seed data (77 questions, 29 topics), 3 refreshes: question embeddings (text-embedding-3-small) | 11,358 tokens | 0.0002 |
+| 2026-10-15 | command | Same 3 refreshes: cluster labels + coverage review, Claude Haiku 5.5 (thinking on, off, on; recorded in `ai_usage` as `insights_labels`) | 26,916 in / 15,099 out tokens | 0.0103 |
 
-**Running total:** ~$0.39 (autopilot ~$0.09 of $0.75; knowledge $0.279 of $1.50)
+**Running total:** ~$0.40 (autopilot ~$0.09 of $0.75; knowledge $0.279 of $1.50; command $0.011 of $0.50)

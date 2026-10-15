@@ -22,9 +22,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const profile = await requireRole('editor', '/admin/');
 
   return (
-    <div className="flex min-h-screen bg-gray-50" dir="rtl">
+    <div className="flex min-h-screen flex-col bg-gray-50 lg:flex-row" dir="rtl">
       <AdminSidebar email={profile.email} role={profile.role} groups={adminNavFor(profile.role, (flag) => isEnabled(flag))} />
-      <main id="admin-main" className="min-w-0 flex-1 p-5 lg:p-8">
+      <main id="admin-main" className="min-w-0 flex-1 p-4 sm:p-5 lg:p-8">
         {children}
       </main>
     </div>

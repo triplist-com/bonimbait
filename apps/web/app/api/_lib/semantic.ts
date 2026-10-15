@@ -188,14 +188,19 @@ function computeIdfWeights(allNormText: string[], terms: string[]): number[] {
  * Hybrid search over video segments and post chunks: Reciprocal Rank Fusion of
  * cosine similarity and IDF-weighted keyword overlap. Only rows of the given
  * kinds are ranked (IDF is computed over those rows too).
+ *
+ * `opts.queryVector`: the query's text-embedding-3-small vector when the
+ * caller already has it (the Command Center's content-gap engine), so the
+ * same ranking runs without a second embedding call.
  */
 export async function semanticSearch(
   query: string,
   topK: number = 30,
   kinds: readonly HitKind[] = ['video', 'post'],
+  opts: { queryVector?: ArrayLike<number> } = {},
 ): Promise<SearchHit[]> {
   const idx = loadIndex();
-  const qvec = await embedQuery(query);
+  const qvec = opts.queryVector ? Float32Array.from(opts.queryVector) : await embedQuery(query);
   let qn = 0;
   for (let i = 0; i < qvec.length; i++) qn += qvec[i] * qvec[i];
   qn = Math.sqrt(qn) || 1;
