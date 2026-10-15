@@ -3,6 +3,7 @@
  * /platform/demo/<slug>/ (no auth, fixtures only) and flips its entry to
  * 'ready' here. One entry per squad; keep the order (pillars P1..P6, then F).
  */
+import { advisorName } from '@/lib/nav';
 import type { DemoSquad } from './fixtures/define';
 
 export type DemoViewStatus = 'ready' | 'planned';
@@ -23,7 +24,7 @@ export const DEMO_VIEWS: readonly DemoView[] = [
     slug: 'advisor',
     squad: 'advisor',
     pillar: 'P1',
-    title: 'היועץ החכם',
+    title: advisorName(),
     description: 'שיחה בעברית שמבוססת על הסרטונים, המאמרים והפודקאסטים, מנגנת את הרגע המדויק בסרטון ומציעה את השאלה הבאה.',
     status: 'ready',
   },

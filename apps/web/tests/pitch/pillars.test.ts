@@ -91,7 +91,7 @@ describe('resolvePillars: registry-driven demo links', () => {
     const off = resolvePillars([], flagsOff);
     const on = resolvePillars([], flagsOn);
     expect(byId(off, 'P4').links).toEqual([]);
-    expect(byId(on, 'P4').links.map((l) => l.href)).toEqual(['/admin/command/']);
+    expect(byId(on, 'P4').links.map((l) => l.href)).toEqual(['/admin/']);
     const onlyHub = resolvePillars([], (f: FlagName) => f === 'hub');
     expect(byId(onlyHub, 'P2').links).toHaveLength(1);
     expect(byId(onlyHub, 'P4').links).toEqual([]);

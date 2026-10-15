@@ -18,6 +18,25 @@ describe('TOUR_BEATS', () => {
     expect(order).toEqual(['P1', 'P6', 'P2', 'P4', 'P3', 'P7', 'P5', 'F']);
   });
 
+  it('every beat and pillar target is a page that exists, and every ready demo view has its page', async () => {
+    const { existsSync } = await import('node:fs');
+    const { fileURLToPath } = await import('node:url');
+    const { PILLARS } = await import('@/lib/pitch/pillars');
+    const { DEMO_VIEWS, demoViewHref } = await import('@/lib/demo/views');
+    const appDir = fileURLToPath(new URL('../../app/', import.meta.url));
+    const isPage = (href: string) => {
+      const path = decodeURI(href.split(/[?#]/)[0]).replace(/^\/|\/$/g, '');
+      return existsSync(`${appDir}${path ? `${path}/` : ''}page.tsx`);
+    };
+    const hrefs = [
+      ...TOUR_BEATS.flatMap((b) => b.targets.flatMap((t) => (t.kind === 'site' ? [t.href] : []))),
+      ...PILLARS.flatMap((p) => p.site.map((s) => s.href)),
+      ...DEMO_VIEWS.filter((v) => v.status === 'ready').map(demoViewHref),
+    ];
+    expect(hrefs.length).toBeGreaterThan(10);
+    for (const href of hrefs) expect(isPage(href), href).toBe(true);
+  });
+
   it('has unique ids, key lines and presenter notes for every beat', () => {
     expect(new Set(TOUR_BEATS.map((b) => b.id)).size).toBe(TOUR_BEATS.length);
     for (const b of TOUR_BEATS) {
@@ -61,7 +80,7 @@ describe('resolveTour', () => {
 
   it('respects feature flags on site targets', () => {
     expect(beat(resolveTour([], () => false), 'command').primary).toBeNull();
-    expect(beat(resolveTour([], () => true), 'command').primary).toMatchObject({ href: '/admin/command/', staffOnly: true });
+    expect(beat(resolveTour([], () => true), 'command').primary).toMatchObject({ href: '/admin/', staffOnly: true });
   });
 
   it('links pitch anchors on the overview page', () => {
