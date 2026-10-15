@@ -101,7 +101,7 @@ export default async function CalculatorScenarioPage({ params }: PageProps) {
       />
 
       <div className="container-page space-y-12 pb-16 pt-8 sm:space-y-16 sm:pb-24 sm:pt-10">
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start">
           <EstimateSummary estimate={estimate} headingId="scenario-total" label="הערכה לתרחיש הזה">
             {scenario.note && <p className="mt-5 text-body-sm text-white/80">{isolateRanges(scenario.note)}</p>}
           </EstimateSummary>
@@ -174,7 +174,7 @@ export default async function CalculatorScenarioPage({ params }: PageProps) {
           <OverrunWarnings estimate={estimate} />
         </section>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <section aria-labelledby="scenario-faq" className="rounded-3xl border border-ink-100 bg-white p-6 shadow-card sm:p-7">
             <h2 id="scenario-faq" className="text-title-lg text-ink-900">
               שאלות נפוצות

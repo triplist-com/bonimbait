@@ -9,7 +9,6 @@
 import { useId, useRef, type ReactNode } from 'react';
 import { ArrowLeft, ArrowRight, Check, Home, Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/lib/cn';
 import {
   EXTRAS,
@@ -175,11 +174,12 @@ export default function PlannerWizard({ book, answers, step, onAnswer, onStep, o
       </h2>
 
       {prefilled && (prefilled.sizeM2 || prefilled.regionSlug) && step < 3 && (
-        <p className="mt-3">
-          <Badge tone="sand" icon={<Home />} className="h-auto whitespace-normal py-1">
+        <p className="mt-3 inline-flex w-fit items-start gap-1.5 rounded-xl bg-sand-100 px-2.5 py-1 text-xs font-semibold text-sand-800 ring-1 ring-inset ring-sand-200">
+          <Home aria-hidden="true" className="mt-px size-3.5 shrink-0" />
+          <span>
             מילאנו לפי הבית שלי:{' '}
             {[prefilled.sizeM2 ? `${prefilled.sizeM2} מ״ר` : null, prefilled.regionSlug ? regionName(prefilled.regionSlug) : null].filter(Boolean).join(', ')}
-          </Badge>
+          </span>
         </p>
       )}
 

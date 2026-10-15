@@ -86,7 +86,7 @@ export default function PlannerResult({ book, estimate, hubDraft, onEdit, onRest
   return (
     <div className="space-y-12 sm:space-y-16" data-planner-result>
       {/* Summary + next step */}
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start">
         <EstimateSummary
           estimate={estimate}
           headingId="planner-total"
@@ -213,7 +213,7 @@ export default function PlannerResult({ book, estimate, hubDraft, onEdit, onRest
         <OverrunWarnings estimate={estimate} />
       </section>
 
-      <section aria-labelledby="planner-sources" className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <section aria-labelledby="planner-sources" className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div>
           <SectionTitle id="planner-sources" eyebrow={asOfBadge(estimate.validAsOf)}>
             מאיפה המספרים

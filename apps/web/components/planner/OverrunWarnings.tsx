@@ -3,7 +3,6 @@ import { absoluteUrl } from '@/lib/site';
 import { isolateRanges } from '@/lib/planner/format';
 import { momentClock, momentHref, selectOverrunWarnings } from '@/lib/planner/warnings';
 import type { PlannerEstimate } from '@/lib/planner/types';
-import { Badge } from '@/components/ui/Badge';
 import MomentPlayer from './MomentPlayer';
 
 /**
@@ -24,9 +23,10 @@ export function OverrunWarnings({ estimate, print = false }: { estimate: Planner
             <span className="num text-sm font-bold text-ink-500">{i + 1}/3</span>
           </div>
           <h3 className="mt-3 text-title text-ink-900">{w.title}</h3>
-          <Badge tone="warning" className="mt-2 h-auto w-fit whitespace-normal py-1 leading-snug">
+          {/* Not <Badge>: it is nowrap, and this line can be long (cn() does not merge classes). */}
+          <p className="mt-2 w-fit rounded-xl bg-warning-50 px-2.5 py-1 text-xs font-semibold leading-snug text-warning-700 ring-1 ring-inset ring-warning-100">
             {isolateRanges(w.impact(estimate))}
-          </Badge>
+          </p>
           <p className="mt-3 text-body-sm text-ink-700">{isolateRanges(w.body)}</p>
           <blockquote className="mt-3 border-s-4 border-primary-600 ps-3 text-body-sm text-ink-800">
             <p>&quot;{isolateRanges(w.quote.text)}&quot;</p>
