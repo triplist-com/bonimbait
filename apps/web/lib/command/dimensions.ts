@@ -49,10 +49,10 @@ export function regionLabel(slug: string | null | undefined, names?: Record<stri
 // ---------------------------------------------------------------------------
 
 export const SCORE_BANDS: ReadonlyArray<{ id: ScoreBandId; label: string; min: number | null }> = [
-  { id: 'hot', label: 'חם מאוד (80+)', min: 80 },
-  { id: 'warm', label: 'חם (60–79)', min: 60 },
-  { id: 'mild', label: 'פושר (40–59)', min: 40 },
-  { id: 'cold', label: 'קר (מתחת ל-40)', min: 0 },
+  { id: 'hot', label: 'חם מאוד: 80 ומעלה', min: 80 },
+  { id: 'warm', label: 'חם: 60 עד 79', min: 60 },
+  { id: 'mild', label: 'פושר: 40 עד 59', min: 40 },
+  { id: 'cold', label: 'קר: מתחת ל-40', min: 0 },
   { id: 'none', label: 'ללא ציון', min: null },
 ];
 
@@ -86,7 +86,8 @@ export function sourceGroupKey(source: LeadSource): string {
   return `${source.medium}:${source.source ?? UNKNOWN}`;
 }
 
-export function sourceGroupLabel(source: LeadSource): string {
+export function sourceGroupLabel(source: LeadSource, partnerNames?: ReadonlyMap<string, string>): string {
   if (source.medium === 'direct' || source.medium === 'ai_source') return SOURCE_MEDIUM_LABELS[source.medium];
-  return `${SOURCE_MEDIUM_LABELS[source.medium]}: ${source.source ?? 'לא ידוע'}`;
+  const name = source.medium === 'partner' && source.source ? partnerNames?.get(source.source) : undefined;
+  return `${SOURCE_MEDIUM_LABELS[source.medium]}: ${name ?? source.source ?? 'לא ידוע'}`;
 }

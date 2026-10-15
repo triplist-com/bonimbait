@@ -8,11 +8,12 @@ const int = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 function compactNumber(value: number, digits = 1): string {
   const abs = Math.abs(value);
   const sign = value < 0 ? '-' : '';
+  const fmtTwo = (v: number, suffix: string) => `${sign}${(Math.round(v * 100) / 100).toFixed(2).replace(/\.?0+$/, '')}${suffix}`;
   const fmt = (v: number, suffix: string) => {
     const rounded = Math.round(v * 10 ** digits) / 10 ** digits;
     return `${sign}${rounded.toFixed(digits).replace(/\.0+$/, '')}${suffix}`;
   };
-  if (abs >= 1_000_000) return fmt(abs / 1_000_000, 'M');
+  if (abs >= 1_000_000) return abs < 10_000_000 ? fmtTwo(abs / 1_000_000, 'M') : fmt(abs / 1_000_000, 'M');
   if (abs >= 10_000) return fmt(abs / 1000, 'K');
   return `${sign}${int.format(abs)}`;
 }

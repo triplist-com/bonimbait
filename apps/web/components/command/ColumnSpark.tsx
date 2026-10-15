@@ -83,7 +83,15 @@ export default function ColumnSpark({
 
   return (
     <div className={cn('min-w-0', className)}>
-      <div className="relative" dir="ltr">
+      <div dir="ltr" className={size === 'md' ? 'grid grid-cols-[auto_minmax(0,1fr)] gap-x-2' : undefined}>
+      {size === 'md' && (
+        <div aria-hidden="true" className={cn('relative w-9 text-end text-[11px] tabular-nums leading-none text-ink-500', height)}>
+          <span className="absolute end-0 top-0 -translate-y-1/2">{fmt(top, format)}</span>
+          <span className="absolute end-0 top-1/2 -translate-y-1/2">{fmt(top / 2, format)}</span>
+          <span className="absolute bottom-0 end-0 translate-y-1/2">{fmt(0, format)}</span>
+        </div>
+      )}
+      <div className="relative min-w-0">
         {shown && (
           <div
             className="pointer-events-none absolute bottom-full z-10 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg bg-ink-900 px-2 py-1 text-center text-xs text-white shadow-lift"
@@ -131,17 +139,18 @@ export default function ColumnSpark({
         {size === 'md' && (
           <div aria-hidden="true" className="mt-1.5 flex justify-between text-[11px] tabular-nums text-ink-500">
             <span>{shortDayHe(points[0].date)}</span>
-            <span>
-              {fmt(0, format)}–{fmt(top, format)}
-            </span>
+            <span>{shortDayHe(points[Math.floor((n - 1) / 2)].date)}</span>
             <span>{shortDayHe(points[n - 1].date)}</span>
           </div>
         )}
       </div>
+      </div>
       <p className="sr-only" aria-live="polite">
         {keyboard && shown ? `${shortDayHe(shown.date)}: ${fmt(shown.value, format)} ${unit}` : ''}
       </p>
-      <table id={`${id}-table`} className="sr-only">
+      {/* sr-only on a <table> doesn't clip it (tables size to their content): wrap it. */}
+      <div className="sr-only">
+      <table id={`${id}-table`}>
         <caption>{label}</caption>
         <thead>
           <tr>
@@ -158,6 +167,7 @@ export default function ColumnSpark({
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

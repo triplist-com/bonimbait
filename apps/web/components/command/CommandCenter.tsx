@@ -254,9 +254,17 @@ export default function CommandCenter({
             </>
           }
           badge={
-            partners.rows.length > 0 ? (
-              <Badge tone={partners.atRisk > 0 ? 'danger' : partners.behind > 0 ? 'warning' : 'success'} size="sm" dot>
-                {partners.onTrack}/{partners.rows.filter((r) => r.status !== 'no_tier').length || partners.rows.length} בקצב
+            partners.atRisk > 0 ? (
+              <Badge tone="danger" size="sm" dot>
+                {partners.atRisk === 1 ? 'שותף אחד בסיכון' : `${partners.atRisk} בסיכון`}
+              </Badge>
+            ) : partners.behind > 0 ? (
+              <Badge tone="warning" size="sm" dot>
+                {partners.behind === 1 ? 'שותף אחד מתחת לקצב' : `${partners.behind} מתחת לקצב`}
+              </Badge>
+            ) : partners.onTrack > 0 ? (
+              <Badge tone="success" size="sm" dot>
+                כולם בקצב
               </Badge>
             ) : null
           }
@@ -283,13 +291,14 @@ export default function CommandCenter({
                     />
                   )}
                   <p className="mt-1 text-xs text-ink-500">
-                    <bdi dir="ltr">{formatCount(p.impressions)}</bdi>
+                    <bdi dir="ltr">{formatCount(p.impressions)}</bdi> חשיפות
                     {p.impressionsTarget != null && (
                       <>
-                        /<bdi dir="ltr">{formatCount(p.impressionsTarget)}</bdi>
+                        {' '}
+                        מתוך יעד <bdi dir="ltr">{formatCount(p.impressionsTarget)}</bdi>
                       </>
                     )}{' '}
-                    חשיפות · <bdi dir="ltr">{formatCount(p.leads)}</bdi> לידים
+                    · <bdi dir="ltr">{formatCount(p.leads)}</bdi> לידים
                     {p.costPerLeadNis != null && (
                       <>
                         {' '}

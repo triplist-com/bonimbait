@@ -66,7 +66,7 @@ export type BarRow = {
 export function BarRows({
   rows,
   max,
-  labelWidth = 'w-28 sm:w-36',
+  labelWidth = 'w-28 sm:w-40',
   empty = 'אין נתונים בתקופה.',
   className,
 }: {
@@ -90,9 +90,9 @@ export function BarRows({
         );
         return (
           <li key={r.key} className="flex items-center gap-3 text-sm">
-            <span className={cn('shrink-0 truncate text-ink-700', labelWidth)} title={r.label}>
+            <span className={cn('shrink-0 break-words leading-snug text-ink-700', labelWidth)}>
               {label}
-              {r.note && <span className="block truncate text-xs text-ink-500">{r.note}</span>}
+              {r.note && <span className="block text-xs text-ink-500">{r.note}</span>}
             </span>
             <span className="flex min-w-0 flex-1 items-center gap-2">
               <span

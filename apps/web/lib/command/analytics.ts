@@ -101,9 +101,16 @@ export function speedToLead(leads: readonly LeadFact[], nowMs: number): SpeedToL
   };
 }
 
-export function buildLeadsAnalytics(
-  input: { now: string; periodDays: PeriodDays; leads: readonly LeadFact[]; expectedValues: readonly ExpectedValue[]; regionNames: Record<string, string> },
-): LeadsAnalytics {
+export function buildLeadsAnalytics(input: {
+  now: string;
+  periodDays: PeriodDays;
+  leads: readonly LeadFact[];
+  expectedValues: readonly ExpectedValue[];
+  regionNames: Record<string, string>;
+  /** Partner id -> name, so "by source" names partners. */
+  partnerNames?: Record<string, string>;
+}): LeadsAnalytics {
+  const partnerNames = new Map(Object.entries(input.partnerNames ?? {}));
   const nowMs = Date.parse(input.now);
   const window = periodWindow(nowMs, input.periodDays);
   const table = expectedValueTable(input.expectedValues);
@@ -118,7 +125,7 @@ export function buildLeadsAnalytics(
     period: { days: window.days, from: window.from, to: window.to },
     total: periodDelta(cur.length, prev.length),
     daily: fillDaily(window.dayList, daily),
-    bySource: breakdown(cur, (l) => ({ key: sourceGroupKey(l.source), label: sourceGroupLabel(l.source) }), value),
+    bySource: breakdown(cur, (l) => ({ key: sourceGroupKey(l.source), label: sourceGroupLabel(l.source, partnerNames) }), value),
     byUtm: breakdown(
       cur.filter((l) => l.source.medium === 'campaign'),
       (l) => ({

@@ -4,7 +4,7 @@
  * (lib/demo/fixtures/command.ts) go through exactly the same math.
  */
 import { LEAD_TYPE_LABELS } from '@/lib/leads/constants';
-import { HOT_SCORE, regionLabel, scoreBand, stageLabel } from './dimensions';
+import { HOT_SCORE, regionLabel, scoreBand, sourceGroupLabel, stageLabel } from './dimensions';
 import { isCountableLead, isOpenLead } from './leads';
 import { expectedValueTable, leadExpectedValue, pipelineSummary, type ExpectedValueTable } from './pipeline';
 import { partnersSummary } from './partners';
@@ -61,7 +61,13 @@ function sortHotLeads(a: LeadFact, b: LeadFact): number {
 
 export function toHotLead(
   lead: LeadFact,
-  ctx: { nowMs: number; table: ExpectedValueTable; regionNames: Record<string, string>; leadHref?: (id: string) => string | null },
+  ctx: {
+    nowMs: number;
+    table: ExpectedValueTable;
+    regionNames: Record<string, string>;
+    leadHref?: (id: string) => string | null;
+    partnerNames?: ReadonlyMap<string, string>;
+  },
 ): HotLead {
   return {
     id: lead.id,
@@ -77,7 +83,7 @@ export function toHotLead(
     regionName: regionLabel(lead.regionSlug, ctx.regionNames),
     sizeM2: lead.sizeM2,
     budgetLabel: lead.budgetLabel,
-    sourceLabel: lead.source.label,
+    sourceLabel: lead.source.medium === 'partner' ? sourceGroupLabel(lead.source, ctx.partnerNames) : lead.source.label,
     minutesAgo: minutesBetween(lead.createdAt, ctx.nowMs),
     expectedValueAgorot: leadExpectedValue(lead, ctx.table),
   };
@@ -191,7 +197,8 @@ export function buildCommandCenter(inputs: CommandInputs, opts: BuildOptions = {
   const scored = curLeads.filter((l) => l.score != null);
   const hotCur = curLeads.filter((l) => (l.score ?? -1) >= HOT_SCORE).length;
   const hotPrev = prevLeads.filter((l) => (l.score ?? -1) >= HOT_SCORE).length;
-  const hotCtx = { nowMs, table, regionNames: inputs.regionNames, leadHref: opts.leadHref };
+  const partnerNames = new Map(inputs.partners.map((p) => [p.id, p.name]));
+  const hotCtx = { nowMs, table, regionNames: inputs.regionNames, leadHref: opts.leadHref, partnerNames };
   const hotList = openLeads.slice(0, 8).map((l) => toHotLead(l, hotCtx));
 
   // AI: $ per UTC budget day, questions per Israel day.

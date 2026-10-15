@@ -92,11 +92,11 @@ const CAMPAIGNS: ReadonlyArray<readonly [string, string, number]> = [
 /** Status by age: building sales cycles are long, so most of a month's leads are still open. */
 function statusFor(r: { float(a: number, b: number): number }, ageDays: number): LeadStatus {
   const x = r.float(0, 1);
-  if (ageDays < 1) return x < 0.82 ? 'new' : 'contacted';
-  if (ageDays < 7) return x < 0.42 ? 'new' : x < 0.88 ? 'contacted' : x < 0.91 ? 'won' : x < 0.98 ? 'lost' : 'spam';
-  if (ageDays < 30) return x < 0.16 ? 'new' : x < 0.77 ? 'contacted' : x < 0.86 ? 'won' : x < 0.97 ? 'lost' : 'spam';
-  if (ageDays < 90) return x < 0.06 ? 'new' : x < 0.5 ? 'contacted' : x < 0.66 ? 'won' : x < 0.96 ? 'lost' : 'spam';
-  return x < 0.03 ? 'new' : x < 0.3 ? 'contacted' : x < 0.5 ? 'won' : x < 0.96 ? 'lost' : 'spam';
+  if (ageDays < 1) return x < 0.7 ? 'new' : 'contacted';
+  if (ageDays < 7) return x < 0.1 ? 'new' : x < 0.88 ? 'contacted' : x < 0.91 ? 'won' : x < 0.98 ? 'lost' : 'spam';
+  if (ageDays < 30) return x < 0.02 ? 'new' : x < 0.77 ? 'contacted' : x < 0.86 ? 'won' : x < 0.97 ? 'lost' : 'spam';
+  if (ageDays < 90) return x < 0.005 ? 'new' : x < 0.5 ? 'contacted' : x < 0.66 ? 'won' : x < 0.96 ? 'lost' : 'spam';
+  return x < 0.3 ? 'contacted' : x < 0.5 ? 'won' : x < 0.96 ? 'lost' : 'spam';
 }
 
 /** Daytime-weighted share of an Israel day that has passed by 11:00 (traffic starts around 07:00). */
@@ -435,7 +435,7 @@ export const commandDemo = defineDemoFixture('command', ({ gen, today }) => {
   const partnerPick = DEMO_PARTNERS.map((p) => [p.id, p.leadWeight] as const);
   const leads: LeadFact[] = [];
   for (const date of days) {
-    const point = { date, value: Math.round(dailyValue(gen, 'lead-volume', date, { level: 38, weeklyGrowth: 0.011, noise: 0.14 })) };
+    const point = { date, value: Math.round(dailyValue(gen, 'lead-volume', date, { level: 33, weeklyGrowth: 0.011, noise: 0.14 })) };
     const isToday = point.date === today;
     const count = isToday ? Math.round(point.value * SHARE_BY_11) : point.value;
     // Refs grow with time and never depend on the window: 64 numbers per day.
@@ -494,8 +494,12 @@ export const commandDemo = defineDemoFixture('command', ({ gen, today }) => {
         regionSlug: base.place.regionSlug,
         sizeM2: type === 'whatsapp_join' || type === 'benefit' ? null : base.sizeSqm,
         budgetLabel: type === 'consultation' || type === 'service_plan' || type === 'business_contact' ? base.budgetBand : null,
-        // The generator's scores run high for a whole funnel; shift them so about a quarter are hot (70+).
-        score: type === 'whatsapp_join' || type === 'benefit' || type === 'contact' ? null : Math.max(18, Math.min(98, base.score - 10)),
+        // The generator's scores run high (and pile up at its 98 cap) for a whole funnel: compress
+        // them with a little jitter so about a quarter are hot (70+) and the top isn't one value.
+        score:
+          type === 'whatsapp_join' || type === 'benefit' || type === 'contact'
+            ? null
+            : Math.max(18, Math.min(97, Math.round(base.score * 0.88 + r.normal(0, 3.5) - 2))),
         scoreReasons: type === 'whatsapp_join' || type === 'benefit' || type === 'contact' ? [] : scoreReasons(base.stage.value, base.budgetBand, base.question),
         planSlug: type === 'service_plan' ? r.weighted(PLAN_WEIGHTS) : null,
         source,

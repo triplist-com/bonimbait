@@ -97,7 +97,7 @@ export function Tile({
       </header>
       {value != null && (
         <p className={cn('mt-3 font-extrabold leading-none tracking-tight text-ink-900', valueSize === 'lg' ? 'text-4xl sm:text-5xl' : 'text-3xl')}>
-          <bdi dir="ltr">{value}</bdi>
+          <bdi>{value}</bdi>
         </p>
       )}
       {sub && <div className="mt-2 space-y-1">{sub}</div>}
