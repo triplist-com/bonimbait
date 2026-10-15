@@ -45,7 +45,8 @@ export type LeadType =
   | 'benefit'
   | 'whatsapp_join'
   | 'service_plan'
-  | 'claim_business';
+  | 'claim_business'
+  | 'budget_report';
 /**
  * Lead workflow (admin inbox): new -> contacted -> won | lost, or spam.
  * 'in_progress' | 'qualified' | 'closed' are the Wave 1 names, still accepted

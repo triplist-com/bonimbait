@@ -2,10 +2,15 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { LogIn } from 'lucide-react';
 import { createClient } from '@/lib/supabase/browser';
 import { authErrorMessage } from '@/lib/auth/messages';
 import GoogleButton from '@/components/auth/GoogleButton';
-import { FormError, inputClass, labelClass, primaryButtonClass } from '@/components/auth/AuthCard';
+import { FormError } from '@/components/auth/AuthCard';
+import { importLocalHubNow } from '@/components/hub/importLocal';
+import { Button } from '@/components/ui/Button';
+import { Field } from '@/components/ui/Field';
+import { Input } from '@/components/ui/Input';
 
 export default function LoginForm({ next, initialError }: { next: string; initialError: string | null }) {
   const [email, setEmail] = useState('');
@@ -26,6 +31,8 @@ export default function LoginForm({ next, initialError }: { next: string; initia
       setLoading(false);
       return;
     }
+    // A map or saved items from before signing in move into the account.
+    await importLocalHubNow();
     // Full navigation so Server Components render with the new session cookie.
     window.location.assign(next);
   }
@@ -36,48 +43,44 @@ export default function LoginForm({ next, initialError }: { next: string; initia
 
       <GoogleButton next={next} onError={setError} />
 
-      <div className="flex items-center gap-3 text-xs text-gray-400">
-        <span className="h-px flex-1 bg-gray-200" />
+      <div className="flex items-center gap-3 text-caption text-ink-500">
+        <span className="h-px flex-1 bg-ink-200" />
         או עם אימייל
-        <span className="h-px flex-1 bg-gray-200" />
+        <span className="h-px flex-1 bg-ink-200" />
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <div>
-          <label htmlFor="email" className={labelClass}>אימייל</label>
-          <input
-            id="email"
+        <Field label="אימייל" id="email">
+          <Input
             type="email"
             dir="ltr"
             autoComplete="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={`${inputClass} text-start`}
+            className="text-start"
           />
-        </div>
-        <div>
-          <label htmlFor="password" className={labelClass}>סיסמה</label>
-          <input
-            id="password"
+        </Field>
+        <Field label="סיסמה" id="password">
+          <Input
             type="password"
             dir="ltr"
             autoComplete="current-password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={`${inputClass} text-start`}
+            className="text-start"
           />
-        </div>
-        <button type="submit" disabled={loading} className={primaryButtonClass}>
-          {loading ? 'מתחבר...' : 'התחברות'}
-        </button>
+        </Field>
+        <Button type="submit" size="lg" fullWidth loading={loading} iconStart={<LogIn />}>
+          {loading ? 'מתחברים…' : 'התחברות'}
+        </Button>
       </form>
 
-      <p className="text-center text-sm text-gray-600">
+      <p className="text-center text-body-sm text-ink-600">
         עדיין אין לכם חשבון?{' '}
-        <Link href={`/signup/?next=${encodeURIComponent(next)}`} className="font-medium text-primary hover:text-primary-700">
-          הרשמה לקהילה
+        <Link href={`/signup/?next=${encodeURIComponent(next)}`} className="font-semibold text-primary-700 hover:underline">
+          הרשמה בחינם
         </Link>
       </p>
     </div>

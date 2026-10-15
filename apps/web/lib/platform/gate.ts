@@ -9,6 +9,9 @@
  *   401 with a small Hebrew code form (noindex).
  * The cookie holds a SHA-256 of the code, not the code: changing
  * PITCH_ACCESS_CODE signs everyone out.
+ * Two exceptions keep shared links previewable (WhatsApp): OG images under
+ * /platform are public, and a link-preview fetcher that brings the right code
+ * gets the page itself instead of the cookie redirect it can't follow.
  */
 import { NextResponse, type NextRequest } from 'next/server';
 import { isPlatformPath } from './paths';
@@ -16,6 +19,23 @@ import { isPlatformPath } from './paths';
 export const PITCH_COOKIE = 'bb_pitch';
 export const PITCH_CODE_PARAM = 'code';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
+
+/**
+ * Link-preview fetchers (WhatsApp, Facebook and iMessage, Telegram, Slack, X,
+ * LinkedIn, Discord, Skype). They keep no cookies, so the unlock redirect
+ * would land them on the 401 page and the shared link would show no preview.
+ */
+const PREVIEW_FETCHER = /(WhatsApp|facebookexternalhit|Facebot|TelegramBot|Slackbot|Twitterbot|LinkedInBot|Discordbot|SkypeUriPreview)/i;
+
+export function isPreviewFetcher(userAgent: string | null | undefined): boolean {
+  return Boolean(userAgent && PREVIEW_FETCHER.test(userAgent));
+}
+
+/** Next.js metadata images (opengraph-image, twitter-image): public, so shared links show their preview. */
+export function isMetadataImagePath(pathname: string): boolean {
+  const last = pathname.slice(pathname.lastIndexOf('/') + 1);
+  return /^(opengraph-image|twitter-image)(-[\w-]+)?$/.test(last);
+}
 
 async function tokenFor(code: string): Promise<string> {
   const bytes = new TextEncoder().encode(`bonimbait-pitch:${code}`);
@@ -86,6 +106,7 @@ export async function pitchGate(
   if (!isPlatformPath(request.nextUrl.pathname)) return null;
   const expected = code?.trim();
   if (!expected) return null;
+  if (isMetadataImagePath(request.nextUrl.pathname)) return null;
 
   const token = await tokenFor(expected);
   const hasCookie = request.cookies.get(PITCH_COOKIE)?.value === token;
@@ -94,6 +115,8 @@ export async function pitchGate(
   if (supplied !== null) {
     const ok = (await tokenFor(supplied.trim())) === token;
     if (!ok && !hasCookie) return gatePage(request, true);
+    // A preview fetcher that brings the right code reads the page itself (title, OG image).
+    if (ok && isPreviewFetcher(request.headers.get('user-agent'))) return null;
     // Strip the code from the URL; set the cookie on a fresh unlock.
     const clean = new URL(request.url);
     clean.searchParams.delete(PITCH_CODE_PARAM);

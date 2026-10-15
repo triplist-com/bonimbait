@@ -58,6 +58,20 @@ const partnerOffer = {
   partner: text(120).optional(),
   placement: text(60).optional(),
 };
+/**
+ * Sources cited under an answer, as '<kind>:<id>' ('video:<youtube id>',
+ * 'post:<slug>', 'podcast:<id>'): the same shape as the source_clicked
+ * attribution source. Malformed entries are dropped and the list is capped at
+ * 8, so a bad entry never drops the event.
+ */
+const sourceIds = z
+  .array(z.unknown())
+  .transform((items) =>
+    items
+      .filter((v): v is string => typeof v === 'string' && /^(video|post|podcast):[^\s]{1,200}$/.test(v.trim()))
+      .map((v) => v.trim().slice(0, 210))
+      .slice(0, 8),
+  );
 const advisorTurn = {
   turn: count.optional(), // 1-based turn in a multi-turn conversation
   conversation_id: text(64).optional(),
@@ -96,9 +110,11 @@ export const EVENT_CATALOG = {
       has_pros: z.boolean().optional(),
       output_tokens: count.optional(),
       cost_usd: z.number().min(0).max(100).optional(),
-      // Advisor (P1): retrieval quality, for "השאלות שעוד לא עניתם עליהן" (P4).
-      top_similarity: z.number().min(-1).max(1).optional(),
-      n_sources: count.optional(),
+      // Advisor (P1): retrieval quality and the Command Center's content-gap signals
+      // ("השאלות שעוד לא עניתם עליהן", P4).
+      top_similarity: z.number().min(-1).max(1).optional(), // best raw cosine among the sources fed to the answer
+      n_sources: count.optional(), // sources fed to the answer (same as `sources`)
+      source_ids: sourceIds.optional(), // the cited sources, in citation order
       cited: count.optional(), // distinct sources the answer cites
       refused: z.enum(['out_of_scope', 'low_confidence']).optional(),
       degraded: text(20).optional(),
@@ -237,6 +253,26 @@ export const EVENT_CATALOG = {
     'A builder saved an item to the hub (video, article, pro, checklist...).',
     z.object({ item_type: text(40), item_id: text(200) }),
   ),
+  hub_checklist_item_done: event(
+    'both',
+    'A builder ticked an item on a stage checklist (ids from lib/hub/content.ts).',
+    z.object({ stage: text(40), item_id: text(80) }),
+  ),
+  hub_task_added: event(
+    'server',
+    'A builder added a task in the hub (typed, or the suggested ones for the stage).',
+    z.object({ stage: text(40).optional(), has_due_date: z.boolean().optional(), source: text(20).optional() }),
+  ),
+  hub_budget_item_added: event(
+    'server',
+    'A builder recorded a quote or a payment in the hub budget (never the amount).',
+    z.object({ kind: z.enum(['quote', 'actual']), category: text(40), stage: text(40).optional() }),
+  ),
+  hub_document_uploaded: event(
+    'server',
+    'A builder uploaded a document to the hub (plans, permit, quote, contract, photo...).',
+    z.object({ category: text(40), mime_type: text(60).optional(), size_kb: count.optional() }),
+  ),
 
   // --- Growth (P6) ------------------------------------------------------------
   planner_started: event(
@@ -262,6 +298,20 @@ export const EVENT_CATALOG = {
       size_sqm: z.number().min(0).max(100_000).optional(),
       region: text(40).optional(),
       finish_level: text(40).optional(),
+      estimate_id: text(64).optional(),
+    }),
+  ),
+  planner_step_completed: event(
+    'client',
+    'A budget planner question was answered (the funnel between planner_started and planner_completed).',
+    z.object({ step: count, question: text(20), source: text(60).optional() }),
+  ),
+  planner_shared: event(
+    'client',
+    'A budget planner result was shared (WhatsApp, link copy or the native share sheet).',
+    z.object({
+      channel: z.enum(['whatsapp', 'copy', 'native']),
+      placement: text(60).optional(), // 'planner_result' | 'planner_report' | ...
       estimate_id: text(64).optional(),
     }),
   ),

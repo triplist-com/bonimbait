@@ -6,7 +6,9 @@ export type PlatformNavItem = { href: string; label: string; exact?: boolean };
 
 export const PLATFORM_NAV: readonly PlatformNavItem[] = [
   { href: '/platform/', label: 'סקירה', exact: true },
+  { href: '/platform/tour/', label: 'סיור' },
   { href: '/platform/demo/', label: 'הדגמות' },
+  { href: '/platform/design-system/', label: 'מערכת עיצוב' },
 ];
 
 /** Active state for a nav item (paths end with "/"). */

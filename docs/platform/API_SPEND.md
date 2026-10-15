@@ -18,6 +18,10 @@ Log every paid run here: amounts and volumes only, never keys.
 | 2026-10-15 | knowledge | Final embeddings: 329 segments of the last captioned videos + title-level rows of the uncaptioned videos | 1,002 rows, 667,861 tokens | 0.0134 |
 | 2026-10-15 | knowledge | AI summaries top-up (newest, most viewed, legacy-linked), Claude Haiku 5.5 via the Batches API (50%) | 60 videos, 511,704 in / 59,855 out tokens | 0.0405 |
 | 2026-10-15 | knowledge | 2 real AI answers for the demo screenshots (desktop, mobile; production build), Sonnet 4.6 + Haiku 4.5 pros classifier, read from the local `ai_usage` table | 20,746 in / 513 out tokens | 0.0639 |
+| 2026-10-15 | command | Content-gap calibration: embeddings of 84 labelled test questions and their topic texts (3 rounds), text-embedding-3-small | 7,667 tokens | 0.0002 |
+| 2026-10-15 | command | Content-gap engine e2e on local seed data (77 questions, 29 topics), 3 refreshes: question embeddings (text-embedding-3-small) | 11,358 tokens | 0.0002 |
+| 2026-10-15 | command | Same 3 refreshes: cluster labels + coverage review, Claude Haiku 5.5 (thinking on, off, on; recorded in `ai_usage` as `insights_labels`) | 26,916 in / 15,099 out tokens | 0.0103 |
+| 2026-10-15 | pitch | One AI answer on the local `/search/` for a sales-deck screenshot (Sonnet 4.6 answer + Haiku 4.5 pros classifier), measured in the local `ai_usage` table | 2 calls | 0.0316 |
 | 2026-10-15 | advisor | Development answers through the new pipeline (Claude Sonnet 5.5), including the thinking-setting comparison, plus the Haiku 4.5 pros classifier. All advisor rows are read from the local `ai_usage` table | 5 answers (23,391 in / 4,209 out; cache 6,134 written, 1,591 read) + 6 pros calls | 0.1136 |
 | 2026-10-15 | advisor | Demo fixture: 3 recordings of the demo question (the first is kept), Sonnet 5.5 + pros classifier | 3 answers (13,924 in / 2,081 out; cache 1,591 written, 3,338 read) + 3 pros calls | 0.0578 |
 | 2026-10-15 | advisor | Evaluation: 15 questions, plus 8 re-runs after prompt tuning (`docs/platform/ADVISOR_EVAL.md`), Sonnet 5.5 + pros classifier | 23 answers (104,406 in / 14,847 out; cache 4,929 written, 32,288 read) + 23 pros calls | 0.4101 |
@@ -25,4 +29,4 @@ Log every paid run here: amounts and volumes only, never keys.
 | 2026-10-15 | advisor | Follow-up rewrite (Claude Haiku 5.5) | 1 call, 667 in / 53 out tokens | 0.0001 |
 | 2026-10-15 | advisor | Query embeddings (text-embedding-3-small) for advisor questions and free dry runs | ~100 queries, ~2K tokens | <0.0001 |
 
-**Running total:** ~$1.04 (autopilot ~$0.09 of $0.75; knowledge $0.279 of $1.50; advisor $0.657 of $1.00)
+**Running total:** ~$1.08 (autopilot ~$0.09 of $0.75; knowledge $0.279 of $1.50; command $0.011 of $0.50; pitch $0.032 of $0.20; advisor $0.657 of $1.00)

@@ -72,8 +72,8 @@ describe('site navigation config', () => {
     expect(SOCIAL_LINKS.map((s) => s.id)).toEqual(['youtube', 'facebook', 'instagram', 'tiktok', 'spotify']);
   });
 
-  it('points "הבית שלי" at /account/ for now', () => {
-    expect(ACCOUNT_NAV.home).toEqual({ label: 'הבית שלי', href: '/account/' });
+  it('points "הבית שלי" at the Builder Hub', () => {
+    expect(ACCOUNT_NAV.home).toEqual({ label: 'הבית שלי', href: '/my-home/' });
   });
 
   it('builds AI entry links from config (the advisor at /ask/)', () => {

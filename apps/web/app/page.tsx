@@ -8,6 +8,7 @@ import ValueStrip from '@/components/home/ValueStrip';
 import HowItWorks from '@/components/home/HowItWorks';
 import JourneyNavigator from '@/components/home/JourneyNavigator';
 import HubTeaserSlot from '@/components/home/HubTeaserSlot';
+import { isEnabled } from '@/lib/flags';
 import MediaRails from '@/components/home/MediaRails';
 import ProsShowcase from '@/components/home/ProsShowcase';
 import BudgetCalculatorSlot from '@/components/home/BudgetCalculatorSlot';
@@ -88,7 +89,7 @@ export default async function Home() {
         />
         <JourneyNavigator stages={BUILD_STAGES} counts={stageCounts} />
         <div className="mt-12 sm:mt-16">
-          <HubTeaserSlot />
+          <HubTeaserSlot href={isEnabled('hub') ? '/my-home/' : undefined} />
         </div>
       </Section>
 

@@ -4,22 +4,17 @@ import StructuredData from '@/components/StructuredData';
 import VideoGrid from '@/components/VideoGrid';
 import Breadcrumbs from '@/components/content/Breadcrumbs';
 import ConsultationCTA from '@/components/leads/ConsultationCTA';
+import SaveButton from '@/components/hub/SaveButton';
 import { stageLabel } from '@/lib/autopilot/summary';
+import { isEnabled } from '@/lib/flags';
 import type { RuntimeVideo } from '@/lib/autopilot/videos';
 import { formatHebrewDate } from '@/lib/content/seo';
+import { videoMoments, videoObjectJsonLd } from '@/lib/jsonld';
 import { absoluteUrl } from '@/lib/site';
 import { formatTimestamp } from '@/lib/types';
 import type { Video } from '@/lib/types';
 import AskAboutVideo from './AskAboutVideo';
 import RuntimeVideoView from './RuntimeVideoView';
-
-function isoDuration(seconds: number | null): string | undefined {
-  if (!seconds || seconds <= 0) return undefined;
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  return `PT${h ? `${h}H` : ''}${m ? `${m}M` : ''}${s}S`;
-}
 
 /**
  * /video/<youtube-id>/ for a video published by Content Autopilot: the same
@@ -37,27 +32,19 @@ export default function RuntimeVideoPage({ video, related }: { video: RuntimeVid
 
   return (
     <div className="pb-16">
+      {/* Shared builder (lib/jsonld.ts): Clip URLs on this page (RuntimeVideoView honours ?t=). */}
       <StructuredData
-        data={{
-          '@context': 'https://schema.org',
-          '@type': 'VideoObject',
+        data={videoObjectJsonLd({
+          youtubeId: video.youtube_id,
           name: video.title,
           description,
-          thumbnailUrl: [video.thumbnail_url],
-          uploadDate: video.published_at ?? undefined,
-          duration: isoDuration(duration),
-          embedUrl: `https://www.youtube.com/embed/${video.youtube_id}`,
-          contentUrl: `https://www.youtube.com/watch?v=${video.youtube_id}`,
-          url: absoluteUrl(path),
-          inLanguage: 'he-IL',
-          hasPart: chapters.map((c, i) => ({
-            '@type': 'Clip',
-            name: c.title,
-            startOffset: c.start_s,
-            endOffset: chapters[i + 1]?.start_s ?? duration ?? undefined,
-            url: `https://www.youtube.com/watch?v=${video.youtube_id}&t=${c.start_s}`,
-          })),
-        }}
+          thumbnailUrl: video.thumbnail_url,
+          uploadDate: video.published_at,
+          durationSec: duration,
+          pageUrl: absoluteUrl(path),
+          moments: videoMoments({ chapters: chapters.map((c) => ({ start_time: c.start_s, title: c.title })), duration_seconds: duration }),
+          seekable: true,
+        })}
       />
 
       <div className="container-page max-w-5xl pt-6 sm:pt-10">
@@ -108,6 +95,7 @@ export default function RuntimeVideoPage({ video, related }: { video: RuntimeVid
               </>
             ) : null}
           </p>
+          {isEnabled('hub') && <SaveButton kind="video" refId={video.youtube_id} title={video.title} className="mt-4" />}
         </header>
 
         <Suspense fallback={<div className="skeleton aspect-video w-full rounded-2xl" />}>
