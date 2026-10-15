@@ -14,6 +14,7 @@ import { partnerHealth, partnersSummary } from '@/lib/command/partners';
 import { buildCommandCenter, dailyTotals } from '@/lib/command/build';
 import { buildLeadsAnalytics, percentile, speedToLead } from '@/lib/command/analytics';
 import { formatBudgetRange, formatCount, formatDurationHe, formatNis, formatUsd } from '@/lib/command/format';
+import { stageKey, stageLabel } from '@/lib/command/dimensions';
 import type { CommandInputs, LeadFact, PartnerFact, PlanFact } from '@/lib/command/types';
 
 const PLANS: PlanFact[] = [
@@ -194,6 +195,18 @@ describe('lead readers (defensive against the revenue squad’s future fields)',
     expect(leadSource({ attribution: { medium: 'weird' }, utm: {} }).medium).toBe('direct');
   });
 
+  it('maps stages onto the owner’s 7 (lib/stages.ts)', () => {
+    expect(stageKey('permit')).toBe('permit');
+    expect(stageKey('tender')).toBe('permit'); // profile value -> its stage
+    expect(stageKey('land')).toBe('purchase');
+    expect(stageKey('moving_in')).toBe('moving-in');
+    expect(stageKey('renovation')).toBe('other');
+    expect(stageKey('design')).toBe('other');
+    expect(stageKey('')).toBeNull();
+    expect(stageKey('nonsense')).toBeNull();
+    expect(stageLabel('permit')).toBe('היתר/מכרז');
+  });
+
   it('builds a lead fact without contact details', () => {
     const row: RawLeadRow = {
       id: 'l1',
@@ -215,7 +228,7 @@ describe('lead readers (defensive against the revenue squad’s future fields)',
       firstResponseAt: new Map([['l1', '2026-10-14T06:30:00Z']]),
     });
     expect(fact).toMatchObject({
-      stage: 'tender', // project-file 'permit' -> the profile's tender stage
+      stage: 'permit', // the project file's stage wins over construction_stage
       regionSlug: 'sharon', // region_id wins over payload.region
       budgetLabel: '₪2M–2.5M',
       score: 71,
@@ -395,7 +408,8 @@ describe('leads analytics', () => {
     });
     expect(a.total.current).toBe(3);
     expect(a.byStage.find((r) => r.key === 'frame')?.count).toBe(2);
-    expect(a.byStage[0].key).toBe('land');
+    // The owner's 7 stages in order, then "אחר" and "לא צוין".
+    expect(a.byStage.map((r) => r.key)).toEqual(['purchase', 'planning', 'permit', 'frame', 'infrastructure', 'finishing', 'moving-in', 'other', 'unknown']);
     expect(a.byRegion).toHaveLength(15); // 14 regions + "not given"
     expect(a.byScoreBand.map((r) => [r.key, r.count])).toEqual([['hot', 1], ['warm', 0], ['mild', 1], ['cold', 0], ['none', 1]]);
     expect(a.byUtm).toEqual([expect.objectContaining({ label: 'facebook / spring', count: 1 })]);

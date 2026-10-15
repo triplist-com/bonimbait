@@ -275,10 +275,12 @@ as $$
          count(*) filter (where k.name = 'answer_completed')::bigint                            as answers,
          avg(case when k.name = 'answer_completed' and jsonb_typeof(k.props -> 'confidence') = 'number'
                   then (k.props ->> 'confidence')::numeric end)                                 as avg_confidence,
-         count(*) filter (where k.name = 'answer_completed' and jsonb_typeof(k.props -> 'sources') = 'number'
-                            and (k.props ->> 'sources')::numeric = 0)::bigint                   as zero_source_answers,
-         avg(case when k.name = 'answer_completed' and jsonb_typeof(k.props -> 'top_cos') = 'number'
-                  then (k.props ->> 'top_cos')::numeric end)                                    as avg_top_similarity,
+         count(*) filter (where k.name = 'answer_completed' and (
+                            (jsonb_typeof(k.props -> 'n_sources') = 'number' and (k.props ->> 'n_sources')::numeric = 0)
+                            or (not (k.props ? 'n_sources') and jsonb_typeof(k.props -> 'sources') = 'number'
+                                and (k.props ->> 'sources')::numeric = 0)))::bigint            as zero_source_answers,
+         avg(case when k.name = 'answer_completed' and jsonb_typeof(k.props -> 'top_similarity') = 'number'
+                  then (k.props ->> 'top_similarity')::numeric end)                             as avg_top_similarity,
          min(k.occurred_at)                                                                     as first_seen,
          max(k.occurred_at)                                                                     as last_seen
   from keyed k

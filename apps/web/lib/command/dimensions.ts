@@ -2,38 +2,33 @@
  * The dimensions leads are broken down by: stage, region, score band, source.
  * Pure and client-safe.
  *
- * Stages: until the design squad's lib/stages.ts (the owner's 7 stages) is
- * merged, buckets are the member-profile values (profiles.construction_stage,
- * lib/constants/community.ts). A project file's stage (BuildStage ids) maps
- * onto the nearest profile value; "תשתיות" has none, so it keeps its own bucket.
- * TODO(design merge): switch STAGE_BUCKETS to BUILD_STAGES from '@/lib/stages'.
+ * Stages are the owner's 7 (lib/stages.ts): רכישה · תכנון · היתר/מכרז · שלד ·
+ * תשתיות · גמרים · אכלוס. A project file names one by id; an older lead or a
+ * member profile has a profiles.construction_stage value, mapped through
+ * stageForProfile(). Profile values with no stage of their own ("עיצוב",
+ * "שיפוץ") count as "אחר".
  */
 import { CONSTRUCTION_STAGES, REGIONS } from '@/lib/constants/community';
+import type { ConstructionStage } from '@/lib/db/types';
+import { BUILD_STAGES, stageForProfile } from '@/lib/stages';
 import type { LeadSource, ScoreBandId } from './types';
 
 export const UNKNOWN = 'unknown';
+export const OTHER_STAGE = 'other';
 
 export const STAGE_BUCKETS: ReadonlyArray<{ key: string; label: string }> = [
-  ...CONSTRUCTION_STAGES.map((s) => ({ key: s.value as string, label: s.label })),
-  { key: 'infrastructure', label: 'תשתיות' },
+  ...BUILD_STAGES.map((s) => ({ key: s.id as string, label: s.label })),
+  { key: OTHER_STAGE, label: 'אחר' },
 ];
 
-/** Project-file stage ids (lib/stages.ts BuildStage['id']) -> profile stage values. */
-const BUILD_STAGE_TO_PROFILE: Record<string, string> = {
-  purchase: 'land',
-  planning: 'planning',
-  permit: 'tender',
-  frame: 'frame',
-  infrastructure: 'infrastructure',
-  finishing: 'finishing',
-  'moving-in': 'moving_in',
-};
-
-/** Stage bucket key for a profile value or a project-file stage id; null when unknown. */
+/** Stage bucket key for a project-file stage id or a profile value; null when not given. */
 export function stageKey(value: unknown): string | null {
   if (typeof value !== 'string' || !value) return null;
-  if (STAGE_BUCKETS.some((s) => s.key === value)) return value;
-  return BUILD_STAGE_TO_PROFILE[value] ?? null;
+  if (BUILD_STAGES.some((s) => s.id === value)) return value;
+  if (CONSTRUCTION_STAGES.some((s) => s.value === value)) {
+    return stageForProfile(value as ConstructionStage)?.id ?? OTHER_STAGE;
+  }
+  return null;
 }
 
 export function stageLabel(key: string | null | undefined): string | null {
