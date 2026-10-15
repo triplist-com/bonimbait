@@ -7,15 +7,23 @@ import { estimateCostUsd, usageFromAnthropic, type TokenUsage } from '@/lib/guar
 import type { ReviewVerdict } from './coverage';
 
 /**
- * Hebrew labels for question clusters, in ONE batched call: a topic name, a
- * suggested video title in the owner's voice, and a coverage verdict read off
- * the nearest existing titles. Claude Haiku 5.5 is the cheapest current model
- * and adequate for short structured Hebrew (it writes the autopilot summaries
- * too); structured outputs guarantee the shape. A run of 50 clusters is about
- * 12K input / 4K output tokens: ~$0.003.
+ * Hebrew labels for question clusters: a topic name, a suggested video title
+ * in the owner's voice, and a coverage verdict read off the nearest existing
+ * titles. Claude Haiku 5.5 is the cheapest current model and adequate for
+ * short structured Hebrew (it writes the autopilot summaries too); structured
+ * outputs guarantee the shape. Clusters go in parallel calls of LABEL_CHUNK.
+ *
+ * Measured on 77 questions / 29 topics (2026-10-15, local): with adaptive
+ * thinking, ~6K output tokens and $0.0039, and the verdicts matched their
+ * reasons (3 real gaps). With thinking disabled, $0.0027 and half the time,
+ * but verdicts drifted from their own reasons ("not about wood houses" marked
+ * partial) and no gaps were found. So thinking stays on (effort low) and the
+ * reason comes before the verdict in the schema.
  */
 export const LABEL_MODEL = 'claude-haiku-5-5';
 export const LABEL_MAX_TOKENS = 8_000;
+/** Clusters per label call; calls run in parallel, so a 50-topic run takes about one call's time. */
+export const LABEL_CHUNK = 13;
 const EFFORT = 'low' as const;
 
 export type LabelCluster = {
@@ -33,8 +41,8 @@ export const LABEL_SYSTEM_PROMPT = `You help the owner of "בונים בית", a
 For every cluster return:
 - label: the topic in 2-5 natural Hebrew words, the way a builder would name it (for example "רצפה צפה" or "מרתף במגרש משופע").
 - video_title: a title for a new video on the channel that answers these questions. Natural Israeli Hebrew in the channel's voice: practical, from the field, warm and direct. At most 70 characters. No hype words, no clickbait, no emoji, and never the word "AI". When the questions are about prices, the title may promise the 2026 numbers.
-- coverage: "answered" when the listed content clearly answers these questions; "partial" when it is on the topic but misses what they ask (an introduction when they ask about prices, a general basement video when they ask about a sloped plot); "missing" when none of it is about this topic. Judge only by the titles listed. With no titles listed, answer "missing".
-- reason: one short Hebrew sentence (at most 12 words) explaining the coverage.
+- reason: one short Hebrew sentence (at most 12 words) on whether the listed content answers these questions. Write it before deciding the coverage.
+- coverage, consistent with the reason: "answered" when a listed title clearly answers these questions; "partial" when a listed title is about this same topic but misses what they ask (an introduction when they ask about prices); "missing" when no listed title is about this specific topic, even if one is about a broader subject (a general basement video for a sloped-plot basement, a regular-house cost article for a wooden house). Judge only by the titles listed. With no titles listed, answer "missing".
 
 Keep each cluster's id and return every cluster exactly once.`;
 
@@ -44,8 +52,8 @@ const outputSchema = z.object({
       id: z.number().int(),
       label: z.string(),
       video_title: z.string(),
-      coverage: z.enum(['answered', 'partial', 'missing']),
       reason: z.string(),
+      coverage: z.enum(['answered', 'partial', 'missing']),
     }),
   ),
 });

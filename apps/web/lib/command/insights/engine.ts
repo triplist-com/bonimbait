@@ -19,10 +19,12 @@ import type { InsightRunRow, InsightRunStatus, InsightTopicRow, QuestionStatRow 
 import type { NearestContent } from '../types';
 import { centroid, clusterQuestions, dot, THRESHOLD, unitVector, COS_WEIGHT, TERM_WEIGHT } from './cluster';
 import { clusterCoverage, levelFromReview, levelFromSimilarity, probeDocs, type DocResolver, type ProbeHit } from './coverage';
-import { estimateLabelUsd, LABEL_MODEL, LabelError, type LabelCluster, type LabelResult } from './label';
+import { estimateLabelUsd, LABEL_CHUNK, LABEL_MODEL, LabelError, type LabelCluster, type LabelResult } from './label';
 import { cleanQuestion, questionKey, topicTerms, topicText } from './text';
 
 export const EMBED_MODEL = 'text-embedding-3-small';
+/** Topics that get every probe question searched; the long tail gets one (a search is ~150 ms). */
+export const DEEP_PROBE_TOPICS = 20;
 const DAY_MS = 86_400_000;
 
 export type InsightsConfig = {
@@ -241,14 +243,17 @@ export async function refreshInsights(
     }
   }
 
+  const timings: Record<string, number> = {};
+  let mark = deps.now();
+  const lap = (step: string) => {
+    const t = deps.now();
+    timings[step] = t - mark;
+    mark = t;
+  };
   const windowTo = new Date(t0).toISOString();
   const windowFrom = new Date(t0 - cfg.windowDays * DAY_MS).toISOString();
   const weekStart = new Date(t0 - 7 * DAY_MS).toISOString();
-  const runId = await deps.store.createRun({
-    window_from: windowFrom,
-    window_to: windowTo,
-    triggered_by: opts.triggeredBy ?? null,
-    params: {
+  const params: Record<string, unknown> = {
       window_days: cfg.windowDays,
       max_questions: cfg.maxQuestions,
       max_topics: cfg.maxTopics,
@@ -257,8 +262,8 @@ export async function refreshInsights(
       probes: cfg.probes,
       embed_model: EMBED_MODEL,
       label_model: LABEL_MODEL,
-    },
-  });
+  };
+  const runId = await deps.store.createRun({ window_from: windowFrom, window_to: windowTo, triggered_by: opts.triggeredBy ?? null, params });
 
   let costUsd = 0;
   let embedTokens = 0;
@@ -272,12 +277,14 @@ export async function refreshInsights(
       label_input_tokens: labelIn,
       label_output_tokens: labelOut,
       cost_usd: Math.round(costUsd * 1e6) / 1e6,
+      params: { ...params, timings_ms: timings } as InsightRunRow['params'],
       ...extra,
     });
 
   try {
     const rows = await deps.questions({ from: windowFrom, to: windowTo, weekStart, limit: cfg.maxQuestions });
     const questions = mergeQuestions(rows).slice(0, cfg.maxQuestions);
+    lap('collect');
     const askCount = questions.reduce((a, q) => a + q.asks, 0);
     if (questions.length === 0) {
       const message = `לא נמצאו שאלות ב-${cfg.windowDays} הימים האחרונים.`;
@@ -296,6 +303,7 @@ export async function refreshInsights(
     }
 
     const embedded = await deps.embed([...fullTexts, ...topicTexts]);
+    lap('embed');
     embedTokens = embedded.tokens;
     costUsd += await deps.recordUsage('insights_embed', EMBED_MODEL, { inputTokens: embedded.tokens, outputTokens: 0 });
     if (embedded.vectors.length !== fullTexts.length * 2) throw new Error('embedding count mismatch');
@@ -304,17 +312,21 @@ export async function refreshInsights(
 
     const groups = clusterQuestions(topicVectors, questions.map((q) => topicTerms(q.text)), cfg.threshold);
     const clusters = summarizeClusters(groups, questions, topicVectors, cfg.probes).slice(0, cfg.maxTopics);
+    lap('cluster');
 
-    // Coverage: the cluster's probe questions through the site's own search.
-    await mapLimit(clusters, 4, async (cluster) => {
-      const docs = await mapLimit(cluster.probes, 3, async (m) => probeDocs(await deps.search(questions[m].text, fullVectors[m]), deps.resolve));
+    // Coverage: the cluster's probe questions through the site's own search
+    // (every probe of the DEEP_PROBE_TOPICS biggest topics, one for the tail).
+    await mapLimit(clusters, 4, async (cluster, i) => {
+      const probes = i < DEEP_PROBE_TOPICS ? cluster.probes : cluster.probes.slice(0, 1);
+      const docs = await mapLimit(probes, 3, async (m) => probeDocs(await deps.search(questions[m].text, fullVectors[m]), deps.resolve));
       const cov = clusterCoverage(docs);
       cluster.topSimilarity = cov.topSimilarity;
       cluster.coverage = cov.coverage;
       cluster.nearest = cov.nearest;
     });
+    lap('coverage');
 
-    // Labels and the coverage review: one call, if there's budget and time.
+    // Labels and the coverage review: parallel calls of LABEL_CHUNK clusters, if there's budget and time.
     let status: InsightRunStatus = 'done';
     let message = '';
     let labels: LabelResult['labels'] | null = null;
@@ -323,35 +335,42 @@ export async function refreshInsights(
       questions: c.examples,
       nearest: c.nearest.map((n) => ({ kind: n.kind, title: n.title })),
     }));
+    const chunks: LabelCluster[][] = [];
+    for (let i = 0; i < labelInput.length; i += LABEL_CHUNK) chunks.push(labelInput.slice(i, i + LABEL_CHUNK));
     const timeLeft = deadline - deps.now();
     if (timeLeft < 12_000) {
       status = 'partial';
       message = 'לא נשאר זמן לניסוח הכותרות: הוצגה השאלה הנפוצה בכל נושא.';
     } else {
-      const labelBudget = await deps.checkBudget(estimateLabelUsd(labelInput));
+      const labelBudget = await deps.checkBudget(chunks.reduce((a, c) => a + estimateLabelUsd(c), 0));
       if (!labelBudget.ok) {
         status = 'partial';
         message = 'תקציב ה-AI היומי נוצל לפני ניסוח הכותרות: הוצגה השאלה הנפוצה בכל נושא.';
       } else {
-        try {
-          const result = await deps.label(labelInput, Math.min(30_000, timeLeft - 5_000));
-          labels = result.labels;
-          labelIn = (result.usage.inputTokens ?? 0) + (result.usage.cacheReadTokens ?? 0);
-          labelOut = result.usage.outputTokens ?? 0;
-          costUsd += await deps.recordUsage('insights_labels', LABEL_MODEL, result.usage);
-        } catch (err) {
-          const usage = err instanceof LabelError ? err.usage : null;
+        const results = await Promise.allSettled(chunks.map((chunk) => deps.label(chunk, Math.min(30_000, timeLeft - 5_000))));
+        labels = new Map();
+        let failed = 0;
+        for (const r of results) {
+          const usage = r.status === 'fulfilled' ? r.value.usage : r.reason instanceof LabelError ? r.reason.usage : null;
+          if (r.status === 'fulfilled') r.value.labels.forEach((v, k) => labels!.set(k, v));
+          else {
+            failed += 1;
+            console.error(`[insights] labels failed: ${r.reason instanceof Error ? r.reason.message : String(r.reason)}`);
+          }
           if (usage) {
-            labelIn = usage.inputTokens;
-            labelOut = usage.outputTokens;
+            labelIn += (usage.inputTokens ?? 0) + (usage.cacheReadTokens ?? 0);
+            labelOut += usage.outputTokens ?? 0;
             costUsd += await deps.recordUsage('insights_labels', LABEL_MODEL, usage);
           }
-          status = 'partial';
-          message = 'ניסוח הכותרות נכשל: הוצגה השאלה הנפוצה בכל נושא.';
-          console.error(`[insights] labels failed: ${err instanceof Error ? err.message : String(err)}`);
         }
+        if (failed > 0) {
+          status = 'partial';
+          message = failed === chunks.length ? 'ניסוח הכותרות נכשל: הוצגה השאלה הנפוצה בכל נושא.' : 'חלק מהכותרות לא נוסחו: בנושאים האלה מוצגת השאלה הנפוצה.';
+        }
+        if (labels.size === 0) labels = null;
       }
     }
+    lap('label');
 
     const topics: TopicInsert[] = clusters.map((c, i) => {
       const l = labels?.get(i + 1);

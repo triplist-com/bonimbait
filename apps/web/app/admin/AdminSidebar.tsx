@@ -84,13 +84,14 @@ export default function AdminSidebar({ email, role, groups }: Props) {
 
   return (
     <>
-      <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-ink-100 bg-white/95 px-4 py-2 backdrop-blur lg:hidden">
+      <div className="flex items-center justify-between gap-3 border-b border-ink-100 bg-white px-4 py-2 lg:hidden">
         <Link href="/admin/" className="text-base font-bold text-primary-700">
           ניהול האתר
         </Link>
         <button
           type="button"
           onClick={() => setOpen(true)}
+          data-admin-menu
           aria-haspopup="dialog"
           aria-expanded={open}
           className="inline-flex h-11 items-center gap-2 rounded-xl border border-ink-200 bg-white px-3 text-sm font-semibold text-ink-800 hover:bg-ink-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-600"

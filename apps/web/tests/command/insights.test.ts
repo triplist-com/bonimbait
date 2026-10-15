@@ -314,6 +314,37 @@ describe('refreshInsights', () => {
     expect(runs[0].label_model).toBeNull();
   });
 
+  it('labels in parallel chunks and keeps the labels of the chunks that worked', async () => {
+    // 30 distinct one-question topics -> 3 label calls (LABEL_CHUNK = 13).
+    const many = Array.from({ length: 30 }, (_, i) => row(`נושא ${String.fromCharCode(0x5d0 + (i % 22))}${i} שאלה ייחודית`, 30 - i));
+    const vectors = (texts: string[]) => texts.map((t) => {
+      const v = new Array(40).fill(0);
+      v[Number(/\d+/.exec(t)?.[0] ?? 0) % 40] = 1;
+      return v;
+    });
+    let call = 0;
+    const { deps: d, saved, runs } = deps({
+      questions: vi.fn(async () => many),
+      embed: vi.fn(async (texts: string[]) => ({ vectors: vectors(texts), tokens: texts.length })),
+      label: vi.fn(async (clusters: LabelCluster[]): Promise<LabelResult> => {
+        call += 1;
+        if (call === 2) throw new LabelError('incomplete', { inputTokens: 500, outputTokens: 4000 });
+        return {
+          labels: new Map(clusters.map((c): [number, ClusterLabel] => [c.id, { label: `תווית ${c.id}`, videoTitle: 't', verdict: 'missing', reason: 'r' }])),
+          usage: { inputTokens: 1000, outputTokens: 500 },
+          model: 'claude-haiku-5-5',
+        };
+      }),
+    });
+    const result = await refreshInsights(d, { config: { probes: 1 } });
+    expect(d.label).toHaveBeenCalledTimes(3);
+    expect(result).toMatchObject({ ok: true, status: 'partial', topics: 30 });
+    expect(saved.filter((t) => t.level_source === 'review')).toHaveLength(17);
+    expect(saved.filter((t) => t.level_source === 'similarity')).toHaveLength(13);
+    expect(runs[0]).toMatchObject({ label_input_tokens: 2500, label_output_tokens: 5000 });
+    expect(Object.keys((runs[0].params as { timings_ms: Record<string, number> }).timings_ms)).toEqual(['collect', 'embed', 'cluster', 'coverage', 'label']);
+  });
+
   it('refuses before any paid call when the budget says no', async () => {
     const { deps: d, runs } = deps({ checkBudget: vi.fn(async () => ({ ok: false, message: 'נגמר' })) });
     const result = await refreshInsights(d);
@@ -366,7 +397,7 @@ describe('label prompt', () => {
     expect(prompt).toContain('- סרטון: רצפה צפה - מה זה בכלל');
     expect(prompt).toContain('- אין');
     const usd = estimateLabelUsd([{ id: 1, questions: [{ q: 'x', asks: 1 }], nearest: [] }]);
-    expect(usd).toBeGreaterThan(0.004); // the full 8K output budget at Haiku 5.5 rates
-    expect(usd).toBeLessThan(0.01);
+    expect(usd).toBeGreaterThan(0.002); // the full 4K output budget at Haiku 5.5 rates
+    expect(usd).toBeLessThan(0.005);
   });
 });
