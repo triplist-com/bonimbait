@@ -59,8 +59,8 @@ describe('stage content', () => {
     expect(text).not.toMatch(/\bAI\b|בינה מלאכותית/);
   });
 
-  it('labels durations in Hebrew', () => {
-    expect(durationLabel('planning')).toBe('3–8 חודשים');
+  it('labels durations in Hebrew, with the range isolated LTR', () => {
+    expect(durationLabel('planning')).toBe('⁦3–8⁩ חודשים');
   });
 });
 

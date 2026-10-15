@@ -11,6 +11,7 @@ import type { ConstructionStage } from '@/lib/db/types';
 import { MEMBER_REGIONS } from '@/lib/constants/community';
 import { BUILD_STAGES } from '@/lib/stages';
 import { STAGE_CONTENT } from './content';
+import { isolateLtr } from './format';
 import { STAGE_IDS, isStageId, type HubDraft, type HubProjectRow, type StageId } from './types';
 
 export const ONBOARDING_STEPS = ['stage', 'region', 'size', 'budget', 'moveIn'] as const;
@@ -23,12 +24,12 @@ export interface SizeOption {
   value: number;
 }
 
-/** House size chips; the band ids are the SIZE_BANDS ids. */
+/** House size chips; the band ids are the SIZE_BANDS ids. Ranges are LTR-isolated (no "200–150" in RTL). */
 export const SIZE_OPTIONS: readonly SizeOption[] = [
   { id: 'lt-150', label: 'עד 150 מ״ר', value: 140 },
-  { id: '150-200', label: '150–200 מ״ר', value: 180 },
-  { id: '200-250', label: '200–250 מ״ר', value: 220 },
-  { id: '250-300', label: '250–300 מ״ר', value: 270 },
+  { id: '150-200', label: `${isolateLtr('150–200')} מ״ר`, value: 180 },
+  { id: '200-250', label: `${isolateLtr('200–250')} מ״ר`, value: 220 },
+  { id: '250-300', label: `${isolateLtr('250–300')} מ״ר`, value: 270 },
   { id: '300-plus', label: 'מעל 300 מ״ר', value: 330 },
 ];
 
@@ -44,12 +45,12 @@ export interface BudgetBand {
 
 /** Budget chips (whole shekels). The aggregates bucket a range by its midpoint. */
 export const BUDGET_BANDS: readonly BudgetBand[] = [
-  { id: 'lt-1.5m', label: 'עד 1.5 מיליון', range: [0, 1_500_000] },
-  { id: '1.5-2m', label: '1.5–2 מיליון', range: [1_500_000, 2_000_000] },
-  { id: '2-2.5m', label: '2–2.5 מיליון', range: [2_000_000, 2_500_000] },
-  { id: '2.5-3m', label: '2.5–3 מיליון', range: [2_500_000, 3_000_000] },
-  { id: '3-4m', label: '3–4 מיליון', range: [3_000_000, 4_000_000] },
-  { id: '4m-plus', label: 'מעל 4 מיליון', range: [4_000_000, 6_000_000] },
+  { id: 'lt-1.5m', label: `עד ${isolateLtr('1.5')} מיליון ₪`, range: [0, 1_500_000] },
+  { id: '1.5-2m', label: `${isolateLtr('1.5–2')} מיליון ₪`, range: [1_500_000, 2_000_000] },
+  { id: '2-2.5m', label: `${isolateLtr('2–2.5')} מיליון ₪`, range: [2_000_000, 2_500_000] },
+  { id: '2.5-3m', label: `${isolateLtr('2.5–3')} מיליון ₪`, range: [2_500_000, 3_000_000] },
+  { id: '3-4m', label: `${isolateLtr('3–4')} מיליון ₪`, range: [3_000_000, 4_000_000] },
+  { id: '4m-plus', label: `מעל ${isolateLtr('4')} מיליון ₪`, range: [4_000_000, 6_000_000] },
 ];
 
 export const BUDGET_MAX_NIS = 1_000_000_000;

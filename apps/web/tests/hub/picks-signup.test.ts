@@ -1,11 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
+import {
+  assignToStages,
+  leadTopic,
+  normalizeForMatch,
+  scoreVideo,
+  titleSimilarity,
+  titleWords,
+  topicHits,
+} from '@/lib/hub/picks';
+import { isNewAccount, signupMethod } from '@/lib/hub/signup';
 
+// Hoisted above the imports by vitest.
 vi.mock('next/cache', () => ({ unstable_cache: (fn: () => unknown) => fn }));
-
-const { assignToStages, leadTopic, normalizeForMatch, scoreVideo, titleSimilarity, titleWords, topicHits } = await import(
-  '@/lib/hub/picks'
-);
-const { isNewAccount, signupMethod } = await import('@/lib/hub/signup');
 
 const zero = { purchase: 0, planning: 0, permit: 0, frame: 0, infrastructure: 0, finishing: 0, 'moving-in': 0 };
 

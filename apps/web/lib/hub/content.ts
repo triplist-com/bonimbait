@@ -10,6 +10,7 @@
  * of the current stage (lib/hub/roadmap.ts).
  */
 import { BUILD_STAGES, type BuildStage } from '@/lib/stages';
+import { isolateLtr } from './format';
 import type { StageId } from './types';
 
 export interface ChecklistItem {
@@ -91,7 +92,7 @@ export const STAGE_CONTENT: Record<StageId, StageContent> = {
       {
         id: 'purchase.budget',
         title: 'קבעו מסגרת תקציב ריאלית לבנייה',
-        why: 'לפי הנתונים של בונים בית, תכנון ובנייה עולים כ-12–14 אלף ₪ למ״ר, לא כולל מע״מ (נכון ל-2026).',
+        why: 'לפי הנתונים של בונים בית, תכנון ובנייה עולים בין 12 ל-14 אלף ₪ למ״ר, לא כולל מע״מ (נכון ל-2026).',
         link: { href: '/calculator/', label: 'תקציב ראשוני' },
       },
       {
@@ -529,9 +530,9 @@ export function findChecklistItem(id: string): (ChecklistItem & { stage: StageId
   return item ? { ...item, stage } : undefined;
 }
 
-/** "3–8 חודשים". */
+/** "3–8 חודשים", with the range in an LTR isolate so it never reads "8–3" in RTL. */
 export function durationLabel(stage: StageId): string {
   const { minMonths, maxMonths } = STAGE_CONTENT[stage].duration;
   if (minMonths === maxMonths) return minMonths === 1 ? 'כחודש' : `כ-${minMonths} חודשים`;
-  return `${minMonths}–${maxMonths} חודשים`;
+  return `${isolateLtr(`${minMonths}–${maxMonths}`)} חודשים`;
 }

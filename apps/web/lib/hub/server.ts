@@ -362,6 +362,21 @@ async function publicBusinesses(ids: string[]): Promise<Map<string, { slug: stri
   return new Map((data ?? []).map((b) => [b.id, { slug: b.slug, name: b.name }]));
 }
 
+/**
+ * The signup form also puts the onboarding draft in the user metadata
+ * (`hub_draft`), so a member who confirms the email on another device still
+ * lands on their map. Creates the project once, when there is none.
+ */
+export async function createProjectFromSignupMetadata(user: User): Promise<boolean> {
+  const draft = normalizeDraft((user.user_metadata as Record<string, unknown> | undefined)?.hub_draft);
+  if (!isDraftComplete(draft)) return false;
+  const db = hubUserDb();
+  if (await getPrimaryProject(db, user.id)) return false;
+  const { project } = await saveProjectFromDraft(db, user.id, draft, { mode: 'fill', source: 'signup' });
+  await syncProfileFromProject(user.id, project);
+  return true;
+}
+
 // ---------------------------------------------------------------------------
 // The dashboard
 // ---------------------------------------------------------------------------
