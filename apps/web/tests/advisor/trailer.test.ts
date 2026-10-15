@@ -58,6 +58,14 @@ describe('TrailerSplitter', () => {
     expect(s.followups()).toEqual([]);
   });
 
+  it('reads the out-of-scope flag and never shows it as a follow-up', () => {
+    const { s, shown } = streamThrough('אני עונה על שאלות על בניית בית.\n\n@@FOLLOWUPS@@\nOUT_OF_SCOPE\nכמה עולה שלד?\nאיך בוחרים קבלן?', 6);
+    expect(shown).toBe('אני עונה על שאלות על בניית בית.');
+    expect(s.outOfScope).toBe(true);
+    expect(s.followups()).toEqual(['כמה עולה שלד?', 'איך בוחרים קבלן?']);
+    expect(streamThrough(FULL, 5).s.outOfScope).toBe(false);
+  });
+
   it('heldTailLength only holds what can still become the marker', () => {
     expect(heldTailLength('טקסט @')).toBe(1);
     expect(heldTailLength('טקסט @@ fo')).toBe(5);

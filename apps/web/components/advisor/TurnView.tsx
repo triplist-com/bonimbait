@@ -176,6 +176,8 @@ export default function TurnView({
     : undefined;
   const playingQuote = playingSource?.moments.find((m) => m.second === playingHere?.second)?.quote;
   const Heading = headingLevel === 1 ? 'h1' : 'h2';
+  // Once the answer is done, the sources it cites lead the rail (numbers unchanged).
+  const railSources = done && turn.sources.some((s) => s.cited) ? [...turn.sources.filter((s) => s.cited), ...turn.sources.filter((s) => !s.cited)] : turn.sources;
 
   return (
     <article aria-labelledby={`q-${turn.id}`} className={cn('scroll-mt-24 space-y-5', className)}>
@@ -252,7 +254,7 @@ export default function TurnView({
 
       {turn.sources.length > 0 && (
         <ul id={`sources-${turn.id}`} aria-label="המקורות של התשובה" className="scroll-mt-28 rail -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-3 lg:gap-4 lg:overflow-visible lg:px-0 lg:pb-0">
-          {turn.sources.map((s) => (
+          {railSources.map((s) => (
             <li key={`${s.kind}-${s.n}`} className="w-[78%] max-w-[19rem] motion-safe:animate-slide-up sm:w-[45%] lg:w-auto lg:max-w-none">
               <SourceCard
                 source={s}

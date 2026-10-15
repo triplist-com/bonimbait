@@ -14,7 +14,14 @@
  */
 
 export const FOLLOWUPS_MARKER = '@@FOLLOWUPS@@';
+/** First trailer line when the question is outside home building (the model's own judgement). */
+export const OUT_OF_SCOPE_FLAG = 'OUT_OF_SCOPE';
 export const MAX_FOLLOWUPS = 3;
+
+/** Did the model mark the question as outside home building? */
+export function isOutOfScope(trailer: string): boolean {
+  return /(^|\n)\s*OUT[_\s-]?OF[_\s-]?SCOPE\b/i.test(trailer);
+}
 
 // Tolerant: "@@ FOLLOWUPS @@", "@@FOLLOW-UPS@@", any case.
 const MARKER_RE = /@@\s*follow[-\s]?ups\s*@@/i;
@@ -96,6 +103,10 @@ export class TrailerSplitter {
 
   followups(question?: string): string[] {
     return parseFollowups(this.trailerText, question);
+  }
+
+  get outOfScope(): boolean {
+    return isOutOfScope(this.trailerText);
   }
 
   private show(text: string): string {

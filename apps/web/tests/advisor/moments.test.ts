@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { focusForQuery } from '@/lib/knowledge/moments';
-import { cleanSpokenText, momentFinder, quoteAround } from '@/lib/advisor/moments';
+import { cleanSpokenText, momentFinder, quoteAround, scrubAsrNumbers } from '@/lib/advisor/moments';
 
 // Shaped like the Ep. 109 row in data/search-index.json: "<title>\n<body>", caption marks.
 const TITLE = 'פודקאסט פרק 109 - עלויות בניה בשנת 2026';
@@ -29,15 +29,30 @@ describe('momentFinder', () => {
     expect(m.quote).toContain('בממוצע 800,000 שק');
   });
 
-  it('text and second are exactly what the knowledge hook returns', () => {
+  it('second is exactly what the knowledge hook returns, and so is the text when it has no ASR artifacts', () => {
     const ours = momentFinder(QUESTION)(SEGMENT, TITLE);
     const theirs = focusForQuery(QUESTION)(SEGMENT, TITLE);
     expect({ text: ours.text, second: ours.second }).toEqual(theirs);
   });
 
+  it('scrubs garbled numbers from the passage the model reads', () => {
+    const seg = { text: 'צריך כיסוי של 2ח סנטימטר בין הרשת לבטון, והשלד עלה 575,000ל שק', start_time: 0 };
+    const m = momentFinder('מה בודקים לפני יציקה?')(seg, undefined);
+    expect(m.text).not.toContain('2ח');
+    expect(m.text).toContain('575,000 שק');
+  });
+
   it('without marks, falls back to the segment start', () => {
     const m = momentFinder(QUESTION)({ text: SEGMENT.text, start_time: 1608 }, TITLE);
     expect(m.second).toBe(1608);
+  });
+});
+
+describe('scrubAsrNumbers', () => {
+  it('drops a single digit fused to letters and frees real figures from stray letters', () => {
+    expect(scrubAsrNumbers('כיסוי של 2ח סנטימטר')).toBe('כיסוי של סנטימטר');
+    expect(scrubAsrNumbers('עלה 575,000ל שק')).toBe('עלה 575,000 שק');
+    expect(scrubAsrNumbers('בממוצע 800,000 שק, ב-2026, 3D')).toBe('בממוצע 800,000 שק, ב-2026, 3D');
   });
 });
 

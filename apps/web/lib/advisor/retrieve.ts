@@ -289,10 +289,22 @@ function round3(v: number): number {
   return Math.round(v * 1000) / 1000;
 }
 
+/**
+ * What to search with. "מה הנקודות הכי חשובות בסרטון?" asked on a video page
+ * says nothing about the video's topic, so a focused video's title joins the
+ * search (the other sources then stay on its topic). Passages and moments are
+ * still chosen by the visitor's own words.
+ */
+export function searchQueryFor(query: string, focus: AdvisorFocus | undefined, lookupVideo: (id: string) => VideoRecord | null = getVideo): string {
+  if (focus?.kind !== 'video') return query;
+  const title = lookupVideo(focus.id)?.title;
+  return title ? `${query} ${title}` : query;
+}
+
 /** Run retrieval for a (standalone) question. Throws when search itself fails. */
 export async function retrieve(query: string, opts: { focus?: AdvisorFocus } = {}): Promise<Retrieval> {
   // With a focus, rank everything so the focused document is always found.
-  const hits = await semanticSearch(query, opts.focus ? 100_000 : SEARCH_TOP_K);
+  const hits = await semanticSearch(searchQueryFor(query, opts.focus), opts.focus ? 100_000 : SEARCH_TOP_K);
   const docs = selectDocuments(groupDocuments(hits), opts.focus, { newestFirst: wantsNumbers(query) });
   const fk = focusKey(opts.focus);
   const focused = fk ? docs.find((d) => d.key === fk) : undefined;

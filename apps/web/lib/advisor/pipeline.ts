@@ -258,6 +258,13 @@ export async function handleAdvisorStream(request: NextRequest): Promise<Respons
         }
 
         const answer = splitter.answer;
+        if (splitter.outOfScope) {
+          // The model judged the question to be outside home building: no sources, no pros.
+          const followups = splitter.followups(req.query);
+          send({ type: 'done', sources: [], followups, confidence: confidence.score, confidence_detail: confidence, pros: null, intent, refused: 'out_of_scope' });
+          completed = { kind: 'refusal', answer, sources: [], followups, confidence, refused: 'out_of_scope', pros: null, cited: 0 };
+          return;
+        }
         const cited = citedNumbers(answer, sources.length);
         const finalSources = sources.map((s) => ({ ...s, cited: cited.includes(s.n) }));
         const followups = splitter.followups(req.query);
@@ -299,7 +306,7 @@ export async function handleAdvisorStream(request: NextRequest): Promise<Respons
               sources: c.sources.length,
               confidence: c.confidence.score,
               latency_ms: Date.now() - startedAt,
-              model: c.kind === 'answer' ? modelName : 'none',
+              model: usageParts.length > 0 ? modelName : 'none',
               has_pros: Boolean(c.pros),
               output_tokens: outputTokens,
               cost_usd: Math.round(costUsd * 1e6) / 1e6,
