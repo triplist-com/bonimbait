@@ -11,8 +11,11 @@
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import { register } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+
+register('./alias-loader.mjs', import.meta.url); // "@/" alias; runtime fusion off (static index only)
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '../../..');

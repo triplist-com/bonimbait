@@ -16,9 +16,11 @@
  *   node scripts/knowledge/quality/retrieval_check.mjs --root <snapshot dir> --cache <json> --out <json>
  */
 import fs from 'node:fs';
+import { register } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+register('./alias-loader.mjs', import.meta.url); // "@/" alias; runtime fusion off (static index only)
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '../../..');
 const args = Object.fromEntries(
@@ -96,7 +98,7 @@ function answerDocs(hits) {
   const ranked = [...byDoc.values()]
     .map((segs) => segs.sort((a, b) => b.score - a.score))
     .sort((a, b) => b[0].score - a[0].score)
-    .filter((segs) => segs[0].kind === 'post' || videos.has(segs[0].youtube_id));
+    .filter((segs) => segs[0].kind === 'post' || (videos.has(segs[0].youtube_id) && !segs[0].title_only));
   const docs = [];
   let posts = 0;
   for (const segs of ranked) {

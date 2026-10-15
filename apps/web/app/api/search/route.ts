@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { semanticSearchSegments, groupByVideo } from '../_lib/semantic';
 import { getVideo } from '../_lib/data';
-import { segmentBody } from '@/lib/knowledge/segment-text';
+import { isTitleOnly, segmentBody } from '@/lib/knowledge/segment-text';
 
 export const runtime = 'nodejs';
 
@@ -45,7 +45,9 @@ export async function GET(request: NextRequest) {
       const v = getVideo(p.youtube_id);
       if (!v) return null;
       if (category && v.category_slug !== category) return null;
-      const body = segmentBody(p.bestSeg.text, v.title);
+      // A video without captions matches by title only: no transcript snippet, no moment.
+      const titleOnly = isTitleOnly(p.bestSeg);
+      const body = titleOnly ? v.summary || '' : segmentBody(p.bestSeg.text, v.title);
       const snippet = body.slice(0, 200) + (body.length > 200 ? '…' : '');
       return {
         video_id: v.id,
@@ -59,7 +61,7 @@ export async function GET(request: NextRequest) {
         category_name: v.category_name_he,
         score: p.bestSeg.cos,
         snippet,
-        matching_segment_time: p.bestSeg.start_time,
+        matching_segment_time: titleOnly ? undefined : p.bestSeg.start_time,
       };
     })
     .filter(Boolean);

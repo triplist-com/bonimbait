@@ -44,6 +44,34 @@ def row_text(title: str | None, segment_text: str) -> str:
     return f"{title}\n{segment_text}" if title else segment_text
 
 
+def uncaptioned_videos(segment_ids: set[str]) -> dict[str, dict]:
+    """Long-form channel videos without segments: {id: metadata}.
+
+    They get a title-level catalog record and index row (findable, no moments).
+    Metadata comes from the per-video file, else the channel inventory listing.
+    """
+    from scripts.knowledge.paths import MIN_INDEX_SECONDS, captions_status_path, inventory_path, metadata_dir
+
+    inventory = json.loads(inventory_path().read_text(encoding="utf-8"))["videos"]
+    status = json.loads(captions_status_path().read_text(encoding="utf-8")) if captions_status_path().exists() else {}
+    out: dict[str, dict] = {}
+    for r in inventory:
+        vid = r["id"]
+        if not r.get("index_scope") or vid in segment_ids:
+            continue
+        if (status.get(vid) or {}).get("status") == "unavailable":
+            continue
+        p = metadata_dir() / f"{vid}.json"
+        meta = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+        title = (meta.get("title") or r.get("title") or "").strip()
+        duration = meta.get("duration") or r.get("duration")
+        if not title or title.startswith("youtube video #") or not duration or duration < MIN_INDEX_SECONDS:
+            continue
+        upload = meta.get("upload_date") or (r.get("upload_date") or "").replace("-", "")
+        out[vid] = {**meta, "youtube_id": vid, "title": title, "duration": duration, "upload_date": upload}
+    return out
+
+
 class EmbeddingCache:
     """Append-only text-hash -> float32 vector store (keys JSON + raw f32 rows)."""
 

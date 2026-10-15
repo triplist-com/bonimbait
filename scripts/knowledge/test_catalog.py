@@ -29,24 +29,35 @@ TEMPLATE = "📌 מתכננים לבנות בית? קבעו עכשיו פגיש�
 class DescriptionTests(unittest.TestCase):
     def test_boilerplate_is_lines_shared_by_many_descriptions(self) -> None:
         descs = [f"{TEMPLATE}\nסרטון {i}" for i in range(10)]
-        bp = boilerplate_lines(descs, min_share=0.2, min_count=5)
+        bp = boilerplate_lines(descs, min_count=5)
         self.assertIn("שלכם,", bp)
         self.assertNotIn("סרטון 3", bp)
 
     def test_clean_description_keeps_only_content(self) -> None:
         desc = f"בסרטון הזה מסבירים על בטון ב-30.\n0:00 פתיחה\n1:20 בדיקות\nhttps://example.com\n#בנייה\n{TEMPLATE}"
-        bp = boilerplate_lines([TEMPLATE] * 6)
+        bp = boilerplate_lines([TEMPLATE] * 12)
         self.assertEqual(clean_description(desc, bp), "בסרטון הזה מסבירים על בטון ב-30.")
 
+    def test_link_lines_and_greetings_are_dropped(self) -> None:
+        desc = (
+            "היי חברים יקרים ,\nעימאד עקל קבלן שלד - https://bit.ly/x\n👈 https://www.bonimbayit.co.il/a\n"
+            "------------\nרן שרון - 0795805958\nתודה גדולה לדני!\nסיור בשלד עם המפקח."
+        )
+        self.assertEqual(clean_description(desc, set()), "סיור בשלד עם המפקח.")
+        cta = "השאירו פרטים ואנו נחזור אליכם:\nלקבלת המדריך פנו בטופס הזה\nמה צריך בטופס 4 ומתי מגישים."
+        self.assertEqual(clean_description(cta, set()), "מה צריך בטופס 4 ומתי מגישים.")
+
     def test_template_only_description_is_empty(self) -> None:
-        self.assertEqual(clean_description(TEMPLATE, boilerplate_lines([TEMPLATE] * 6)), "")
+        self.assertEqual(clean_description(TEMPLATE, boilerplate_lines([TEMPLATE] * 12)), "")
 
     def test_summary_cuts_on_a_word_boundary(self) -> None:
         text = "מילה " * 100
         out = summary_from_description(text.strip(), max_chars=50)
         self.assertTrue(out.endswith("…"))
         self.assertLessEqual(len(out), 51)
-        self.assertEqual(summary_from_description("קצר"), "קצר")
+        self.assertEqual(summary_from_description("קצר"), "")  # too thin to be a summary
+        line = "בסרטון הזה מסבירים איך בוחרים בטון לבית פרטי ומה זה ב-30."
+        self.assertEqual(summary_from_description(line), line)
 
 
 class ChapterTests(unittest.TestCase):
@@ -73,6 +84,23 @@ class ChapterTests(unittest.TestCase):
         chs = [{"start_time": 0.0, "end_time": 96.0, "title": "פתיחה"}, {"start_time": 96.4, "end_time": 200, "title": " חלק ב "}]
         self.assertEqual(normalize_chapters(chs, duration=300), [{"start_time": 0, "title": "פתיחה"}, {"start_time": 96, "title": "חלק ב"}])
         self.assertEqual(normalize_chapters(chs[:1]), [])
+
+
+class TitleRowTests(unittest.TestCase):
+    def test_title_row_holds_title_and_chapter_titles(self) -> None:
+        from scripts.knowledge.catalog import title_row_text
+
+        chs = [{"start_time": 0, "title": "פתיחה"}, {"start_time": 90, "title": "חימום תת רצפתי"}]
+        self.assertEqual(title_row_text(" פרק 54 ", chs), "פרק 54\nפתיחה · חימום תת רצפתי")
+        self.assertEqual(title_row_text("פרק 54"), "פרק 54")
+
+    def test_chapters_for_prefers_ytdlp_then_description(self) -> None:
+        from scripts.knowledge.catalog import chapters_for
+
+        meta = {"duration": 600, "chapters": [{"start_time": 0, "title": "א"}, {"start_time": 60, "title": "ב"}], "description": "0:00 x\n1:00 y"}
+        self.assertEqual([c["title"] for c in chapters_for(meta)], ["א", "ב"])
+        self.assertEqual([c["title"] for c in chapters_for({"duration": 600, "description": "0:00 x\n1:00 y"})], ["x", "y"])
+        self.assertEqual(chapters_for({}), [])
 
 
 class CategoryTests(unittest.TestCase):

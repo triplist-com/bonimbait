@@ -39,6 +39,30 @@ export function wantsNumbers(query: string): boolean {
   return COST_QUESTION.test(query);
 }
 
+// Same stopwords and token rules as app/api/_lib/semantic.ts (kept here so the answer
+// route's hook does not depend on the search module).
+const STOPWORDS = new Set([
+  'כמה', 'מה', 'איך', 'למה', 'האם', 'מי', 'מתי', 'איפה', 'איזה', 'איזו',
+  'של', 'על', 'את', 'עם', 'או', 'גם', 'כן', 'לא', 'זה', 'זאת', 'הוא', 'היא',
+  'אני', 'אתה', 'אנחנו', 'הם', 'הן', 'יש', 'אין',
+  'צריך', 'צריכה', 'יכול', 'יכולה',
+  'ליד', 'לפני', 'אחרי', 'בין', 'תחת', 'מעל',
+  'ב', 'ל', 'מ', 'ה', 'ו', 'כ', 'ש',
+]);
+
+/** Content terms of a question (sofit-normalized; geresh/gershayim are punctuation). */
+export function queryTerms(query: string): string[] {
+  const cleaned = query.replace(/[׳״]/g, ' ').replace(/[^֐-׿a-zA-Z\s]/g, ' ');
+  const out: string[] = [];
+  for (const raw of cleaned.split(/\s+/).filter(Boolean)) {
+    if (STOPWORDS.has(raw)) continue;
+    const n = raw.replace(/[ךםןףץ]/g, (c) => SOFIT[c] || c);
+    if (n.length < 2 || STOPWORDS.has(n)) continue;
+    out.push(n);
+  }
+  return out;
+}
+
 /** Second at a body offset: the last mark at or before it, else the segment start. */
 export function secondAt(marks: Mark[] | undefined, offset: number, fallback: number): number {
   let second = Math.floor(fallback);
@@ -123,6 +147,16 @@ export function focusWindow(
   if (start > 0 && space !== -1) start = space + 1;
   start = Math.min(start, Math.max(0, body.length - size));
   return { start, end: Math.min(body.length, start + size), anchor };
+}
+
+/**
+ * The answer route's hook: for this question, the part of a video segment to show the
+ * model and the second to play from (price-aware for cost questions).
+ */
+export function focusForQuery(query: string): (seg: MomentSegment, title: string | undefined) => { text: string; second: number } {
+  const terms = queryTerms(query);
+  const options: FocusOptions = { numeric: wantsNumbers(query) };
+  return (seg, title) => focusSegment(seg, title, terms, options);
 }
 
 /** The part of a video segment to show the model, and the second to play from. */

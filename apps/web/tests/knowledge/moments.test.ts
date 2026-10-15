@@ -1,5 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { focusSegment, focusWindow, secondAt, wantsNumbers, type Mark } from '@/lib/knowledge/moments';
+import { focusForQuery, focusSegment, focusWindow, queryTerms, secondAt, wantsNumbers, type Mark } from '@/lib/knowledge/moments';
+
+describe('queryTerms', () => {
+  it('drops stopwords and digits, normalizes sofit, treats gershayim as punctuation', () => {
+    expect(queryTerms('כמה עולה שלד לבית של 200 מ״ר ב-2026?')).toEqual(['עולה', 'שלד', 'לבית']);
+    expect(queryTerms('איך בוחרים מטבח')).toEqual(['בוחרימ', 'מטבח']);
+  });
+});
+
+describe('focusForQuery', () => {
+  it('focuses a segment on the question, price-aware for cost questions', () => {
+    const body = `${'מילה '.repeat(150)} השלדים בממוצע 800,000 שקל ${'מילה '.repeat(150)}`;
+    const price = body.indexOf('800,000');
+    const marks: Mark[] = [
+      [0, 1608],
+      [price - 20, 1717],
+    ];
+    const f = focusForQuery('כמה עולה שלד?')({ text: `פרק 109\n${body}`, start_time: 1608, marks }, 'פרק 109');
+    expect(f.text).toContain('800,000');
+    expect(f.second).toBe(1717);
+  });
+});
 
 // Distinct filler words without digits (digits would count as price figures).
 const LETTERS = 'אבגדהוזחטיכלמנסעפצקרשת';

@@ -56,7 +56,10 @@ def main() -> int:
     status = json.loads(captions_status_path().read_text(encoding="utf-8")) if captions_status_path().exists() else {}
 
     before_rows = git_json(args.before, "apps/web/data/search-index.json")
-    after_rows = json.loads((WEB_DATA / "search-index.json").read_text(encoding="utf-8"))
+    all_after_rows = json.loads((WEB_DATA / "search-index.json").read_text(encoding="utf-8"))
+    # Title-level rows (videos without captions) are findable but not "indexed" content.
+    after_rows = [r for r in all_after_rows if not r.get("title_only")]
+    title_only_ids = {r["youtube_id"] for r in all_after_rows if r.get("title_only")}
     before_posts = git_json(args.before, "apps/web/data/posts-index.json")
     after_posts = json.loads((WEB_DATA / "posts-index.json").read_text(encoding="utf-8"))
     before_ids = {r["youtube_id"] for r in before_rows}
@@ -122,6 +125,9 @@ def main() -> int:
         "index": {
             "before": index_stats(before_rows, durations),
             "after": index_stats(after_rows, durations),
+            "title_only_videos": len(title_only_ids),
+            "title_only_hours": hours(title_only_ids),
+            "findable_videos": len({r["youtube_id"] for r in all_after_rows}),
             "post_chunks_before": len(before_posts),
             "post_chunks_after": len(after_posts),
             "posts": len({p["slug"] for p in after_posts}),

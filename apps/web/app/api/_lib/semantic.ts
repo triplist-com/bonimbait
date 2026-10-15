@@ -136,7 +136,7 @@ function normalizeHebrewToken(tok: string): string {
   return tok.replace(/[ךםןףץ]/g, (c) => SOFIT_MAP[c] || c);
 }
 
-export function extractContentTerms(query: string): string[] {
+function extractContentTerms(query: string): string[] {
   // Keep Hebrew (U+0590-U+05FF), Latin letters, and whitespace; drop punctuation/digits.
   // Geresh/gershayim (׳ ״) sit inside the Hebrew block but are punctuation: treat them
   // like ASCII quotes, so "מ״ר" behaves like "מ"ר" instead of a rare, heavy keyword.

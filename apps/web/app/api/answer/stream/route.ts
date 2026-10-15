@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server';
-import { extractContentTerms, semanticSearch, type PostHit, type SearchHit, type SegmentHit } from '../../_lib/semantic';
+import { semanticSearch, type PostHit, type SearchHit, type SegmentHit } from '../../_lib/semantic';
 import { getVideo } from '../../_lib/data';
 import { matchPros } from '../../_lib/pros';
-import { focusSegment, wantsNumbers } from '@/lib/knowledge/moments';
+import { focusForQuery } from '@/lib/knowledge/moments';
+import { isTitleOnly } from '@/lib/knowledge/segment-text';
 import type { ProsCta } from '@/lib/types';
 import { trackServer } from '@/lib/analytics/server';
 import { AI_RATE_LIMITED_MESSAGE, AI_UNAVAILABLE_MESSAGE, checkAiBudget, recordAiUsage } from '@/lib/guard/aiBudget';
@@ -92,10 +93,8 @@ export async function POST(request: NextRequest) {
 
   // The pros CTA runs in parallel with retrieval and the answer stream.
   const prosPromise: Promise<ProsCta | null> = budget.ok ? matchPros(query, { isDemo }) : Promise.resolve(null);
-  // Query terms (and, for cost questions, price figures) locate the matching passage
-  // inside each video segment and the second it is said.
-  const terms = extractContentTerms(query);
-  const focus = { numeric: wantsNumbers(query) };
+  // lib/knowledge: the passage of each video segment that matches the question, and its second.
+  const focus = focusForQuery(query);
 
   // Step 1: hybrid search over video segments and article chunks
   let hits: SearchHit[];
@@ -121,7 +120,8 @@ export async function POST(request: NextRequest) {
   const ranked = Array.from(byDoc.values())
     .map((segs) => segs.sort((a, b) => b.score - a.score))
     .sort((a, b) => b[0].score - a[0].score)
-    .filter((segs) => segs[0].kind === 'post' || getVideo(segs[0].youtube_id));
+    // Title-only rows (videos without captions) can't ground an answer: search only.
+    .filter((segs) => segs[0].kind === 'post' || (getVideo(segs[0].youtube_id) && !isTitleOnly(segs[0])));
   const docs: SearchHit[][] = [];
   let postDocs = 0;
   for (const segs of ranked) {
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
       for (const s of videoSegs.slice(0, 3)) {
         blockIdx += 1;
         // The part of the 3-minute segment that matches the question, and its own second.
-        const f = focusSegment(s, v.title, terms, focus);
+        const f = focus(s, v.title);
         contextBlocks.push(
           `[מקור ${blockIdx}] סרטון: ${v.title}\nמתוך דקה ${Math.floor(f.second / 60)}:${String(f.second % 60).padStart(2, '0')}\n${f.text}`,
         );
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
         video_id: v.id,
         youtube_id: v.youtube_id,
         title: v.title,
-        timestamp: focusSegment(top, v.title, terms, focus).second,
+        timestamp: focus(top, v.title).second,
         relevance_score: top.cos,
       });
     } else {

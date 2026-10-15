@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { segmentBody } from '@/lib/knowledge/segment-text';
+import { isTitleOnly, segmentBody } from '@/lib/knowledge/segment-text';
+
+describe('isTitleOnly', () => {
+  it('flags title-level rows of videos without captions', () => {
+    expect(isTitleOnly({ kind: 'video', text: 'כותרת', title_only: true })).toBe(true);
+    expect(isTitleOnly({ kind: 'video', text: 'כותרת\nתמליל' })).toBe(false);
+  });
+});
 
 describe('segmentBody', () => {
   it('drops the leading title line of a video index row', () => {

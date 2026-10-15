@@ -5,6 +5,9 @@ grid, category pages and AI-answer citations. Existing records are kept as they
 are; this script
 
   * appends a record for every video that has segments but no record yet,
+  * appends a title-level record (has_transcript: false) for every long-form
+    video without captions, so it is findable, listed and offered as a related
+    video, without moments,
   * refreshes has_transcript / segment_count on existing records that gained
     segments, and adds chapters to any record whose metadata has them,
   * merges AI summaries from data/processed/ai_summaries/<id>.json when present,
@@ -38,13 +41,13 @@ from scripts.knowledge.catalog import (
     CATEGORY_NAMES,
     boilerplate_lines,
     candidate_categories,
-    chapters_from_description,
+    chapters_for,
     clean_description,
-    normalize_chapters,
     rule_category,
     summary_from_description,
+    title_row_text,
 )
-from scripts.knowledge.embeddings import EmbeddingCache, row_text, text_key, unit, video_titles
+from scripts.knowledge.embeddings import EmbeddingCache, row_text, text_key, uncaptioned_videos, unit, video_titles
 from scripts.knowledge.paths import (
     MIN_INDEX_SECONDS,
     REPO_ROOT,
@@ -161,7 +164,8 @@ def main() -> int:
 
     inventory = {r["id"]: r for r in json.loads(inventory_path().read_text(encoding="utf-8"))["videos"]}
     segments = load_segments()
-    metas = {}
+    uncaptioned = uncaptioned_videos(set(segments))
+    metas = dict(uncaptioned)
     for vid in set(segments) | set(by_id):
         p = metadata_dir() / f"{vid}.json"
         if p.exists():
@@ -173,26 +177,40 @@ def main() -> int:
         for vid in segments
         if vid not in by_id and vid in metas and (metas[vid].get("duration") or 0) >= MIN_INDEX_SECONDS
     )
-    print(f"catalog: {len(records)} records | segment files: {len(segments)} | new: {len(new_ids)}")
+    # Videos without captions: title-level records (findable, related videos; no moments).
+    title_only_ids = sorted(vid for vid in uncaptioned if vid not in by_id)
+    print(
+        f"catalog: {len(records)} records | segment files: {len(segments)} | "
+        f"new with transcript: {len(new_ids)} | new title-only: {len(title_only_ids)}"
+    )
 
     cache = EmbeddingCache()
-    vectors = video_vectors(segments, cache, video_titles(records))
+    titles = video_titles(records)
+    vectors = video_vectors(segments, cache, titles)
+    for vid, meta in uncaptioned.items():  # title-level rows (build_search_index.py)
+        key = text_key(title_row_text(titles.get(vid) or meta["title"], chapters_for(meta)))
+        if key in cache:
+            vectors[vid] = unit(cache.get(key))
     rows_for_rules = {
         vid: {"title": (metas.get(vid) or {}).get("title") or inv.get("title"), "playlists": inv.get("playlists", [])}
         for vid, inv in inventory.items()
     }
-    categories = assign_categories({vid: rows_for_rules.get(vid, {"title": metas[vid].get("title")}) for vid in new_ids}, rows_for_rules, vectors)
-    missing_vec = [vid for vid in new_ids if vid not in vectors]
+    candidates = new_ids + title_only_ids
+    categories = assign_categories(
+        {vid: rows_for_rules.get(vid, {"title": metas[vid].get("title")}) for vid in candidates}, rows_for_rules, vectors
+    )
+    missing_vec = [vid for vid in candidates if vid not in vectors]
     if missing_vec:
         print(f"warning: {len(missing_vec)} new videos have no cached vectors (run build_search_index.py --embed-only)")
 
     added, updated = [], []
-    for vid in new_ids:
+    for vid in candidates:
         m = metas[vid]
         inv = inventory.get(vid, {})
         cleaned = clean_description(m.get("description") or "", boilerplate)
-        chapters = normalize_chapters(m.get("chapters"), m.get("duration")) or chapters_from_description(m.get("description") or "")
+        chapters = chapters_for(m)
         cat = categories[vid]["category"]
+        transcribed = vid in segments
         record = {
             "id": vid,
             "youtube_id": vid,
@@ -212,8 +230,8 @@ def main() -> int:
             "warnings": [],
             "materials": [],
             "difficulty_level": "",
-            "has_transcript": True,
-            "segment_count": len(segments[vid]),
+            "has_transcript": transcribed,
+            "segment_count": len(segments[vid]) if transcribed else 0,
             "kind": inv.get("type") if inv.get("type") in ("video", "podcast", "live") else "video",
         }
         if record["summary"]:
@@ -233,7 +251,7 @@ def main() -> int:
             rec["segment_count"] = len(segments[vid])
             changed = True
         m = metas.get(vid) or {}
-        chapters = normalize_chapters(m.get("chapters"), m.get("duration")) or chapters_from_description(m.get("description") or "")
+        chapters = chapters_for(m)
         if chapters and not rec.get("chapters"):
             rec["chapters"] = chapters
             changed = True
@@ -276,6 +294,7 @@ def main() -> int:
     cat_counts = Counter(categories[v]["category"] for v in added)
     report = {
         "added": len(added),
+        "added_title_only": sum(1 for v in added if not by_id[v]["has_transcript"]),
         "updated": len(updated),
         "ai_summaries_merged": merged,
         "category_rule": dict(rule_counts),

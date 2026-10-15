@@ -22,6 +22,9 @@ topic, the title does. --no-title-context writes the bare 2026-03 format.
 Rows also carry "marks": [[char offset in the segment text (after the title
 line), second], ...] about every 10 s, from the caption lines, so a matched
 passage can be played at its own second (apps/web/lib/knowledge/moments.ts).
+Videos without captions get one row each, "title_only": true, holding the title
+and chapter titles: findable by /api/search, skipped by the AI answer (no content,
+no moments).
 
 Usage (from the repo root or a worktree; data/ is found in the main checkout):
   scripts/.venv/bin/python scripts/build_search_index.py --dry-run     # cost estimate, no API calls
@@ -39,6 +42,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from scripts.knowledge.catalog import chapters_for, title_row_text  # noqa: E402
 from scripts.knowledge.embeddings import (  # noqa: E402
     DIM,
     PRICE_PER_MTOK,
@@ -47,6 +51,7 @@ from scripts.knowledge.embeddings import (  # noqa: E402
     embed_missing,
     row_text,
     text_key,
+    uncaptioned_videos,
     video_titles,
 )
 from scripts.knowledge.paths import WEB_DATA, load_env, segments_dir, transcripts_dir  # noqa: E402
@@ -142,6 +147,19 @@ def main() -> int:
     print(f"Embedding cache: {len(cache)} vectors ({seeded} seeded from the committed index)")
 
     rows = [with_title(r, titles, args.title_context) for r in load_segments()]
+    # Videos without captions: one title-level row each (findable in search, no moments).
+    segmented = {r["youtube_id"] for r in rows}
+    for vid, meta in sorted(uncaptioned_videos(segmented).items()):
+        rows.append(
+            {
+                "youtube_id": vid,
+                "segment_index": 0,
+                "start_time": 0,
+                "end_time": meta["duration"],
+                "text": title_row_text(titles.get(vid) or meta["title"], chapters_for(meta)),
+                "title_only": True,
+            }
+        )
     missing: dict[str, str] = {}
     for r in rows:
         k = text_key(r["text"])
@@ -149,9 +167,10 @@ def main() -> int:
             missing.setdefault(k, r["text"])
     tokens = count_tokens(list(missing.values()))
     cost = tokens / 1e6 * PRICE_PER_MTOK
+    seg_rows = [r for r in rows if not r.get("title_only")]
     print(
-        f"Segment files: {len({r['youtube_id'] for r in rows})} videos, {len(rows)} segments | "
-        f"to embed: {len(missing)} ({tokens:,} tokens, ~${cost:.4f})"
+        f"Rows: {len(seg_rows)} segments of {len({r['youtube_id'] for r in seg_rows})} videos"
+        f" + {len(rows) - len(seg_rows)} title-only | to embed: {len(missing)} ({tokens:,} tokens, ~${cost:.4f})"
     )
     if args.dry_run:
         return 0
@@ -171,7 +190,11 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "search-index.json").write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     matrix.tofile(out_dir / "search-index.f32")
-    print(f"Index: {len(out)} segments across {len({r['youtube_id'] for r in out})} videos (title context: {args.title_context})")
+    full = [r for r in out if not r.get("title_only")]
+    print(
+        f"Index: {len(full)} segments across {len({r['youtube_id'] for r in full})} videos"
+        f" + {len(out) - len(full)} title-only rows (title context: {args.title_context})"
+    )
     for name in ("search-index.json", "search-index.f32"):
         print(f"Wrote {out_dir / name} ({(out_dir / name).stat().st_size / 1e6:.1f} MB)")
     return 0

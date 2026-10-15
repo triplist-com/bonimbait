@@ -78,14 +78,13 @@ def normalize(text: str) -> str:
     return (text or "").translate(_SOFIT)
 
 
-def boilerplate_lines(descriptions: Iterable[str], min_share: float = 0.2, min_count: int = 5) -> set[str]:
-    """Lines repeated across many descriptions (the channel's CTA template)."""
-    descs = list(descriptions)
+def boilerplate_lines(descriptions: Iterable[str], min_count: int = 10) -> set[str]:
+    """Lines repeated across many descriptions: the channel's CTA templates of each era
+    (a line in 10+ descriptions is a template line, not something said about one video)."""
     counts: Counter = Counter()
-    for d in descs:
+    for d in descriptions:
         counts.update({ln.strip() for ln in (d or "").splitlines() if ln.strip()})
-    threshold = max(min_count, int(len(descs) * min_share))
-    return {ln for ln, n in counts.items() if n >= threshold}
+    return {ln for ln, n in counts.items() if n >= min_count}
 
 
 def clean_title(title: str) -> str:
@@ -142,8 +141,30 @@ def normalize_chapters(chapters: Sequence[dict] | None, duration: float | None =
     return out if len(out) >= 2 else []
 
 
+def chapters_for(meta: dict) -> list[dict]:
+    """A video's chapters from its metadata: yt-dlp's, else "0:00 title" description lines."""
+    return normalize_chapters(meta.get("chapters"), meta.get("duration")) or chapters_from_description(meta.get("description") or "")
+
+
+def title_row_text(title: str, chapters: Sequence[dict] | None = None) -> str:
+    """Index text for a video without captions: its title and chapter titles (no moments)."""
+    parts = [title.strip()]
+    if chapters:
+        parts.append(" · ".join(c["title"] for c in chapters))
+    return "\n".join(p for p in parts if p)
+
+
+_GREETING = re.compile(r"^(היי|שלום|הי)\s+(חברים|חברות|לכולם|קהילה)|^תודה|השאירו פרטים|בטופס הזה|מלאו את הטופס|הירשמו|הרשמו לערוץ")
+_SEPARATOR = re.compile(r"[-_=*•.~\s]+")
+_PHONE = re.compile(r"(?<!\d)0\d{1,2}-?\d{3}-?\d{4}(?!\d)")
+
+
 def clean_description(description: str, boilerplate: set[str]) -> str:
-    """Description without the CTA template, timestamp lines, link-only lines and hashtags."""
+    """Description without CTA templates, links, timestamps, hashtags and greetings.
+
+    On this channel a line with a link is a promo or a pro listing ("X - https://..."),
+    never content about the video, so it goes as a whole.
+    """
     kept: list[str] = []
     for raw in (description or "").splitlines():
         line = raw.strip()
@@ -151,18 +172,21 @@ def clean_description(description: str, boilerplate: set[str]) -> str:
             if kept and kept[-1]:
                 kept.append("")
             continue
-        if line in boilerplate or _TIMESTAMP.match(line):
+        if line in boilerplate or _TIMESTAMP.match(line) or _URL.search(line) or line.startswith("#"):
             continue
-        without_urls = _URL.sub("", line).strip(" »:-–—|")
-        if not without_urls or line.startswith("#"):
+        if _SEPARATOR.fullmatch(line) or _PHONE.search(line):  # rules, contact lines
+            continue
+        if _GREETING.search(clean_title(line)) or len(clean_title(line)) < 3:  # greetings, calls to action
             continue
         kept.append(line)
     return "\n".join(kept).strip()
 
 
-def summary_from_description(cleaned: str, max_chars: int = 300) -> str:
-    """First paragraph of the cleaned description, cut on a word boundary."""
+def summary_from_description(cleaned: str, max_chars: int = 300, min_chars: int = 40) -> str:
+    """First paragraph of the cleaned description, cut on a word boundary ('' if too thin)."""
     para = cleaned.split("\n\n")[0].strip() if cleaned else ""
+    if len(para) < min_chars:
+        return ""
     if len(para) <= max_chars:
         return para
     cut = para[:max_chars].rsplit(" ", 1)[0]
