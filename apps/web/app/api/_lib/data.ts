@@ -32,6 +32,15 @@ export interface VideoRecord {
   difficulty_level: string;
   has_transcript: boolean;
   segment_count: number;
+  // Added by scripts/knowledge/build_catalog.py (full-channel index), all optional:
+  /** Chapters from the YouTube description ("0:00 title" lines). */
+  chapters?: Array<{ start_time: number; title: string }>;
+  /** Seconds into the video for each key point (same order as key_points); null = no moment. */
+  key_point_times?: Array<number | null>;
+  /** Channel content type (from the channel inventory). */
+  kind?: 'video' | 'podcast' | 'live';
+  /** Where `summary` came from: an AI pass or the cleaned YouTube description. */
+  summary_source?: 'ai' | 'description';
 }
 
 export interface CategoryRecord {

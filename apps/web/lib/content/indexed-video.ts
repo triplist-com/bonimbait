@@ -7,6 +7,7 @@ import 'server-only';
  * summary in its first HTML (fast LCP) instead of fetching after hydration.
  */
 import { getStaticVideo, getVideos, type VideoRecord } from '@/app/api/_lib/data';
+import { keyPointsWithTimes, videoChapters } from '@/lib/knowledge/video-detail';
 import type { Video, VideoDetail } from '@/lib/types';
 
 function toVideo(v: VideoRecord): Video {
@@ -42,7 +43,9 @@ export function loadIndexedVideoDetail(id: string): VideoDetail | null {
     ...base,
     costs_count: undefined,
     tips_count: undefined,
-    key_points: v.key_points?.length ? v.key_points.map((text) => ({ text })) : undefined,
+    key_points: keyPointsWithTimes(v),
+    chapters: videoChapters(v),
+    kind: v.kind,
     costs_data: v.costs?.length ? v.costs.map((c) => ({ item: c.item, price: c.price, unit: c.unit, context: c.context })) : undefined,
     tips: v.tips?.length ? v.tips : undefined,
     warnings: v.warnings?.length ? v.warnings : undefined,

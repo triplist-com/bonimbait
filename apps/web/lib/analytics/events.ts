@@ -58,6 +58,20 @@ const partnerOffer = {
   partner: text(120).optional(),
   placement: text(60).optional(),
 };
+/**
+ * Sources cited under an answer, as '<kind>:<id>' ('video:<youtube id>',
+ * 'post:<slug>', 'podcast:<id>'): the same shape as the source_clicked
+ * attribution source. Malformed entries are dropped and the list is capped at
+ * 8, so a bad entry never drops the event.
+ */
+const sourceIds = z
+  .array(z.unknown())
+  .transform((items) =>
+    items
+      .filter((v): v is string => typeof v === 'string' && /^(video|post|podcast):[^\s]{1,200}$/.test(v.trim()))
+      .map((v) => v.trim().slice(0, 210))
+      .slice(0, 8),
+  );
 const advisorTurn = {
   turn: count.optional(), // 1-based turn in a multi-turn conversation
   conversation_id: text(64).optional(),
@@ -94,6 +108,10 @@ export const EVENT_CATALOG = {
       has_pros: z.boolean().optional(),
       output_tokens: count.optional(),
       cost_usd: z.number().min(0).max(100).optional(),
+      // Content-gap signals for the Command Center (command squad; the advisor emits them).
+      top_similarity: z.number().min(-1).max(1).optional(), // best raw cosine among the cited sources
+      n_sources: count.optional(), // sources fed to the answer (same as `sources`, the advisor's name)
+      source_ids: sourceIds.optional(), // the cited sources, in order
       ...advisorTurn,
     }),
   ),

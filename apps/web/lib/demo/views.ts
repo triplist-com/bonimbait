@@ -47,9 +47,9 @@ export const DEMO_VIEWS: readonly DemoView[] = [
     slug: 'command',
     squad: 'command',
     pillar: 'P4',
-    title: 'מרכז השליטה',
-    description: 'המשפך, הלידים וההכנסות במסך אחד, ומה שבונים שואלים ועדיין לא קיבלו עליו תשובה.',
-    status: 'planned',
+    title: 'חדר הבקרה',
+    description: 'כל העסק במסך אחד: צבר, פגישות ייעוץ, לידים חמים, שותפים ועלות ה-AI, והשאלות שעוד אין עליהן סרטון.',
+    status: 'ready',
   },
   {
     slug: 'growth',

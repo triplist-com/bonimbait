@@ -138,7 +138,9 @@ function normalizeHebrewToken(tok: string): string {
 
 function extractContentTerms(query: string): string[] {
   // Keep Hebrew (U+0590-U+05FF), Latin letters, and whitespace; drop punctuation/digits.
-  const cleaned = query.replace(/[^֐-׿a-zA-Z\s]/g, ' ');
+  // Geresh/gershayim (׳ ״) sit inside the Hebrew block but are punctuation: treat them
+  // like ASCII quotes, so "מ״ר" behaves like "מ"ר" instead of a rare, heavy keyword.
+  const cleaned = query.replace(/[׳״]/g, ' ').replace(/[^֐-׿a-zA-Z\s]/g, ' ');
   const raw = cleaned.split(/\s+/).filter(Boolean);
   const out: string[] = [];
   for (const r of raw) {
@@ -186,14 +188,19 @@ function computeIdfWeights(allNormText: string[], terms: string[]): number[] {
  * Hybrid search over video segments and post chunks: Reciprocal Rank Fusion of
  * cosine similarity and IDF-weighted keyword overlap. Only rows of the given
  * kinds are ranked (IDF is computed over those rows too).
+ *
+ * `opts.queryVector`: the query's text-embedding-3-small vector when the
+ * caller already has it (the Command Center's content-gap engine), so the
+ * same ranking runs without a second embedding call.
  */
 export async function semanticSearch(
   query: string,
   topK: number = 30,
   kinds: readonly HitKind[] = ['video', 'post'],
+  opts: { queryVector?: ArrayLike<number> } = {},
 ): Promise<SearchHit[]> {
   const idx = loadIndex();
-  const qvec = await embedQuery(query);
+  const qvec = opts.queryVector ? Float32Array.from(opts.queryVector) : await embedQuery(query);
   let qn = 0;
   for (let i = 0; i < qvec.length; i++) qn += qvec[i] * qvec[i];
   qn = Math.sqrt(qn) || 1;
@@ -229,7 +236,10 @@ export async function semanticSearch(
     kwScores.push({ i: N + j, s: weightedKeywordScore(normalizeHebrewToken(h.text), terms, idf) });
   });
   const cosRank = cosScores.sort((a, b) => b.s - a.s);
-  const kwRank = kwScores.sort((a, b) => b.s - a.s);
+  // Many rows tie on keyword overlap; break ties by cosine, not by row order
+  // (row order is alphabetical by YouTube id, which favoured arbitrary videos).
+  const cosAt = (i: number) => (i < N ? cos[i] : runtime[i - N].cos);
+  const kwRank = kwScores.sort((a, b) => b.s - a.s || cosAt(b.i) - cosAt(a.i));
   const K = 60;
   const KW_WEIGHT = 1.5; // keyword signal is highly diagnostic for niche Hebrew queries
   const rrf = new Float64Array(N + runtime.length);

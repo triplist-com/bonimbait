@@ -34,6 +34,9 @@ const ADMIN_ONLY = new Set([
   'deleteRegion',
   'setOrderStatus',
   'changeMemberRole',
+  // Command Center: the owner's expected value per lead (lib/admin/actions/command.ts).
+  'saveExpectedValues',
+  'resetExpectedValues',
 ]);
 
 async function loadActions(): Promise<Array<[string, (...args: unknown[]) => Promise<{ ok: boolean; error?: string }>]>> {

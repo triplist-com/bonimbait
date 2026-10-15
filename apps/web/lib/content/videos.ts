@@ -17,11 +17,14 @@ export const loadVideoPage = cache(async (slug: string): Promise<VideoPageRow | 
   return getPublishedVideoPageBySlug(db, slug);
 });
 
-/** First YouTube id of a legacy page that is in our AI index (timestamped segments), if any. */
+/**
+ * First YouTube id of a legacy page that is in our AI index (timestamped segments), if any.
+ * Title-level catalog records (videos without captions) have no AI page content: skipped.
+ */
 export function findIndexedYoutubeId(youtubeIds: string[]): string | null {
   for (const id of youtubeIds) {
     try {
-      if (getIndexedVideo(id)) return id;
+      if (getIndexedVideo(id)?.has_transcript) return id;
     } catch {
       return null; // static index unavailable
     }
