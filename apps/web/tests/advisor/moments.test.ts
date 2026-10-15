@@ -35,11 +35,12 @@ describe('momentFinder', () => {
     expect({ text: ours.text, second: ours.second }).toEqual(theirs);
   });
 
-  it('scrubs garbled numbers from the passage the model reads', () => {
+  it('frees figures from stray letters in the passage the model reads, and never changes a figure', () => {
     const seg = { text: 'צריך כיסוי של 2ח סנטימטר בין הרשת לבטון, והשלד עלה 575,000ל שק', start_time: 0 };
     const m = momentFinder('מה בודקים לפני יציקה?')(seg, undefined);
-    expect(m.text).not.toContain('2ח');
     expect(m.text).toContain('575,000 שק');
+    // "2ח" is "two and a half": "2" (or nothing) would be a different figure.
+    expect(m.text).toContain('2ח סנטימטר');
   });
 
   it('without marks, falls back to the segment start', () => {
@@ -49,10 +50,22 @@ describe('momentFinder', () => {
 });
 
 describe('scrubAsrNumbers', () => {
-  it('drops a single digit fused to letters and frees real figures from stray letters', () => {
-    expect(scrubAsrNumbers('כיסוי של 2ח סנטימטר')).toBe('כיסוי של סנטימטר');
+  it('frees real figures from stray letters', () => {
     expect(scrubAsrNumbers('עלה 575,000ל שק')).toBe('עלה 575,000 שק');
-    expect(scrubAsrNumbers('בממוצע 800,000 שק, ב-2026, 3D')).toBe('בממוצע 800,000 שק, ב-2026, 3D');
+    expect(scrubAsrNumbers('בערך 10ה חודשים, 1,500ב.')).toBe('בערך 10 חודשים, 1,500.');
+  });
+
+  it('leaves alone what the digits alone would misstate', () => {
+    // A single digit fused to letters is the tail of a spoken number.
+    expect(scrubAsrNumbers('כיסוי של 2ח סנטימטר 2 2ח סנטימטר')).toBe('כיסוי של 2ח סנטימטר 2 2ח סנטימטר');
+    expect(scrubAsrNumbers('זה 8ן מהמקרים, (7בע ליטר)')).toBe('זה 8ן מהמקרים, (7בע ליטר)');
+    // "ח"/"וח" opens "וחצי": 10ח is ten and a half.
+    expect(scrubAsrNumbers('עוד 10ח מטר ועוד 12וח')).toBe('עוד 10ח מטר ועוד 12וח');
+  });
+
+  it('never touches clean text', () => {
+    const clean = 'בממוצע 800,000 שק, ב-2026, 3D, 35% מעוגת הביצוע, 1.7 מיליון';
+    expect(scrubAsrNumbers(clean)).toBe(clean);
   });
 });
 

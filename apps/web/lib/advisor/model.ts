@@ -5,8 +5,9 @@ import 'server-only';
  *
  * - The frozen system prompt is cached (cache_control on its block; Sonnet
  *   5.5 caches prefixes from 512 tokens).
- * - `thinking: between_tools` is Sonnet 5.5's lowest thinking setting: no
- *   extended thinking before the first token. Effort is fixed per route.
+ * - Thinking is adaptive at `low` effort (config.ts): measured as fast to the
+ *   first token as `between_tools`, Sonnet 5.5's lowest setting, with tighter
+ *   answers. Effort is fixed per route.
  * - Server-side refusal fallback (`fallbacks: "default"`, beta, Claude API
  *   only): a Sonnet 5.5 decline is retried on Sonnet 5 inside the same stream.
  * - Usage is reported per model that ran (usage.iterations), so the AI budget

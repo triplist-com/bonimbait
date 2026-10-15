@@ -27,15 +27,17 @@ const QUOTE_BEFORE = 70;
 const QUOTE_AFTER = 190;
 
 /**
- * Numbers that speech recognition fused with letters. "2ח סנטימטר" is a garbled
- * figure nobody can read back (a single digit fused to letters): it is dropped,
- * so neither the model nor the reader guesses it. "575,000ל שק" is a real
- * figure with a stray letter: the letter goes, the figure stays.
+ * Figures that speech recognition glued to a stray letter ("575,000ל שק",
+ * "10ה חודשים"): the letter goes, the figure stays.
+ *
+ * Left as they are, because the digits alone would be a different figure:
+ * - a single digit fused to letters, the tail of a spoken number: "2ח סנטימטר"
+ *   is "two and a half", "8ן" is "eighty";
+ * - any figure followed by "ח"/"וח", the start of "וחצי" (and a half).
+ * The model reads those in context.
  */
 export function scrubAsrNumbers(text: string): string {
-  return text
-    .replace(/(^|[\s(])(\d+(?:[.,]\d+)*)[א-ת]{1,2}(?=[\s.,!?)]|$)/g, (_m, pre: string, num: string) => (/^\d$/.test(num) ? pre : `${pre}${num}`))
-    .replace(/[ \t]{2,}/g, ' ');
+  return text.replace(/(^|[\s(])(\d{2,}(?:[.,]\d+)*|\d(?:[.,]\d+)+)(?!ו?ח(?=[\s.,!?)]|$))[א-ת]{1,2}(?=[\s.,!?)]|$)/g, '$1$2');
 }
 
 /**
