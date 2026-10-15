@@ -15,6 +15,7 @@ type FakeQuery = PromiseLike<{ data: Row[]; error: null }> & {
   select(cols?: string): FakeQuery;
   eq(col: string, value: unknown): FakeQuery;
   neq(col: string, value: unknown): FakeQuery;
+  is(col: string, value: unknown): FakeQuery;
   in(col: string, values: unknown[]): FakeQuery;
   gte(col: string, value: unknown): FakeQuery;
   lte(col: string, value: unknown): FakeQuery;
@@ -48,6 +49,11 @@ export function fakeDb(
         },
         neq: (col, value) => {
           rows = rows.filter((r) => r[col] !== value);
+          return q;
+        },
+        is: (col, value) => {
+          filters.push([col, value]);
+          rows = rows.filter((r) => (r[col] ?? null) === value);
           return q;
         },
         in: (col, values) => {

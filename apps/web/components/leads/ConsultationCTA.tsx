@@ -27,11 +27,16 @@
  *   fullWidth    stretch the button
  *   className    extra classes on the outer element
  *
- * Every variant opens the same modal:
- *   - Calendly inline booking (NEXT_PUBLIC_CALENDLY_URL, live:
- *     https://calendly.com/tzuri-galili-bonimbayit/demo45min), and
- *   - a fallback "leave your number and we'll call you" LeadForm (type
- *     'consultation'). With no Calendly URL, only the form is shown.
+ * Every variant opens the same booking sheet (components/revenue/BookingSheet.tsx):
+ *   - it shows the visitor's project file ("התיק שלכם יגיע לצוות הייעוץ"),
+ *   - creates a `consultation` lead with the file BEFORE Calendly opens,
+ *   - opens Calendly (NEXT_PUBLIC_CALENDLY_URL, live:
+ *     https://calendly.com/tzuri-galili-bonimbayit/demo45min) prefilled with
+ *     name and email, the lead ref in utm_content, and marks the lead booked
+ *     on `calendly.event_scheduled`;
+ *   - "העדפתי שתחזרו אליי" stores the same lead without Calendly. With no
+ *     Calendly URL the sheet is the call-back form; with no Supabase it opens
+ *     Calendly directly (the old behaviour).
  * WhatsApp uses NEXT_PUBLIC_WHATSAPP_NUMBER (international digits, live 972584020730).
  *
  * The floating variant is one round button that never sits over content: it
@@ -41,14 +46,12 @@
  */
 import { useCallback, useState } from 'react';
 import { CalendarCheck, PhoneCall } from 'lucide-react';
-import LeadForm from './LeadForm';
 import FloatingAction from './FloatingAction';
-import { CONSULTATION_FIELDS } from '@/lib/leads/fields';
+import BookingSheet from '@/components/revenue/BookingSheet';
 import { track } from '@/lib/analytics/track';
-import { useCalendlyTracking } from '@/lib/analytics/calendly';
+import { calendlyBookingUrl, type CalendlyPrefill } from '@/lib/revenue/calendly';
 import { cn } from '@/lib/cn';
 import { Button, type ButtonSize, type ButtonVariant } from '@/components/ui/Button';
-import { Dialog } from '@/components/ui/Dialog';
 
 export type ConsultationCTAVariant = 'button' | 'banner' | 'card' | 'floating';
 
@@ -79,21 +82,9 @@ export function whatsappHref(message = '', number = WHATSAPP_NUMBER): string | n
   return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 }
 
-/** Calendly inline URL with the live site's display params. */
-export function calendlyEmbedUrl(source: string, base = CALENDLY_URL): string | null {
-  if (!base) return null;
-  try {
-    const url = new URL(base);
-    url.searchParams.set('hide_event_type_details', '1');
-    url.searchParams.set('hide_gdpr_banner', '1');
-    url.searchParams.set('primary_color', 'e61559');
-    url.searchParams.set('utm_source', source);
-    url.searchParams.set('utm_medium', 'website');
-    url.searchParams.set('utm_campaign', 'management');
-    return url.toString();
-  } catch {
-    return null;
-  }
+/** Calendly inline URL with the live site's display params (+ optional name/email/lead-ref prefill). */
+export function calendlyEmbedUrl(source: string, base = CALENDLY_URL, prefill: CalendlyPrefill = {}): string | null {
+  return calendlyBookingUrl(base, source, prefill);
 }
 
 function WhatsAppIcon({ className = 'h-5 w-5' }: { className?: string }) {
@@ -137,63 +128,8 @@ export function WhatsAppChatButton({
   );
 }
 
-type ModalTab = 'calendly' | 'callback';
-
 function ConsultationModal({ open, onClose, source }: { open: boolean; onClose: () => void; source: string }) {
-  const calendly = calendlyEmbedUrl(source);
-  const [tab, setTab] = useState<ModalTab>(calendly ? 'calendly' : 'callback');
-  useCalendlyTracking(source, open && tab === 'calendly');
-  const tabs: Array<[ModalTab, string]> = [
-    ['calendly', 'קביעת פגישה ביומן'],
-    ['callback', 'השאירו מספר ונחזור אליכם'],
-  ];
-
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title={DEFAULT_TITLE}
-      description="בונים בית או משפצים? קבעו פגישת ייעוץ תקציב, ללא עלות וללא התחייבות."
-      className="sm:w-[min(100vw-2rem,46rem)]"
-    >
-      {calendly && (
-        <div role="tablist" aria-label="דרך יצירת הקשר" className="mb-5 flex w-full gap-1 rounded-2xl bg-ink-100 p-1">
-          {tabs.map(([key, text]) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={tab === key}
-              onClick={() => setTab(key)}
-              className={cn(
-                'flex-1 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors',
-                tab === key ? 'bg-white text-ink-900 shadow-xs' : 'text-ink-600 hover:text-ink-900',
-              )}
-            >
-              {text}
-            </button>
-          ))}
-        </div>
-      )}
-      {tab === 'calendly' && calendly ? (
-        <iframe src={calendly} title="קביעת פגישת ייעוץ ב-Calendly" className="h-[620px] w-full rounded-2xl border-0" loading="lazy" />
-      ) : (
-        <LeadForm
-          type="consultation"
-          fields={CONSULTATION_FIELDS}
-          submitLabel="חזרו אליי"
-          context={{ cta_source: source }}
-          successTitle="תודה! קיבלנו את הפרטים"
-          successMessage="נציג בונים בית יחזור אליכם בהקדם לתיאום פגישת הייעוץ."
-          footnote="המידע שלכם מאובטח ולא ישותף"
-          idPrefix={`consult-${source}`}
-        />
-      )}
-      <div className="mt-5 flex justify-center">
-        <WhatsAppChatButton />
-      </div>
-    </Dialog>
-  );
+  return <BookingSheet open={open} onClose={onClose} source={source} calendlyBase={CALENDLY_URL} footer={<WhatsAppChatButton />} />;
 }
 
 export default function ConsultationCTA({

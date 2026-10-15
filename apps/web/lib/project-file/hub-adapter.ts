@@ -4,8 +4,9 @@ import 'server-only';
  * Adapter to the hub squad's member snapshot: `getMemberProjectSnapshot()` in
  * lib/hub/server.ts (built in parallel, Wave B).
  *
- * The hub module is looked up with webpack's require.context, which resolves
- * at build time and is simply EMPTY when lib/hub/server.ts doesn't exist. So
+ * The hub module is looked up with webpack's require.context over lib/ filtered
+ * to ./hub/server.ts: it resolves at build time and is simply EMPTY while
+ * lib/hub/server.ts doesn't exist. So
  * this branch builds and runs without the hub, and picks the function up as
  * soon as it lands, with no import to wire at integration. Whatever the hub
  * returns is coerced through sanitizeProjectFile (camelCase or snake_case,
@@ -32,7 +33,8 @@ function resolveHubLoader(): Loader | null {
   resolved = null;
   try {
     // Must stay a literal `require.context(...)` call for webpack to resolve it at build time.
-    const ctx = (require as unknown as ContextRequire).context('../hub', false, /^\.\/server\.tsx?$/);
+    // The context is lib/ (always there) filtered to ./hub/server.ts, so a missing hub is not a warning.
+    const ctx = (require as unknown as ContextRequire).context('..', true, /^\.\/hub\/server\.tsx?$/);
     const key = ctx.keys()[0];
     const mod = key ? (ctx(key) as { getMemberProjectSnapshot?: unknown }) : null;
     if (mod && typeof mod.getMemberProjectSnapshot === 'function') resolved = mod.getMemberProjectSnapshot as Loader;

@@ -3,9 +3,11 @@
  * (`{ event: 'calendly.<name>', payload }`). Map the two funnel steps:
  *   calendly.date_and_time_selected -> consult_booking_started
  *   calendly.event_scheduled        -> consult_booked
- * Used by the consultation modal (components/leads/ConsultationCTA.tsx).
+ * Used by the consultation booking sheet (components/revenue/BookingSheet.tsx).
+ * With a `leadRef` the events name the consultation lead, and `onScheduled`
+ * lets the sheet mark that lead booked.
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { track } from './track';
 
 const CALENDLY_ORIGIN = /^https:\/\/(?:[a-z0-9-]+\.)*calendly\.com$/i;
@@ -23,17 +25,30 @@ export function calendlyFunnelEvent(data: unknown): CalendlyFunnelEvent | null {
   return null;
 }
 
+export type CalendlyTrackingOptions = {
+  /** The consultation lead's ref (BB-YY-NNNNNN), sent on both events. */
+  leadRef?: string | null;
+  /** Called once per scheduled booking with Calendly's message data. */
+  onScheduled?: (data: unknown) => void;
+};
+
 /** While `active`, record the embed's booking steps for `source`. */
-export function useCalendlyTracking(source: string, active: boolean): void {
+export function useCalendlyTracking(source: string, active: boolean, opts: CalendlyTrackingOptions = {}): void {
+  const onScheduled = useRef(opts.onScheduled);
+  onScheduled.current = opts.onScheduled;
+  const leadRef = opts.leadRef ?? undefined;
   useEffect(() => {
     if (!active) return;
     const onMessage = (e: MessageEvent) => {
       if (!isCalendlyOrigin(e.origin)) return;
       const name = calendlyFunnelEvent(e.data);
-      if (name === 'consult_booking_started') track(name, { source, method: 'calendly' });
-      else if (name === 'consult_booked') track(name, { source, method: 'calendly' });
+      if (name === 'consult_booking_started') track(name, { source, method: 'calendly', lead_ref: leadRef });
+      else if (name === 'consult_booked') {
+        track(name, { source, method: 'calendly', lead_ref: leadRef });
+        onScheduled.current?.(e.data);
+      }
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [source, active]);
+  }, [source, active, leadRef]);
 }
