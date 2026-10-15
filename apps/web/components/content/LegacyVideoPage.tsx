@@ -39,10 +39,11 @@ export default async function LegacyVideoPage({ page }: { page: VideoPageRow }) 
     getCategoryMap(),
   ]);
   const postCategorySlugs = new Set(Array.from(categoryMap.values()).map((c) => c.slug.normalize('NFC')));
-  const cats = legacyCategories(page.legacy_categories);
+  const kindLabel = page.kind === 'podcast' ? 'פודקאסט' : 'וידאו';
+  // The WordPress categories include the kind itself ("וידאו", "פודקאסט"): the kind badge already says it.
+  const cats = legacyCategories(page.legacy_categories).filter((c) => c.name !== 'וידאו' && c.name !== 'פודקאסט');
   const thumb = videoThumb(page);
   const description = page.seo_description || htmlToText(page.excerpt || page.body_html, 200) || page.title;
-  const kindLabel = page.kind === 'podcast' ? 'פודקאסט' : 'וידאו';
   const firstVideo = page.youtube_ids?.[0];
 
   return (
