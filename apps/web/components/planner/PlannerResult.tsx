@@ -3,7 +3,7 @@
 /**
  * The planner result: an honest range (dated, sourced), where the money goes
  * by the owner's 7 stages, a rough timeline, three "פה הכי קל לחרוג" moments,
- * and the way forward: the free budget consultation ("דיוק של 3%–5%"), the
+ * and the way forward: the free budget consultation ("דיוק של 3%-5%"), the
  * בונים תקציב plan, save to "הבית שלי", WhatsApp and the printable report.
  */
 import { useMemo, useState } from 'react';
@@ -13,7 +13,7 @@ import { Button, ButtonLink } from '@/components/ui/Button';
 import { Switch } from '@/components/ui/Choice';
 import { track } from '@/lib/analytics/track';
 import { cn } from '@/lib/cn';
-import { asOfBadge, monthYearAfter, rangeText } from '@/lib/planner/format';
+import { asOfBadge, isolateRanges, monthYearAfter, rangeText } from '@/lib/planner/format';
 import { BUDGET_PLAN_HREF, MY_HOME_HREF, reportHref, whatsappShareHref } from '@/lib/planner/share';
 import { plannerSnapshot, writePlannerLast } from '@/lib/planner/storage';
 import type { HubDraft, PlannerEstimate, PriceBook } from '@/lib/planner/types';
@@ -62,7 +62,7 @@ function SectionTitle({ id, eyebrow, children }: { id: string; eyebrow?: string;
 function budgetVerdict(estimate: PlannerEstimate, budget: [number, number]): string {
   if (estimate.total.min > budget[1]) return 'ההערכה גבוהה מהתקציב שהגדרתם. בפגישת הייעוץ נראה איפה אפשר לחסוך בלי לוותר על מה שחשוב.';
   if (estimate.total.max < budget[0]) return 'ההערכה נמוכה מהתקציב שהגדרתם: יש לכם מרווח, וכדאי לשמור עליו לבלת״מים.';
-  return 'ההערכה בתוך התקציב שהגדרתם. הטווח עדיין רחב: בתקציב מפורט מצמצמים אותו ל-3%–5%.';
+  return 'ההערכה בתוך התקציב שהגדרתם. הטווח עדיין רחב: בתקציב מפורט מצמצמים אותו ל-3%-5%.';
 }
 
 export default function PlannerResult({ book, estimate, hubDraft, onEdit, onRestart, ctaSource = 'planner-result', today, persist = true }: PlannerResultProps) {
@@ -125,7 +125,7 @@ export default function PlannerResult({ book, estimate, hubDraft, onEdit, onRest
           {hubDraft?.budgetRangeNis && (
             <p className="mt-4 rounded-2xl bg-white/10 p-4 text-body-sm text-white/85">
               <strong className="text-white">התקציב שהגדרתם בבית שלי: {rangeText({ min: hubDraft.budgetRangeNis[0], max: hubDraft.budgetRangeNis[1] })}.</strong>{' '}
-              {budgetVerdict(estimate, hubDraft.budgetRangeNis)}
+              {isolateRanges(budgetVerdict(estimate, hubDraft.budgetRangeNis))}
             </p>
           )}
         </EstimateSummary>
@@ -133,7 +133,7 @@ export default function PlannerResult({ book, estimate, hubDraft, onEdit, onRest
         <aside data-floating-cta="hide" aria-labelledby="planner-next" className="rounded-4xl border border-sand-200 bg-sand-50 p-6 shadow-card sm:p-7">
           <p className="eyebrow">הצעד הבא</p>
           <h2 id="planner-next" className="mt-2 text-title-lg text-ink-900">
-            רוצים דיוק של <span className="num">3%–5%</span>?
+            רוצים דיוק של <span className="num whitespace-nowrap">3%–5%</span>?
           </h2>
           <p className="mt-2 text-body-sm text-ink-600">
             בפגישת ייעוץ תקציב עוברים על התוכניות שלכם, סעיף אחרי סעיף, ומבינים איפה הכסף באמת הולך. ללא עלות וללא התחייבות.
@@ -143,9 +143,11 @@ export default function PlannerResult({ book, estimate, hubDraft, onEdit, onRest
             <ButtonLink href={BUDGET_PLAN_HREF} variant="outline" size="lg" fullWidth onClick={ctaEvent('budget_plan')} iconEnd={<ArrowLeft className="ltr:rotate-180" />}>
               לתוכנית בונים תקציב
             </ButtonLink>
-            <p className="text-caption text-ink-600">תקציב מפורט של 360 סעיפים, מבוסס כמויות: סטייה של 3%–5% ממחירי השוק.</p>
+            <p className="text-caption text-ink-600">
+              תקציב מפורט של 360 סעיפים, מבוסס כמויות: סטייה של <span className="num whitespace-nowrap">3%–5%</span> ממחירי השוק.
+            </p>
           </div>
-          <div className="mt-5 grid grid-cols-2 gap-2 border-t border-sand-200 pt-5">
+          <div className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-2 border-t border-sand-200 pt-5">
             <ButtonLink href={MY_HOME_HREF} variant="secondary" onClick={saveToHome} iconStart={<Home />}>
               שמרו בבית שלי
             </ButtonLink>
@@ -243,7 +245,7 @@ export default function PlannerResult({ book, estimate, hubDraft, onEdit, onRest
         variant="banner"
         source={`${ctaSource}-band`}
         title="רוצים לדעת בדיוק כמה הבית שלכם יעלה?"
-        description="תקציב מפורט של 360 סעיפים, מבוסס כמויות, עם סטייה של 3%–5% ממחירי השוק. מתחילים בפגישת ייעוץ תקציב, ללא עלות."
+        description={isolateRanges('תקציב מפורט של 360 סעיפים, מבוסס כמויות, עם סטייה של 3%-5% ממחירי השוק. מתחילים בפגישת ייעוץ תקציב, ללא עלות.')}
         label="קבעו פגישת ייעוץ תקציב — ללא עלות"
       />
     </div>

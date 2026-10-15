@@ -114,7 +114,7 @@ export function calculateCost(answers: CalculatorAnswers, book: PriceBook = DEFA
 
 /** Format NIS amount with LTR mark for correct RTL rendering */
 export function formatNIS(amount: number): string {
-  return `‎${amount.toLocaleString('he-IL')} ₪`;
+  return `${String.fromCharCode(0x200e)}${amount.toLocaleString('he-IL')} ₪`;
 }
 
 /** Get the sqm value for a size key */

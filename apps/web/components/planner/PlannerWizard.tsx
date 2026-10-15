@@ -25,7 +25,7 @@ import {
   type QuestionId,
 } from '@/lib/planner/content';
 import { finishLevelRange } from '@/lib/planner/engine';
-import { amountText } from '@/lib/planner/format';
+import { compactAmount } from '@/lib/planner/format';
 import { EXTRA_IDS, FINISH_LEVEL_IDS, FLOOR_OPTIONS, type ExtraId, type PlannerInput, type PriceBook } from '@/lib/planner/types';
 
 export interface PlannerWizardProps {
@@ -62,26 +62,31 @@ function ChoiceGroup<T extends string | number>({
   onPick: (value: T, viaPointer: boolean) => void;
   className?: string;
 }) {
-  const pointer = useRef(false);
+  // When the last pointer press started (0 = none). A click within a second of it is a tap.
+  const pressedAt = useRef(0);
   return (
     <div role="radiogroup" aria-labelledby={labelledBy} className={className}>
       {options.map((o) => (
         <label
           key={String(o.value)}
           className={optionCard}
-          onPointerDown={() => (pointer.current = true)}
-          onKeyDown={() => (pointer.current = false)}
+          onPointerDown={() => (pressedAt.current = Date.now())}
+          onPointerCancel={() => (pressedAt.current = 0)}
+          onKeyDown={() => (pressedAt.current = 0)}
         >
           <input
             type="radio"
             name={name}
             value={String(o.value)}
             checked={value === o.value}
-            onChange={() => onPick(o.value, pointer.current)}
+            // The pick happens on click: React runs onClick before onChange, and a
+            // radio fires click for taps, Space and arrow keys alike. Re-tapping the
+            // selected option also moves on.
+            onChange={() => undefined}
             onClick={() => {
-              // Tapping the option that is already selected also moves on.
-              if (pointer.current && value === o.value) onPick(o.value, true);
-              pointer.current = false;
+              const viaPointer = pressedAt.current > 0 && Date.now() - pressedAt.current < 1000;
+              pressedAt.current = 0;
+              onPick(o.value, viaPointer);
             }}
             className={nativeInput}
           />
@@ -89,6 +94,17 @@ function ChoiceGroup<T extends string | number>({
         </label>
       ))}
     </div>
+  );
+}
+
+/** "+₪750 אלף": the sign and digits in one LTR island, the unit after it. */
+function ExtraAmount({ agorot }: { agorot: number }) {
+  const { value, unit } = compactAmount(agorot / 100);
+  return (
+    <span className="whitespace-nowrap text-sm font-semibold text-ink-700">
+      <span className="num">+₪{value}</span>
+      {unit && ` ${unit}`}
+    </span>
   );
 }
 
@@ -315,7 +331,7 @@ export default function PlannerWizard({ book, answers, step, onAnswer, onStep, o
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-baseline justify-between gap-x-2">
                       <span className="text-title-sm text-ink-900">{EXTRAS[id].label}</span>
-                      <span className="num text-sm font-semibold text-ink-700">+{amountText(book.extras[id].amountAgorot / 100)}</span>
+                      <ExtraAmount agorot={book.extras[id].amountAgorot} />
                     </span>
                     <span className="mt-0.5 block text-body-sm text-ink-600">{EXTRAS[id].hint}</span>
                   </span>

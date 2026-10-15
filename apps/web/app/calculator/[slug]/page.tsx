@@ -15,7 +15,7 @@ import { OverrunWarnings } from '@/components/planner/OverrunWarnings';
 import { SourcesList } from '@/components/planner/SourcesList';
 import { StageBreakdown } from '@/components/planner/StageBreakdown';
 import { estimateBudget } from '@/lib/planner/engine';
-import { asOfBadge, perM2Text, rangeText } from '@/lib/planner/format';
+import { asOfBadge, isolateRanges, perM2Text, rangeText, stripIsolates } from '@/lib/planner/format';
 import { loadPriceBook } from '@/lib/planner/price-book';
 import { plannerQuery } from '@/lib/planner/prefill';
 import { PLANNER_PATH } from '@/lib/planner/share';
@@ -82,7 +82,7 @@ export default async function CalculatorScenarioPage({ params }: PageProps) {
         data={{
           '@context': 'https://schema.org',
           '@type': 'FAQPage',
-          mainEntity: faq.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
+          mainEntity: faq.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: stripIsolates(f.a) } })),
         }}
       />
       <PageHeader
@@ -97,13 +97,13 @@ export default async function CalculatorScenarioPage({ params }: PageProps) {
         }
         eyebrow={`תרחיש לדוגמה · ${asOfBadge(estimate.validAsOf)}`}
         title={scenario.title}
-        description={scenario.description}
+        description={isolateRanges(scenario.description)}
       />
 
       <div className="container-page space-y-12 pb-16 pt-8 sm:space-y-16 sm:pb-24 sm:pt-10">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start">
           <EstimateSummary estimate={estimate} headingId="scenario-total" label="הערכה לתרחיש הזה">
-            {scenario.note && <p className="mt-5 text-body-sm text-white/80">{scenario.note}</p>}
+            {scenario.note && <p className="mt-5 text-body-sm text-white/80">{isolateRanges(scenario.note)}</p>}
           </EstimateSummary>
           <aside data-floating-cta="hide" aria-labelledby="scenario-next" className="rounded-4xl border border-sand-200 bg-sand-50 p-6 shadow-card sm:p-7">
             <p className="eyebrow">
@@ -147,7 +147,7 @@ export default async function CalculatorScenarioPage({ params }: PageProps) {
                 >
                   <span className="text-title-sm text-ink-900">{v.label}</span>
                   <Money min={v.estimate.total.min} max={v.estimate.total.max} className="mt-2 text-title-lg font-extrabold text-ink-900" unitClassName="text-base font-bold" />
-                  <span className="num mt-0.5 text-sm text-ink-600">{perM2Text(v.estimate.perM2)}</span>
+                  <span className="mt-0.5 text-sm text-ink-600">{perM2Text(v.estimate.perM2)}</span>
                   <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-primary group-hover:underline">
                     פתחו במחשבון
                     <ArrowLeft aria-hidden="true" className="size-4 ltr:rotate-180" />
@@ -232,7 +232,7 @@ export default async function CalculatorScenarioPage({ params }: PageProps) {
           variant="banner"
           source={`scenario-${scenario.slug}-band`}
           title="רוצים לדעת בדיוק כמה הבית שלכם יעלה?"
-          description="תקציב מפורט של 360 סעיפים, מבוסס כמויות, עם סטייה של 3%–5% ממחירי השוק. מתחילים בפגישת ייעוץ תקציב, ללא עלות."
+          description={isolateRanges('תקציב מפורט של 360 סעיפים, מבוסס כמויות, עם סטייה של 3%-5% ממחירי השוק. מתחילים בפגישת ייעוץ תקציב, ללא עלות.')}
           label="קבעו פגישת ייעוץ תקציב — ללא עלות"
         />
       </div>

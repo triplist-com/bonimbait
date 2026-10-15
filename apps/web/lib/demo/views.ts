@@ -57,7 +57,7 @@ export const DEMO_VIEWS: readonly DemoView[] = [
     pillar: 'P6',
     title: 'מתכנן התקציב',
     description: 'מחשבון תקציב שמפיק דוח הערכה מקצועי ומוביל לפגישת הייעוץ.',
-    status: 'planned',
+    status: 'ready',
   },
   {
     slug: 'foundation',

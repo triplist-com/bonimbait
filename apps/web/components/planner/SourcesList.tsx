@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { FileText, Mic } from 'lucide-react';
 import { absoluteUrl } from '@/lib/site';
-import { shortDate } from '@/lib/planner/format';
+import { isolateRanges, shortDate } from '@/lib/planner/format';
 import { momentClock } from '@/lib/planner/warnings';
 import type { PriceBook } from '@/lib/planner/types';
 
@@ -39,7 +39,7 @@ export function SourcesList({ book, print = false, all = false }: { book: PriceB
                   </>
                 )}
               </p>
-              {s.quote && <p className="mt-0.5 text-sm text-ink-700">&quot;{s.quote}&quot;</p>}
+              {s.quote && <p className="mt-0.5 text-sm text-ink-700">&quot;{isolateRanges(s.quote)}&quot;</p>}
               {print && (
                 <p dir="ltr" className="mt-0.5 break-all text-start text-xs text-ink-500">
                   {absoluteUrl(s.href)}

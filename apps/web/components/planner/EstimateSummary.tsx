@@ -61,7 +61,7 @@ export function EstimateSummary({
         <Money min={total.min} max={total.max} valueClassName="text-5xl font-extrabold tracking-tight sm:text-7xl" unitClassName="text-2xl font-bold sm:text-3xl" />
       </h2>
       <p className="mt-2 text-body text-white/75">
-        לתכנון ובנייה, {withVat ? `כולל מע״מ ${estimate.vatRatePct}%` : 'לפני מע״מ'} · <span className="num">{perM2Text(perM2)}</span>
+        לתכנון ובנייה, {withVat ? `כולל מע״מ ${estimate.vatRatePct}%` : 'לפני מע״מ'} · <span>{perM2Text(perM2)}</span>
       </p>
       {controls}
       {chips ?? (

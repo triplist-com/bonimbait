@@ -28,17 +28,17 @@ export function NotIncluded({ estimate, book }: { estimate: PlannerEstimate; boo
   return (
     <ul className="grid gap-3 sm:grid-cols-2">
       <Item icon={<Receipt />} title={`מע״מ ${estimate.vatRatePct}%`}>
-        כל הסכומים לפני מע״מ. כולל מע״מ: <span className="num font-semibold text-ink-800">{rangeText(vat)}</span>.
+        כל הסכומים לפני מע״מ. כולל מע״מ: <span className="font-semibold text-ink-800">{rangeText(vat)}</span>.
       </Item>
       <Item icon={<Landmark />} title="המגרש ומס הרכישה">
-        מס רכישה של 5%–6% על המגרש, ועוד עורך דין ותיווך. בודקים אגרות והיטלים עוד לפני הקנייה.
+        מס רכישה של <span className="num">5%–6%</span> על המגרש, ועוד עורך דין ותיווך. בודקים אגרות והיטלים עוד לפני הקנייה.
       </Item>
       <Item icon={<Armchair />} title="אכלוס">
-        ריהוט, מכשירי חשמל ווילונות: <span className="num font-semibold text-ink-800">{rangeText(estimate.movingIn)}</span> לבית בגודל הזה.
+        ריהוט, מכשירי חשמל ווילונות: <span className="font-semibold text-ink-800">{rangeText(estimate.movingIn)}</span> לבית בגודל הזה.
       </Item>
       <Item icon={<LifeBuoy />} title="בלת״מים (רזרבה)">
         עם תקציב מקצועי מספיקים <span className="num">{withLo}%–{withHi}%</span>, כלומר{' '}
-        <span className="num font-semibold text-ink-800">{rangeText(estimate.contingency.withBudget)}</span>. בלי תקציב מסודר צריך{' '}
+        <span className="font-semibold text-ink-800">{rangeText(estimate.contingency.withBudget)}</span>. בלי תקציב מסודר צריך{' '}
         <span className="num">{withoutLo}%–{withoutHi}%</span>.
       </Item>
     </ul>

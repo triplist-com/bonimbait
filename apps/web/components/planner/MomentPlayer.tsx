@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { YouTubeFacade } from '@/components/ui/YouTubeFacade';
 import { track } from '@/lib/analytics/track';
 import { momentClock, momentHref, type VideoMoment } from '@/lib/planner/warnings';
+import { isolateRanges } from '@/lib/planner/format';
 
 /**
  * One tap plays the exact podcast moment inline (no navigation, no player
@@ -43,7 +44,7 @@ export default function MomentPlayer({ moment, title, source = 'planner_warning'
         <Play className="size-4 translate-x-[-1px] fill-current" />
       </span>
       <span className="flex flex-col">
-        <span className="text-sm font-bold text-ink-900">{moment.label}</span>
+        <span className="text-sm font-bold text-ink-900">{isolateRanges(moment.label)}</span>
         <span className="text-xs text-ink-600">
           {moment.episode} · מדקה <span className="num">{clock}</span>
         </span>

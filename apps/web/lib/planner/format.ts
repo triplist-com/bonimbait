@@ -1,12 +1,29 @@
 /**
  * Display formatting for planner amounts. Client-safe, pure.
  *
- * Numbers render inside an LTR isolate (`.num`), so values here are plain
- * "2.21–2.99" strings and the Hebrew unit ("מיליון", "אלף") is a separate part.
+ * Numbers in Hebrew text need care:
+ *   - In JSX, digits go in an LTR isolate (`.num`); the Hebrew unit stays outside it.
+ *   - In plain strings (badges, share text, owner-edited notes), ranges are wrapped in
+ *     Unicode isolates (LRI ... PDI). Without them, RTL text shows "200-250" fine but
+ *     "5%-6%" or "200–250" (en dash) reversed.
+ *   - A range never breaks across lines: word joiners around its dash, and a no-break
+ *     space before its unit.
  */
 import type { MoneyRange, MonthsRange } from './types';
 
 const HE_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+
+/** Left-to-right isolate / pop directional isolate (Unicode 6.3). */
+const LRI = String.fromCharCode(0x2066);
+const PDI = String.fromCharCode(0x2069);
+/** Word joiner: no line break here. */
+const WJ = String.fromCharCode(0x2060);
+/** No-break space (number and unit stay on one line). */
+const NBSP = String.fromCharCode(0xa0);
+/** What stripIsolates() removes: word joiners and the bidi isolates. */
+const INVISIBLE_RE = new RegExp(`[${WJ}${LRI}-${PDI}]`, 'g');
+/** The dash between the two ends of a range, unbreakable. */
+const DASH = `${WJ}–${WJ}`;
 
 export interface CompactParts {
   /** Digits for an LTR isolate, without the currency sign: "2.21–2.99". */
@@ -37,32 +54,56 @@ export function compactAmount(n: number): CompactParts {
 
 /** A range in one unit, chosen by its top: { "2.21–2.99", "מיליון" }, { "690–930", "אלף" }. */
 export function compactRange(min: number, max: number): CompactParts {
-  if (Math.abs(max) >= 1_000_000) return { value: `${fixed2(min / 1_000_000)}–${fixed2(max / 1_000_000)}`, unit: 'מיליון' };
-  if (Math.abs(max) >= 10_000) return { value: `${thousands(min)}–${thousands(max)}`, unit: 'אלף' };
-  return { value: `${Math.round(min).toLocaleString('he-IL')}–${Math.round(max).toLocaleString('he-IL')}`, unit: '' };
+  if (Math.abs(max) >= 1_000_000) return { value: `${fixed2(min / 1_000_000)}${DASH}${fixed2(max / 1_000_000)}`, unit: 'מיליון' };
+  if (Math.abs(max) >= 10_000) return { value: `${thousands(min)}${DASH}${thousands(max)}`, unit: 'אלף' };
+  return { value: `${Math.round(min).toLocaleString('he-IL')}${DASH}${Math.round(max).toLocaleString('he-IL')}`, unit: '' };
 }
 
-/** Plain text (share messages, titles): "₪2.21–2.99 מיליון". */
+/** Digits (and ₪) as an LTR island inside Hebrew text. */
+export function ltr(text: string): string {
+  return `${LRI}${text}${PDI}`;
+}
+
+// A numeric range: "200-250", "5%–6%", "₪700-800", "1,100–1,900", "12,000–14,000".
+const RANGE_RE = /₪?\d[\d,.]*%?(?:\s*[-–]\s*₪?\d[\d,.]*%?)+/g;
+
+/**
+ * Isolate every numeric range in Hebrew copy so it reads left to right and stays
+ * on one line. Use on all copy that can hold ranges, owner-edited notes included.
+ * Idempotent.
+ */
+export function isolateRanges(text: string): string {
+  return text.replace(RANGE_RE, (m: string, offset: number, whole: string) =>
+    whole[offset - 1] === LRI ? m : ltr(m.replace(/\s*([-–])\s*/g, `${WJ}$1${WJ}`)),
+  );
+}
+
+/** Without the invisible bidi and joining characters (structured data, plain exports). */
+export function stripIsolates(text: string): string {
+  return text.replace(INVISIBLE_RE, '').split(NBSP).join(' ');
+}
+
+/** Plain text (share messages, titles): "₪2.21–2.99 מיליון", digits isolated, unbreakable. */
 export function rangeText(range: Pick<MoneyRange, 'min' | 'max'>): string {
   const { value, unit } = compactRange(range.min, range.max);
-  return unit ? `₪${value} ${unit}` : `₪${value}`;
+  return unit ? `${ltr(`₪${value}`)}${NBSP}${unit}` : ltr(`₪${value}`);
 }
 
-/** Plain text: "₪750 אלף". */
+/** Plain text: "₪750 אלף", digits isolated, unbreakable. */
 export function amountText(n: number): string {
   const { value, unit } = compactAmount(n);
-  return unit ? `₪${value} ${unit}` : `₪${value}`;
+  return unit ? `${ltr(`₪${value}`)}${NBSP}${unit}` : ltr(`₪${value}`);
 }
 
-/** "₪11,100–15,000 למ״ר". */
+/** "₪11,100–15,000 למ״ר", digits isolated, unbreakable. */
 export function perM2Text(range: Pick<MoneyRange, 'min' | 'max'>): string {
-  return `₪${range.min.toLocaleString('he-IL')}–${range.max.toLocaleString('he-IL')} למ״ר`;
+  return `${ltr(`₪${range.min.toLocaleString('he-IL')}${DASH}${range.max.toLocaleString('he-IL')}`)}${NBSP}למ״ר`;
 }
 
-/** [4, 5] -> "4–5 חודשים", [12, 12] -> "12 חודשים", [1, 1] -> "חודש". */
+/** [4, 5] -> "4–5 חודשים" (range isolated), [12, 12] -> "12 חודשים", [1, 1] -> "חודש". */
 export function monthsText([a, b]: MonthsRange): string {
   if (a === b) return a === 1 ? 'חודש' : `${a} חודשים`;
-  return `${a}–${b} חודשים`;
+  return `${ltr(`${a}${DASH}${b}`)}${NBSP}חודשים`;
 }
 
 /** "2026-07-16" -> "16.7.2026". */

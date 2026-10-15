@@ -41,6 +41,8 @@ export interface PlannerAppProps {
   source?: string;
   /** Pin "today" (demo screenshots). */
   today?: string;
+  /** Use this hub draft instead of bb.hub.draft (the demo's fictional family). */
+  hubDraft?: HubDraft | null;
 }
 
 function usePriceBook(initial?: PriceBook): PriceBook {
@@ -71,7 +73,16 @@ function answeredFor(q: QuestionId, a: Partial<PlannerInput>): boolean {
   return a.extras !== undefined;
 }
 
-export default function PlannerApp({ book: initialBook, mode = 'page', initialInput, initialText, startOnResult, source, today }: PlannerAppProps) {
+export default function PlannerApp({
+  book: initialBook,
+  mode = 'page',
+  initialInput,
+  initialText,
+  startOnResult,
+  source,
+  today,
+  hubDraft: hubDraftOverride,
+}: PlannerAppProps) {
   const book = usePriceBook(initialBook);
   const params = useSearchParams();
   const [answers, setAnswersState] = useState<Partial<PlannerInput>>(() => mergeInputs(initialInput ?? {}));
@@ -91,7 +102,7 @@ export default function PlannerApp({ book: initialBook, mode = 'page', initialIn
 
   // Prefill once on mount (client only: localStorage and the URL).
   useEffect(() => {
-    const draft = readHubDraft();
+    const draft = hubDraftOverride !== undefined ? hubDraftOverride : readHubDraft();
     setHubDraft(draft);
     const fromHub = inputFromHubDraft(draft);
     const fromUrl = mode === 'page' && params ? parsePlannerQuery(params) : {};

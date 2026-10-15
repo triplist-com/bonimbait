@@ -1,5 +1,6 @@
 import { TriangleAlert } from 'lucide-react';
 import { absoluteUrl } from '@/lib/site';
+import { isolateRanges } from '@/lib/planner/format';
 import { momentClock, momentHref, selectOverrunWarnings } from '@/lib/planner/warnings';
 import type { PlannerEstimate } from '@/lib/planner/types';
 import { Badge } from '@/components/ui/Badge';
@@ -13,7 +14,7 @@ import MomentPlayer from './MomentPlayer';
 export function OverrunWarnings({ estimate, print = false }: { estimate: PlannerEstimate; print?: boolean }) {
   const warnings = selectOverrunWarnings(estimate.input);
   return (
-    <ol className="grid gap-4 lg:grid-cols-3">
+    <ol className={print ? 'grid gap-3' : 'grid gap-4 lg:grid-cols-3'}>
       {warnings.map((w, i) => (
         <li key={w.id} className="flex flex-col rounded-3xl border border-ink-100 bg-white p-5 shadow-card break-inside-avoid sm:p-6">
           <div className="flex items-start justify-between gap-3">
@@ -24,16 +25,16 @@ export function OverrunWarnings({ estimate, print = false }: { estimate: Planner
           </div>
           <h3 className="mt-3 text-title text-ink-900">{w.title}</h3>
           <Badge tone="warning" className="mt-2 h-auto w-fit whitespace-normal py-1 leading-snug">
-            {w.impact(estimate)}
+            {isolateRanges(w.impact(estimate))}
           </Badge>
-          <p className="mt-3 text-body-sm text-ink-700">{w.body}</p>
+          <p className="mt-3 text-body-sm text-ink-700">{isolateRanges(w.body)}</p>
           <blockquote className="mt-3 border-s-4 border-primary-600 ps-3 text-body-sm text-ink-800">
-            <p>&quot;{w.quote.text}&quot;</p>
+            <p>&quot;{isolateRanges(w.quote.text)}&quot;</p>
             <footer className="mt-1 text-caption text-ink-600">{w.quote.who}</footer>
           </blockquote>
           <p className="mt-3 text-body-sm text-ink-700">
             <strong className="font-bold text-ink-900">מה עושים: </strong>
-            {w.tip}
+            {isolateRanges(w.tip)}
           </p>
           <div className="mt-auto">
             {print ? (

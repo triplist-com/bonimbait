@@ -1,6 +1,6 @@
 import { BUILD_STAGES } from '@/lib/stages';
 import { EXTRAS } from '@/lib/planner/content';
-import { amountText, rangeText } from '@/lib/planner/format';
+import { amountText, isolateRanges, rangeText } from '@/lib/planner/format';
 import type { PlannerEstimate } from '@/lib/planner/types';
 import { cn } from '@/lib/cn';
 import { Money } from './Money';
@@ -38,7 +38,7 @@ export function StageBreakdown({ estimate, compact = false, headingId }: { estim
               {outside ? (
                 <p className="mt-1 text-body-sm text-ink-600">
                   {s.id === 'purchase'
-                    ? 'מגרש, מס רכישה (5%–6%), עורך דין ותיווך. תלוי במגרש, ולכן לא בהערכה.'
+                    ? isolateRanges('מגרש, מס רכישה (5%-6%), עורך דין ותיווך. תלוי במגרש, ולכן לא בהערכה.')
                     : `ריהוט, מכשירי חשמל ווילונות: ${rangeText(estimate.movingIn)}. מתכננים אותו מראש, לא "נסתדר עם הוויזה".`}
                 </p>
               ) : (
