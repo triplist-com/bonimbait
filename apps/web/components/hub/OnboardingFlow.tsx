@@ -30,6 +30,7 @@ import {
   type OnboardingStep,
 } from '@/lib/hub/onboarding';
 import type { HubDraft } from '@/lib/hub/types';
+import type { PriceBook } from '@/lib/planner/types';
 import { saveOnboardingAction } from '@/app/my-home/actions';
 import { cn } from '@/lib/cn';
 import { MoneyRange } from './Money';
@@ -77,11 +78,14 @@ export default function OnboardingFlow({
   isMember,
   today,
   editing,
+  book,
 }: {
   initialDraft: HubDraft;
   isMember: boolean;
   today: string;
   editing: boolean;
+  /** The owner's current price book (the page loads it), for the estimate in the reveal. */
+  book?: PriceBook;
 }) {
   const [draft, setDraft] = useState<HubDraft>(() => normalizeDraft(initialDraft));
   const [stepIndex, setStepIndex] = useState(0);
@@ -110,7 +114,7 @@ export default function OnboardingFlow({
     headingRef.current?.focus();
   }, [stepIndex, revealed]);
 
-  const estimate = useMemo(() => estimateFromCalculator(draft), [draft]);
+  const estimate = useMemo(() => estimateFromCalculator(draft, book), [draft, book]);
   const suggested = draft.stage ? suggestMoveIn(draft.stage, today) : addMonths(today.slice(0, 7), 24);
 
   function update(patch: Partial<HubDraft>, advance = true) {
@@ -164,7 +168,7 @@ export default function OnboardingFlow({
         saveState={saveState}
         saveError={saveError}
         onRetry={() => finish(draft)}
-        estimate={initialEstimate(draft, readPlanner())}
+        estimate={initialEstimate(draft, readPlanner(), book)}
         headingRef={headingRef}
       />
     );

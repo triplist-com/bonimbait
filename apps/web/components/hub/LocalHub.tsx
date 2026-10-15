@@ -14,6 +14,7 @@ import { ToastProvider } from '@/components/ui/Toast';
 import { isDraftComplete } from '@/lib/hub/onboarding';
 import { onHubStorageChange, readLocalHub, readPlanner } from '@/lib/hub/local';
 import type { StagePicksMap } from '@/lib/hub/types';
+import type { PriceBook } from '@/lib/planner/types';
 import { buildLocalViewData, type LocalViewInput } from '@/lib/hub/view';
 import { HubActionsProvider } from './HubActions';
 import { HubDashboard } from './HubDashboard';
@@ -24,7 +25,7 @@ function readInput(): LocalViewInput {
   return { ...readLocalHub(), planner: readPlanner() };
 }
 
-export default function LocalHub({ picks, today }: { picks: StagePicksMap; today: string }) {
+export default function LocalHub({ picks, today, book }: { picks: StagePicksMap; today: string; book?: PriceBook }) {
   const [input, setInput] = useState<LocalViewInput | null>(null);
   const refresh = useCallback(() => setInput(readInput()), []);
 
@@ -48,7 +49,7 @@ export default function LocalHub({ picks, today }: { picks: StagePicksMap; today
     return <HubIntro signedIn={false} savedCount={input.saved.length} />;
   }
 
-  const data = buildLocalViewData(input, picks, today);
+  const data = buildLocalViewData(input, picks, today, book);
   return (
     <ToastProvider>
       <HubActionsProvider value={actions}>

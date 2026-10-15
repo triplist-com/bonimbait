@@ -4,6 +4,7 @@
  * Pure and client-safe (the same dashboard renders it in the browser).
  */
 import { MEMBER_REGIONS } from '@/lib/constants/community';
+import type { PriceBook } from '@/lib/planner/types';
 import { initialEstimate } from './estimate';
 import type { LocalSavedItem } from './local-saved';
 import { savedHref, savedThumbnail } from './saved';
@@ -18,7 +19,8 @@ export interface LocalViewInput {
   planner: PlannerEstimate | null;
 }
 
-export function buildLocalViewData(input: LocalViewInput, picks: StagePicksMap, today: string): HubViewData {
+/** `book`: the owner's current price book (the page loads it; the seeded book otherwise). */
+export function buildLocalViewData(input: LocalViewInput, picks: StagePicksMap, today: string, book?: PriceBook): HubViewData {
   const { draft, saved, shortlist, checklist, planner } = input;
   const region = MEMBER_REGIONS.find((r) => r.slug === draft.regionSlug);
   return {
@@ -37,7 +39,7 @@ export function buildLocalViewData(input: LocalViewInput, picks: StagePicksMap, 
       mode: 'self',
     },
     checklistDone: checklist,
-    estimate: initialEstimate(draft, planner),
+    estimate: initialEstimate(draft, planner, book),
     budgetVersion: null,
     budgetItems: [],
     saved: saved
