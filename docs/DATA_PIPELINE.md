@@ -120,6 +120,11 @@ Cost and price information extracted from videos has a freshness rule: data from
 
 **Current**: Pipeline is triggered manually. All stages run as Python scripts.
 
+**Full-channel index (2026-10-14):** `scripts/knowledge/` inventories the whole channel, fetches
+Hebrew captions politely, segments them with the stage-2 functions above, embeds them into the static
+index (`scripts/build_search_index.py`) and adds catalog records to `apps/web/data/videos.json`. Run
+book and coverage numbers: `docs/platform/KNOWLEDGE_COVERAGE.md`.
+
 **Future**:
 - YouTube upload webhook to automatically ingest new videos as they are published
 - Incremental processing (only new/updated videos)

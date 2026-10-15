@@ -40,6 +40,11 @@ export interface CostItem {
   context?: string;
 }
 
+export interface VideoChapter {
+  start_time: number;
+  title: string;
+}
+
 export interface VideoDetail extends Video {
   summary?: string;
   key_points?: KeyPoint[];
@@ -47,6 +52,8 @@ export interface VideoDetail extends Video {
   costs_data?: CostItem[];
   tips?: string[];
   warnings?: string[];
+  chapters?: VideoChapter[];
+  kind?: 'video' | 'podcast' | 'live';
 }
 
 // --- Category ---
