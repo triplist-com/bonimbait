@@ -108,6 +108,19 @@ export const FLAGS = {
       'P5 content autopilot: the daily YouTube watch (cron) and its admin entry. Off = the cron skips; published videos stay in search and answers.',
     migrations: ['20261014103000_autopilot_knowledge_store'],
   },
+  bonimos: {
+    default: true,
+    owner: 'bonimos',
+    description:
+      'P7 Bonim.Os: /manage/ (managers and their managed clients), /admin/bonimos/ (assignments) and the managed band on /my-home/. Off = /manage/ and /admin/bonimos/ are 404 and the band hides.',
+    migrations: [
+      ...FOUNDATION,
+      '20261014121000_hub_core',
+      '20261014121100_hub_storage',
+      '20261014126000_bonimos_core',
+      '20261014126100_bonimos_storage',
+    ],
+  },
   // Out of scope by decision (PROGRAM.md §3.1 P6 "Won't"): no pages behind it.
   programmaticSeo: { default: false, owner: 'growth', description: 'P6 specialty x region landing pages. Won\'t for this program: nothing reads it.' },
 } as const satisfies Record<string, FlagDef>;

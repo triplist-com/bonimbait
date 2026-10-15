@@ -13,6 +13,8 @@ import { israelToday } from '@/lib/hub/onboarding';
 import { loadStagePicks } from '@/lib/hub/picks';
 import { loadPriceBook } from '@/lib/planner/price-book';
 import { createProjectFromSignupMetadata, loadMemberHub } from '@/lib/hub/server';
+import { ManagedHubBand } from '@/components/bonimos/ManagedHubBand';
+import { isProjectManager, loadManagedHubSummary } from '@/lib/bonimos/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +45,8 @@ export default async function MyHomePage() {
   }
 
   if (!hub || !hub.data.project.onboarded) {
+    // Bonim.Os (P7): a project manager without a house of their own works from /manage/.
+    if (!hub && isEnabled('bonimos') && (await isProjectManager(user.id))) redirect('/manage/');
     const savedCount = hub ? hub.data.saved.length + hub.data.shortlist.length : 0;
     return (
       <>
@@ -52,11 +56,16 @@ export default async function MyHomePage() {
     );
   }
 
+  // Bonim.Os (P7): a managed client sees their manager and the live numbers here.
+  const managed =
+    isEnabled('bonimos') && hub.project.mode === 'managed' ? await loadManagedHubSummary(user, hub.project.id) : null;
+
   return (
     <MemberHubProvider>
       <HubLocalImport />
       <HubDashboard
         data={hub.data}
+        banner={managed ? <ManagedHubBand summary={managed} today={hub.data.today} /> : undefined}
         editHref="/my-home/start/?edit=1"
         headerActions={
           <ButtonLink href="/account/" variant="ghost" size="sm" iconStart={<UserRound />} prefetch={false}>

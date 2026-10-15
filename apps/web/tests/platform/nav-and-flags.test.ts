@@ -103,7 +103,7 @@ describe('feature flags', () => {
   it('launch defaults: every pillar on, each with an off switch; the Won\'t stays off', () => {
     const snap = allFlags({});
     expect(Object.keys(snap).sort()).toEqual(Object.keys(FLAGS).sort());
-    const pillars = ['analytics', 'aiAnswers', 'advisor', 'hub', 'revenue', 'commandCenter', 'budgetPlanner', 'autopilot'] as const;
+    const pillars = ['analytics', 'aiAnswers', 'advisor', 'hub', 'revenue', 'commandCenter', 'budgetPlanner', 'autopilot', 'bonimos'] as const;
     for (const name of pillars) {
       expect(snap[name], name).toBe(true);
       expect(isEnabled(name, { [flagEnvName(name)]: 'false' }), `${name} off`).toBe(false);

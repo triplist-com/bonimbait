@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 800 600" role="img" aria-label="איור: קוביות בטון לבדיקת חוזק">
+  <defs>
+    <linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FBF8F3"/><stop offset="1" stop-color="#EFE7DA"/></linearGradient>
+    <g id="cube">
+      <path d="M0 0 L60 0 L84 -22 L24 -22Z" fill="#E4DFDA"/>
+      <path d="M0 0 L60 0 L60 60 L0 60Z" fill="#CFC8C2"/>
+      <path d="M60 0 L84 -22 L84 38 L60 60Z" fill="#958D87"/>
+    </g>
+    <g id="mold">
+      <path d="M-4 -4 L64 -4 L64 64 L-4 64Z" fill="#46403D"/>
+      <path d="M64 -4 L90 -28 L90 42 L64 64Z" fill="#322D2C"/>
+      <path d="M-4 -4 L64 -4 L90 -28 L22 -28Z" fill="#5C5551"/>
+      <path d="M4 -8 L60 -8 L80 -24 L24 -24Z" fill="#958D87"/>
+    </g>
+  </defs>
+  <rect width="800" height="600" fill="url(#s)"/>
+  <path d="M0 230 L800 230 L800 330 L0 330Z" fill="#958D87"/>
+  <path d="M0 230 L800 230" stroke="#776F6A" stroke-width="4"/>
+  <path d="M0 330 L800 330 L800 600 L0 600Z" fill="#C8B08E"/>
+  <path d="M90 420 L710 420 L740 470 L60 470Z" fill="#DDCDB4"/>
+  <path d="M60 470 L740 470 L740 492 L60 492Z" fill="#AE916B"/>
+  <g stroke="#C8B08E" stroke-width="2"><path d="M100 436 H700 M80 454 H720"/></g>
+  <use xlink:href="#cube" href="#cube" x="130" y="372"/>
+  <use xlink:href="#cube" href="#cube" x="236" y="372"/>
+  <use xlink:href="#cube" href="#cube" x="342" y="372"/>
+  <use xlink:href="#mold" href="#mold" x="470" y="372"/>
+  <use xlink:href="#mold" href="#mold" x="590" y="372"/>
+  <g transform="translate(150 300) rotate(-8)">
+    <rect x="0" y="0" width="70" height="40" rx="4" fill="#FFFFFF"/>
+    <rect x="0" y="0" width="12" height="40" rx="3" fill="#E61559"/>
+    <path d="M22 12 H60 M22 22 H54 M22 31 H46" stroke="#CFC8C2" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>

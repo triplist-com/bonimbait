@@ -34,6 +34,8 @@ export function BudgetPanel({ data }: { data: HubViewData }) {
   const summary = summarizeBudget(planned, budgetItems);
   const gap = budgetGap(project.budgetRangeNis, estimate);
   const rows = summary.categories.filter((c) => c.planned > 0 || c.forecastBasis !== 'plan');
+  // Bonim.Os (P7): in a managed project the project manager owns the approved budget.
+  const managedApproved = project.mode === 'managed' && (budgetVersion?.basis === 'manual' || budgetVersion?.basis === 'quotes');
 
   return (
     <HubSection
@@ -43,7 +45,7 @@ export function BudgetPanel({ data }: { data: HubViewData }) {
       subtitle={
         estimate ? (
           <>
-            {BASIS_LABEL[budgetVersion?.basis ?? estimate.basis]}
+            {managedApproved ? 'תקציב מאושר על ידי מנהל הפרויקט' : BASIS_LABEL[budgetVersion?.basis ?? estimate.basis]}
             {budgetVersion && budgetVersion.versionNo > 1 && (
               <>
                 {' '}
@@ -58,7 +60,7 @@ export function BudgetPanel({ data }: { data: HubViewData }) {
       }
       action={!local && estimate ? <BudgetAddButton /> : undefined}
     >
-      {estimate && <PlannerRebasePrompt currentBasis={budgetVersion?.basis ?? estimate.basis} currentAt={estimate.at ?? null} />}
+      {estimate && !managedApproved && <PlannerRebasePrompt currentBasis={budgetVersion?.basis ?? estimate.basis} currentAt={estimate.at ?? null} />}
 
       {estimate && (
         <dl className={cn('grid gap-3', summary.hasData && 'sm:grid-cols-3')}>

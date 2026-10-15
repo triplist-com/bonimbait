@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="איור: ברזל ליסודות לפני יציקה">
+  <defs>
+    <linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FBF8F3"/><stop offset="1" stop-color="#EFE7DA"/></linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#s)"/>
+  <path d="M0 300 Q150 258 300 290 T600 276 T800 296 V390 H0Z" fill="#EBE1D1"/>
+  <rect y="388" width="800" height="212" fill="#C8B08E"/>
+  <path d="M0 388 H800 V402 H0Z" fill="#AE916B" opacity=".55"/>
+  <path d="M104 376 L696 376" stroke="#46403D" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <g fill="#46403D"><rect x="100" y="362" width="6" height="40" rx="1"/><rect x="692" y="362" width="6" height="40" rx="1"/></g>
+  <g fill="#E61559"><path d="M106 364 l22 7 l-22 7z"/><path d="M698 364 l22 7 l-22 7z"/></g>
+  <rect x="112" y="428" width="576" height="120" fill="#6F5940"/>
+  <rect x="112" y="428" width="576" height="10" fill="#51412F" opacity=".6"/>
+  <g stroke="#362B20" stroke-width="5" stroke-linecap="round">
+    <path d="M132 452 H668"/><path d="M132 474 H668"/><path d="M132 506 H668"/><path d="M132 528 H668"/>
+  </g>
+  <g fill="none" stroke="#51412F" stroke-width="2.5">
+    <rect x="142" y="446" width="24" height="88" rx="2"/><rect x="190" y="446" width="24" height="88" rx="2"/>
+    <rect x="238" y="446" width="24" height="88" rx="2"/><rect x="286" y="446" width="24" height="88" rx="2"/>
+    <rect x="334" y="446" width="24" height="88" rx="2"/><rect x="382" y="446" width="24" height="88" rx="2"/>
+    <rect x="430" y="446" width="24" height="88" rx="2"/><rect x="478" y="446" width="24" height="88" rx="2"/>
+    <rect x="526" y="446" width="24" height="88" rx="2"/><rect x="574" y="446" width="24" height="88" rx="2"/>
+    <rect x="622" y="446" width="24" height="88" rx="2"/>
+  </g>
+  <g fill="#E4DFDA"><rect x="150" y="538" width="16" height="8" rx="2"/><rect x="300" y="538" width="16" height="8" rx="2"/><rect x="450" y="538" width="16" height="8" rx="2"/><rect x="600" y="538" width="16" height="8" rx="2"/></g>
+  <g stroke="#362B20" stroke-width="5" stroke-linecap="round">
+    <path d="M196 452 V318"/><path d="M212 452 V318"/><path d="M396 452 V318"/><path d="M412 452 V318"/><path d="M596 452 V318"/><path d="M612 452 V318"/>
+  </g>
+  <g fill="none" stroke="#51412F" stroke-width="2"><path d="M192 360 h24 M192 392 h24 M392 360 h24 M392 392 h24 M592 360 h24 M592 392 h24"/></g>
+  <g fill="#E61559"><rect x="188" y="306" width="16" height="14" rx="5"/><rect x="204" y="306" width="16" height="14" rx="5"/><rect x="388" y="306" width="16" height="14" rx="5"/><rect x="404" y="306" width="16" height="14" rx="5"/><rect x="588" y="306" width="16" height="14" rx="5"/><rect x="604" y="306" width="16" height="14" rx="5"/></g>
+</svg>
