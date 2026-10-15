@@ -66,11 +66,15 @@ describe('admin nav config', () => {
 });
 
 describe('platform nav', () => {
-  it('links the overview and the demos', () => {
-    expect(PLATFORM_NAV.map((i) => i.href)).toEqual(['/platform/', '/platform/demo/']);
-    expect(isPlatformNavActive('/platform/', PLATFORM_NAV[0])).toBe(true);
-    expect(isPlatformNavActive('/platform/demo/foundation/', PLATFORM_NAV[0])).toBe(false);
-    expect(isPlatformNavActive('/platform/demo/foundation/', PLATFORM_NAV[1])).toBe(true);
+  it('links the overview, the tour, the demos and the design system', () => {
+    expect(PLATFORM_NAV.map((i) => i.href)).toEqual(['/platform/', '/platform/tour/', '/platform/demo/', '/platform/design-system/']);
+    expect(PLATFORM_NAV.map((i) => i.label)).toEqual(['סקירה', 'סיור', 'הדגמות', 'מערכת עיצוב']);
+    const [overview, tour, demos] = PLATFORM_NAV;
+    expect(isPlatformNavActive('/platform/', overview)).toBe(true);
+    expect(isPlatformNavActive('/platform/tour/', overview)).toBe(false);
+    expect(isPlatformNavActive('/platform/tour/', tour)).toBe(true);
+    expect(isPlatformNavActive('/platform/demo/foundation/', overview)).toBe(false);
+    expect(isPlatformNavActive('/platform/demo/foundation/', demos)).toBe(true);
   });
 });
 

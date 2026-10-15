@@ -24,7 +24,7 @@ describe('command demo fixture', () => {
     const next = loadDemoFixture(commandDemo, { today: '2026-10-16' });
     const sameDay = (l: { createdAt: string }) => l.createdAt.startsWith('2026-10-10');
     expect(next.leads.filter(sameDay).map((l) => l.id)).toEqual(data.leads.filter(sameDay).map((l) => l.id));
-  });
+  }, 30_000); // builds two full 180-day fixtures; slow under a busy CPU
 
   it('covers 180 days so a 90-day view has a full previous period', () => {
     expect(data.days).toHaveLength(DEMO_DAYS);

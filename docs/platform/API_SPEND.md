@@ -21,5 +21,6 @@ Log every paid run here: amounts and volumes only, never keys.
 | 2026-10-15 | command | Content-gap calibration: embeddings of 84 labelled test questions and their topic texts (3 rounds), text-embedding-3-small | 7,667 tokens | 0.0002 |
 | 2026-10-15 | command | Content-gap engine e2e on local seed data (77 questions, 29 topics), 3 refreshes: question embeddings (text-embedding-3-small) | 11,358 tokens | 0.0002 |
 | 2026-10-15 | command | Same 3 refreshes: cluster labels + coverage review, Claude Haiku 5.5 (thinking on, off, on; recorded in `ai_usage` as `insights_labels`) | 26,916 in / 15,099 out tokens | 0.0103 |
+| 2026-10-15 | pitch | One AI answer on the local `/search/` for a sales-deck screenshot (Sonnet 4.6 answer + Haiku 4.5 pros classifier), measured in the local `ai_usage` table | 2 calls | 0.0316 |
 
-**Running total:** ~$0.40 (autopilot ~$0.09 of $0.75; knowledge $0.279 of $1.50; command $0.011 of $0.50)
+**Running total:** ~$0.43 (autopilot ~$0.09 of $0.75; knowledge $0.279 of $1.50; command $0.011 of $0.50; pitch $0.032 of $0.20)
