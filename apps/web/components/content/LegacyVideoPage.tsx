@@ -12,6 +12,7 @@ import { absoluteUrl } from '@/lib/site';
 import ArticleBody from './ArticleBody';
 import Breadcrumbs from './Breadcrumbs';
 import ConsultationCTA from '@/components/leads/ConsultationCTA';
+import PartnerOfferSlot from '@/components/revenue/PartnerOfferSlot';
 import VideoPageCard from './VideoPageCard';
 
 /** Legacy WordPress /video/<hebrew-slug>/ page (videos and podcast episodes). */
@@ -117,6 +118,9 @@ export default async function LegacyVideoPage({ page }: { page: VideoPageRow }) 
         )}
 
         {html.trim() && <ArticleBody html={html} className="mt-10 max-w-3xl" />}
+
+        {/* Sponsored partner offer for this video's topic (revenue; FLAG_REVENUE). */}
+        <PartnerOfferSlot slot="video-page" context={{ topic: page.title, placement: 'video' }} className="mt-12 max-w-3xl" />
 
         <div className="mt-12">
           <ConsultationCTA variant="card" source="video-page" />

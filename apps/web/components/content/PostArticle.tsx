@@ -14,6 +14,8 @@ import ArticleBody from './ArticleBody';
 import Breadcrumbs from './Breadcrumbs';
 import CommunityCTA from './CommunityCTA';
 import ConsultationCTA from '@/components/leads/ConsultationCTA';
+import PartnerOfferSlot from '@/components/revenue/PartnerOfferSlot';
+import { stageForCategory } from '@/lib/stages';
 import { PostGrid } from './PostCard';
 import { TocInline, TocSidebar } from './TableOfContents';
 
@@ -123,6 +125,12 @@ export default async function PostArticle({ post }: { post: PostRow }) {
           <div className="min-w-0 max-w-3xl">
             <TocInline items={toc} />
             <ArticleBody html={html} />
+            {/* Sponsored partner offer for the article's topic and stage (revenue; FLAG_REVENUE). */}
+            <PartnerOfferSlot
+              slot="article"
+              context={{ topic: post.title, stage: primary ? stageForCategory(primary.slug)?.id : null, placement: 'article' }}
+              className="mt-12"
+            />
             <div className="mt-12">
               <ConsultationCTA variant="card" source="post-footer" />
             </div>

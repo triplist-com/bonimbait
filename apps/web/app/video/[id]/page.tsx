@@ -11,6 +11,7 @@ import { YOUTUBE_ID, loadVideoPage, videoThumb } from '@/lib/content/videos';
 import { absoluteUrl } from '@/lib/site';
 import type { Video } from '@/lib/types';
 import VideoPageClient from './VideoPageClient';
+import PartnerOfferSlot from '@/components/revenue/PartnerOfferSlot';
 import { loadIndexedVideoDetail, loadRelatedIndexedVideos } from '@/lib/content/indexed-video';
 
 /**
@@ -146,5 +147,8 @@ export default async function VideoPage({ params }: VideoPageProps) {
   // player poster is in the first HTML (LCP), not fetched after hydration.
   const initialVideo = loadIndexedVideoDetail(decodeSlug(params.id));
   const initialRelated = initialVideo ? loadRelatedIndexedVideos(initialVideo) : [];
-  return <VideoPageClient initialVideo={initialVideo} initialRelated={initialRelated} />;
+  const partnerSlot = initialVideo ? (
+    <PartnerOfferSlot slot="video-page" context={{ topic: `${initialVideo.title} ${initialVideo.category_name ?? ''}`, placement: 'video' }} />
+  ) : null;
+  return <VideoPageClient initialVideo={initialVideo} initialRelated={initialRelated} partnerSlot={partnerSlot} />;
 }

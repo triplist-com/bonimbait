@@ -16,6 +16,7 @@ import {
 } from '@/lib/directory/listing';
 import { createPublicClient } from '@/lib/directory/server';
 import { loadPartnerBadges, tierRanks } from '@/lib/revenue/badges';
+import PartnerOfferSlot from '@/components/revenue/PartnerOfferSlot';
 import BusinessCard from './BusinessCard';
 import ListingFilters, { SortSelect } from './ListingFilters';
 
@@ -121,6 +122,15 @@ export default async function DirectoryListing({ filters }: { filters: Filters }
             </li>
           ))}
         </ul>
+      )}
+
+      {/* Sponsored partner offer for the filtered specialty and region (revenue; FLAG_REVENUE). */}
+      {result.items.length > 0 && (
+        <PartnerOfferSlot
+          slot="directory"
+          context={{ topic: result.specialty?.slug ?? null, region: result.region?.slug ?? null, placement: 'directory' }}
+          className="mx-auto mt-8 max-w-3xl"
+        />
       )}
 
       {result.pageCount > 1 && (

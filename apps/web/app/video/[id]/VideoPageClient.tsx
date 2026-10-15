@@ -15,9 +15,11 @@ import type { VideoDetail as VideoDetailType, Video } from '@/lib/types';
 interface InitialData {
   initialVideo?: VideoDetailType | null;
   initialRelated?: Video[];
+  /** Sponsored partner offer rendered by the server page (revenue squad); shown after the summary. */
+  partnerSlot?: React.ReactNode;
 }
 
-function VideoContent({ initialVideo, initialRelated }: InitialData) {
+function VideoContent({ initialVideo, initialRelated, partnerSlot }: InitialData) {
   const params = useParams();
   const id = params.id as string;
   const hasInitial = Boolean(initialVideo);
@@ -251,6 +253,7 @@ function VideoContent({ initialVideo, initialRelated }: InitialData) {
             )}
           </div>
         )}
+        {partnerSlot && <div className="mb-8">{partnerSlot}</div>}
       </section>
 
       {/* Related Videos */}
