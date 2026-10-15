@@ -169,7 +169,7 @@ export default function PlannerWizard({ book, answers, step, onAnswer, onStep, o
     <div className={cn(!compact && 'p-5 sm:p-8')}>
       <StepHeader step={step} total={QUESTION_ORDER.length} onStep={onStep} answered={answered} />
 
-      <h2 id={titleId} className="text-headline-sm text-ink-900" tabIndex={-1} data-planner-question>
+      <h2 id={titleId} className="text-headline-sm text-ink-900 focus:outline-none" tabIndex={-1} data-planner-question data-planner-focus>
         {QUESTION_TITLES[question]}
       </h2>
 

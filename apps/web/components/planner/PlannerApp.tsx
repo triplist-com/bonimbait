@@ -137,20 +137,21 @@ export default function PlannerApp({
     }
   }, [showResult, estimate, mode, hubDraft]);
 
-  // Move focus to the new question (screen readers, keyboard) and keep it in view.
+  // After a step or the result renders: focus its heading (screen readers, keyboard) and
+  // bring it into view. Each view marks exactly one heading with data-planner-focus; the
+  // timeout lets React commit the new view first.
   const focusQuestion = useCallback(() => {
-    requestAnimationFrame(() => {
+    window.setTimeout(() => {
       const root = rootRef.current;
       if (!root) return;
-      const target = root.querySelector<HTMLElement>(showResult ? '[data-planner-result] h2' : '[data-planner-question]');
-      target?.focus({ preventScroll: true });
+      root.querySelector<HTMLElement>('[data-planner-focus]')?.focus({ preventScroll: true });
       const top = root.getBoundingClientRect().top;
       if (mode !== 'modal' && (top < 0 || top > window.innerHeight * 0.4)) {
         const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
         window.scrollTo({ top: window.scrollY + top - 96, behavior: reduce ? 'auto' : 'smooth' });
       }
-    });
-  }, [mode, showResult]);
+    }, 60);
+  }, [mode]);
 
   const goTo = useCallback(
     (next: number) => {

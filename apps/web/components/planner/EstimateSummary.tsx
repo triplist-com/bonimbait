@@ -56,7 +56,8 @@ export function EstimateSummary({
         <span aria-hidden="true">·</span>
         <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-semibold text-white">{asOfBadge(estimate.validAsOf)}</span>
       </p>
-      <h2 id={headingId} className="mt-3">
+      {/* Focus target when the planner shows this result (PlannerApp). */}
+      <h2 id={headingId} className="mt-3 focus:outline-none" tabIndex={-1} data-planner-focus>
         <span className="sr-only">טווח העלות המשוער: </span>
         <Money min={total.min} max={total.max} valueClassName="text-5xl font-extrabold tracking-tight sm:text-7xl" unitClassName="text-2xl font-bold sm:text-3xl" />
       </h2>
