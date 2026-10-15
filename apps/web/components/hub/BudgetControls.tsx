@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition, type FormEvent } from 'react';
+import { useEffect, useRef, useState, useTransition, type FormEvent } from 'react';
 import { Check, Plus, Receipt, RefreshCw, Trash2, X } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -196,18 +196,58 @@ export function BudgetItemList({ items }: { items: HubBudgetItemView[] }) {
   );
 }
 
-/** Offer a new budget version when growth's planner has a newer result. Members only. */
+/** The planner result's "שמרו בבית שלי" lands here with ?saved=planner (lib/planner/share.ts SAVE_TO_HOME_HREF). */
+function takeSavedFromPlanner(): boolean {
+  const url = new URL(window.location.href);
+  if (url.searchParams.get('saved') !== 'planner') return false;
+  url.searchParams.delete('saved');
+  window.history.replaceState(window.history.state, '', url.toString());
+  return true;
+}
+
+/**
+ * Offer a new budget version when growth's planner has a newer result. Members
+ * only. Arriving from the planner's "שמרו בבית שלי" is the builder's yes: the
+ * new version is made at once (the previous one is kept).
+ */
 export function PlannerRebasePrompt({ currentBasis, currentAt }: { currentBasis: BudgetBasis; currentAt: string | null }) {
   const actions = useHubActions();
   const { toast } = useToast();
   const [planner, setPlanner] = useState<PlannerEstimate | null>(null);
   const [pending, startTransition] = useTransition();
+  const checked = useRef(false);
 
   useEffect(() => {
-    if (actions.mode !== 'member') return;
+    if (checked.current) return; // once per page load (StrictMode runs effects twice)
+    checked.current = true;
+    const fromPlanner = takeSavedFromPlanner();
+    if (actions.mode !== 'member') {
+      // A visitor's hub reads bb.planner.last directly: the estimate is already the budget.
+      if (fromPlanner && actions.mode === 'local') toast({ title: 'התקציב מהמתכנן נשמר בבית שלי', tone: 'success' });
+      return;
+    }
     const p = readPlanner();
-    if (p && !(currentBasis === 'planner' && currentAt === p.at)) setPlanner(p);
-  }, [actions.mode, currentBasis, currentAt]);
+    if (!p || (currentBasis === 'planner' && currentAt === p.at)) return;
+    if (!fromPlanner) {
+      setPlanner(p);
+      return;
+    }
+    startTransition(async () => {
+      const res = await actions.rebaseFromPlanner(p);
+      if (res.ok) toast({ title: 'התקציב עודכן לפי המתכנן. הגרסה הקודמת נשמרה.', tone: 'success' });
+      else {
+        toast({ title: res.message ?? 'לא הצלחנו לעדכן. נסו שוב.', tone: 'error' });
+        setPlanner(p);
+      }
+    });
+    // Once per page load: the arrival from the planner is read (and removed) on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The prompt goes away once the current version is the planner's result.
+  useEffect(() => {
+    if (planner && currentBasis === 'planner' && currentAt === planner.at) setPlanner(null);
+  }, [planner, currentBasis, currentAt]);
 
   if (!planner) return null;
   return (

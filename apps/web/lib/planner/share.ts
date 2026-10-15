@@ -14,6 +14,12 @@ export const REPORT_PATH = '/calculator/report/';
 export const BUDGET_PLAN_HREF = '/membership-tiers/#plans';
 /** The hub (P2). */
 export const MY_HOME_HREF = '/my-home/';
+/**
+ * "שמרו בבית שלי" on a result: the hub's budget, told the builder chose to
+ * save this estimate (a member's project gets a new budget version from it;
+ * components/hub/BudgetControls.tsx PlannerRebasePrompt).
+ */
+export const SAVE_TO_HOME_HREF = `${MY_HOME_HREF}?saved=planner#budget`;
 
 export function plannerHref(input: PlannerInput): string {
   return `${PLANNER_PATH}?${plannerQuery(input)}`;

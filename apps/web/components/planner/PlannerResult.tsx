@@ -14,7 +14,7 @@ import { Switch } from '@/components/ui/Choice';
 import { track } from '@/lib/analytics/track';
 import { cn } from '@/lib/cn';
 import { asOfBadge, isolateRanges, monthYearAfter, rangeText } from '@/lib/planner/format';
-import { BUDGET_PLAN_HREF, MY_HOME_HREF, reportHref, whatsappShareHref } from '@/lib/planner/share';
+import { BUDGET_PLAN_HREF, SAVE_TO_HOME_HREF, reportHref, whatsappShareHref } from '@/lib/planner/share';
 import { plannerSnapshot, writePlannerLast } from '@/lib/planner/storage';
 import type { HubDraft, PlannerEstimate, PriceBook } from '@/lib/planner/types';
 import { EstimateSummary, answerLabels } from './EstimateSummary';
@@ -151,7 +151,8 @@ export default function PlannerResult({ book, estimate, hubDraft, onEdit, onRest
           </div>
           <div className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-2 border-t border-sand-200 pt-5">
             {/* No prefetch: a personal (possibly auth-gated) page, and the hub owns the route. */}
-            <ButtonLink href={MY_HOME_HREF} variant="secondary" prefetch={false} onClick={saveToHome} iconStart={<Home />}>
+            {/* The demo continues in the hub's demo view (the tour's P6 -> P2), never into a real account. */}
+            <ButtonLink href={persist ? SAVE_TO_HOME_HREF : '/platform/demo/hub/'} variant="secondary" prefetch={false} onClick={saveToHome} iconStart={<Home />}>
               שמרו בבית שלי
             </ButtonLink>
             <a
