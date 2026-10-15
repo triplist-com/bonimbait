@@ -4,11 +4,20 @@ import { getVideo } from '../../_lib/data';
 import { matchPros } from '../../_lib/pros';
 import { focusSegment, wantsNumbers } from '@/lib/knowledge/moments';
 import type { ProsCta } from '@/lib/types';
+import { trackServer } from '@/lib/analytics/server';
+import { AI_RATE_LIMITED_MESSAGE, AI_UNAVAILABLE_MESSAGE, checkAiBudget, recordAiUsage } from '@/lib/guard/aiBudget';
+import { EMPTY_USAGE, accumulateStreamUsage, type TokenUsage } from '@/lib/guard/aiPricing';
+import { rateLimit } from '@/lib/guard/rateLimit';
+import { clientIpFromHeaders, hashIp } from '@/lib/leads/spam';
+import { isDemoRequest } from '@/lib/platform/paths';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const MODEL = 'claude-sonnet-4-6';
+// Reserved against the daily AI budget before a call: ~5 docs of context plus
+// max_tokens of output on Sonnet 4.6 is about $0.02-0.03.
+const ANSWER_COST_ESTIMATE_USD = 0.03;
 const MAX_DOCS = 5; // videos + articles fed to the model and shown as sources
 // Article chunks are cleaner text than transcripts and outrank them, so cap
 // them to keep video sources in the answer. Unused slots go back to articles.
@@ -34,6 +43,25 @@ function sseEvent(obj: unknown): string {
   return `data: ${JSON.stringify(obj)}\n\n`;
 }
 
+const SSE_HEADERS = {
+  'Content-Type': 'text/event-stream',
+  'Cache-Control': 'no-cache',
+  Connection: 'keep-alive',
+  'X-Accel-Buffering': 'no',
+};
+
+/**
+ * A complete answer stream without calling the model (lib/guard): a friendly
+ * Hebrew message as the answer text, plus whatever sources retrieval found.
+ * Same SSE shape as a real answer, so the current UI renders it as-is.
+ */
+function degradedAnswer(message: string, sources: AnswerSourceOut[], confidence: number, reason: string): Response {
+  const body =
+    sseEvent({ type: 'chunk', content: message }) +
+    sseEvent({ type: 'done', sources, confidence, pros: null, degraded: reason });
+  return new Response(body, { status: 200, headers: { ...SSE_HEADERS, 'X-BB-Degraded': reason } });
+}
+
 export async function POST(request: NextRequest) {
   let body: { query?: string };
   try {
@@ -51,8 +79,19 @@ export async function POST(request: NextRequest) {
     return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not set' }), { status: 500 });
   }
 
+  // Guards (lib/guard): per-visitor rate limit, then the daily AI budget.
+  const startedAt = Date.now();
+  const isDemo = isDemoRequest(request);
+  const requested = trackServer('answer_requested', { query }, { request });
+  const limited = await rateLimit('ai_answer', hashIp(clientIpFromHeaders(request.headers)));
+  if (!limited.ok) {
+    await requested;
+    return degradedAnswer(AI_RATE_LIMITED_MESSAGE, [], 0, 'rate_limited');
+  }
+  const budget = await checkAiBudget({ estimateUsd: ANSWER_COST_ESTIMATE_USD });
+
   // The pros CTA runs in parallel with retrieval and the answer stream.
-  const prosPromise: Promise<ProsCta | null> = matchPros(query);
+  const prosPromise: Promise<ProsCta | null> = budget.ok ? matchPros(query, { isDemo }) : Promise.resolve(null);
   // Query terms (and, for cost questions, price figures) locate the matching passage
   // inside each video segment and the second it is said.
   const terms = extractContentTerms(query);
@@ -149,6 +188,12 @@ export async function POST(request: NextRequest) {
       : 0;
   const avgConfidence = Math.min(1, Math.max(0, (avgCos - 0.25) / 0.35));
 
+  // Over budget or AI switched off: no model call, but keep the sources.
+  if (!budget.ok) {
+    await requested;
+    return degradedAnswer(budget.message ?? AI_UNAVAILABLE_MESSAGE, sources, avgConfidence, budget.reason ?? 'budget');
+  }
+
   const systemPrompt = `אתה עוזר מומחה בנושאי בנייה של בתים פרטיים בישראל.
 המשתמש שואל שאלה ואתה מקבל קטעים רלוונטיים מתוך סרטוני YouTube ומאמרים של "בונים בית".
 תפקידך: לענות תשובה קצרה, ממוקדת ומדויקת בעברית, המבוססת אך ורק על המידע בקטעים שסופקו.
@@ -199,6 +244,10 @@ ${contextBlocks.join('\n\n---\n\n')}
       const reader = upstream.body!.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      // Token counts from message_start / message_delta, for the AI budget.
+      let usage: TokenUsage = { ...EMPTY_USAGE };
+      let pros: ProsCta | null = null;
+      let completed = false;
 
       try {
         while (true) {
@@ -217,6 +266,7 @@ ${contextBlocks.join('\n\n---\n\n')}
                 type: string;
                 delta?: { type: string; text?: string };
               };
+              usage = accumulateStreamUsage(usage, evt);
               if (
                 evt.type === 'content_block_delta' &&
                 evt.delta?.type === 'text_delta' &&
@@ -231,7 +281,7 @@ ${contextBlocks.join('\n\n---\n\n')}
             }
           }
         }
-        const pros = await Promise.race([
+        pros = await Promise.race([
           prosPromise,
           new Promise<null>((resolve) => setTimeout(() => resolve(null), PROS_WAIT_MS)),
         ]);
@@ -240,24 +290,39 @@ ${contextBlocks.join('\n\n---\n\n')}
             sseEvent({ type: 'done', sources, confidence: avgConfidence, pros }),
           ),
         );
+        completed = true;
       } catch (err) {
         console.error('stream error:', err);
         controller.enqueue(
           encoder.encode(sseEvent({ type: 'error', message: 'stream interrupted' })),
         );
       } finally {
+        // Both never throw. Usage is recorded even for an interrupted stream.
+        const spent = usage.inputTokens + usage.outputTokens > 0;
+        const { costUsd } = spent
+          ? await recordAiUsage({ route: 'answer_stream', model: MODEL, usage, isDemo })
+          : { costUsd: 0 };
+        if (completed) {
+          await trackServer(
+            'answer_completed',
+            {
+              query,
+              sources: sources.length,
+              confidence: avgConfidence,
+              latency_ms: Date.now() - startedAt,
+              model: MODEL,
+              has_pros: Boolean(pros),
+              output_tokens: usage.outputTokens,
+              cost_usd: costUsd,
+            },
+            { request },
+          );
+        }
+        await requested;
         controller.close();
       }
     },
   });
 
-  return new Response(stream, {
-    status: 200,
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-      'X-Accel-Buffering': 'no',
-    },
-  });
+  return new Response(stream, { status: 200, headers: SSE_HEADERS });
 }

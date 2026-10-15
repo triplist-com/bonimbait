@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { recallRuntimeVideo } from '@/lib/autopilot/registry';
 
 // ---- Types for the static JSON data ----
 
@@ -200,9 +201,18 @@ export function getVideos(params: {
   return { videos, total, page, pages };
 }
 
-export function getVideo(id: string): VideoRecord | null {
+/** A video of the static AI index (videos.json) only. */
+export function getStaticVideo(id: string): VideoRecord | null {
   const data = loadData();
   return data.videos.find((v) => v.youtube_id === id || v.id === id) || null;
+}
+
+/**
+ * Static video, else a published Content Autopilot video that search just
+ * returned on this instance (lib/autopilot/registry.ts).
+ */
+export function getVideo(id: string): VideoRecord | null {
+  return getStaticVideo(id) ?? recallRuntimeVideo(id);
 }
 
 export function getCategories(): CategoryRecord[] {

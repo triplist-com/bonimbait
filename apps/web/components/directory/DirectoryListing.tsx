@@ -73,9 +73,10 @@ export default async function DirectoryListing({ filters }: { filters: Filters }
 
   return (
     <div className="container-page py-8 sm:py-12">
-      <header className="mb-6 text-center">
-        <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">{heading}</h1>
-        <p className="mx-auto mt-3 max-w-2xl text-gray-600">
+      <header className="mb-8 text-center">
+        <p className="eyebrow justify-center">נבחרת המומלצים</p>
+        <h1 className="mt-3 text-display text-ink-900">{heading}</h1>
+        <p className="mx-auto mt-4 max-w-2xl text-body-lg text-ink-600">
           בעלי מקצוע וספקים שקיבלו המלצות מבונים ומשפצים בקהילה, עם דירוג וחוות דעת מאומתות.
         </p>
       </header>

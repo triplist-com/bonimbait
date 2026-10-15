@@ -46,3 +46,6 @@ venv/
 
 # Private sales material (pricing, strategy, pitch decks) — the repo is public
 /sales/
+
+# TypeScript incremental build info
+*.tsbuildinfo

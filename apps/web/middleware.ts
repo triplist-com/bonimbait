@@ -3,6 +3,7 @@ import { updateSession } from '@/lib/supabase/middleware';
 import { findRedirect } from '@/lib/redirects/lookup';
 import { wantsTrailingSlash } from '@/lib/site';
 import { commerceRedirect } from '@/lib/commerce/middleware';
+import { pitchGate } from '@/lib/platform/gate';
 
 /**
  * Request pipeline:
@@ -10,6 +11,7 @@ import { commerceRedirect } from '@/lib/commerce/middleware';
  *  2. Trailing-slash canonicalization for pages (WordPress parity) with a 301.
  *     next.config sets skipTrailingSlashRedirect so /api/* is never redirected
  *     (payment webhooks must not get a 308).
+ *  2b. /platform/* pitch gate when PITCH_ACCESS_CODE is set (lib/platform/gate.ts).
  *  3. Supabase session refresh.
  *  4. /admin requires a signed-in user (role is checked in app/admin/layout).
  *  5. Commerce: /checkout/ 302 -> /cart/ when the cart is empty (WooCommerce
@@ -40,6 +42,10 @@ export async function middleware(request: NextRequest) {
     url.pathname = `${url.pathname}/`;
     return NextResponse.redirect(url, 301);
   }
+
+  // 2b. Pitch site gate (no-op unless PITCH_ACCESS_CODE is set).
+  const gate = await pitchGate(request);
+  if (gate) return gate;
 
   // 3. Session refresh.
   const { response, user } = await updateSession(request);

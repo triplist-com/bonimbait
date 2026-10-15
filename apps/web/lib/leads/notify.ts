@@ -22,6 +22,7 @@ import type { DbClient } from '@/lib/db/client';
 import { getLeadRoutingTarget, recordLeadNotification, type LeadRoutingTarget } from '@/lib/db/leads';
 import { SITE_HOST, SITE_NAME, SITE_URL } from '@/lib/site';
 import { LEAD_TYPE_LABELS } from './constants';
+import { ink } from '@/lib/design/tokens';
 
 export type NotifyEnv = {
   RESEND_API_KEY?: string;
@@ -99,7 +100,7 @@ export function planNotification(
   const emailEnabled = Boolean(env.RESEND_API_KEY) && recipient.to.length > 0;
   const rows = describeLead(lead, business);
   const typeLabel = LEAD_TYPE_LABELS[lead.type] ?? lead.type;
-  const subject = `ליד חדש: ${typeLabel}${lead.full_name ? ` – ${lead.full_name}` : ''}`;
+  const subject = `ליד חדש${lead.ref ? ` ${lead.ref}` : ''}: ${typeLabel}${lead.full_name ? ` – ${lead.full_name}` : ''}`;
   return {
     recipient,
     email: emailEnabled
@@ -131,6 +132,7 @@ const PAYLOAD_LABELS: Record<string, string> = {
 /** Label/value rows for the email body. */
 export function describeLead(lead: LeadRow, business: LeadRoutingTarget | null): Array<[string, string]> {
   const rows: Array<[string, string]> = [['סוג פנייה', LEAD_TYPE_LABELS[lead.type] ?? lead.type]];
+  if (lead.ref) rows.unshift(['מספר ליד', lead.ref]);
   if (lead.full_name) rows.push(['שם', lead.full_name]);
   if (lead.phone) rows.push(['טלפון', lead.phone]);
   if (lead.email) rows.push(['אימייל', lead.email]);
@@ -159,14 +161,14 @@ function renderEmailHtml(title: string, rows: Array<[string, string]>): string {
   const body = rows
     .map(
       ([k, v]) =>
-        `<tr><th style="text-align:right;padding:6px 10px;background:#f3f4f6;white-space:nowrap">${escapeHtml(k)}</th>` +
+        `<tr><th style="text-align:right;padding:6px 10px;background:${ink[100]};white-space:nowrap">${escapeHtml(k)}</th>` +
         `<td style="padding:6px 10px;white-space:pre-wrap">${escapeHtml(v)}</td></tr>`,
     )
     .join('');
   return (
-    `<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px;color:#111827">` +
+    `<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px;color:${ink[900]}">` +
     `<h2 style="margin:0 0 12px">${escapeHtml(title)}</h2>` +
-    `<table style="border-collapse:collapse;border:1px solid #e5e7eb">${body}</table></div>`
+    `<table style="border-collapse:collapse;border:1px solid ${ink[200]}">${body}</table></div>`
   );
 }
 

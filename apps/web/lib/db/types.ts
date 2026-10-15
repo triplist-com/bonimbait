@@ -503,6 +503,10 @@ export type LeadRow = {
   notify_error: string | null;
   notified_at: string | null;
   ip_hash: string | null;
+  /** Human-friendly id, BB-YY-NNNNNN (trigger-assigned; migration 20261014102200). */
+  ref: string;
+  /** 4h last-touch attribution (lib/analytics/attribution.ts LeadAttribution); null = direct. */
+  attribution: Json | null;
 } & Timestamps;
 
 export type RedirectRow = {
@@ -631,7 +635,7 @@ export type Database = {
         [FK<'order_items_order_id_fkey', 'order_id', 'orders'>]
       >;
       payments: TableDef<PaymentRow, 'order_id' | 'provider' | 'amount_agorot'>;
-      leads: TableDef<LeadRow, 'type'>;
+      leads: TableDef<LeadRow, 'type', 'ref'>;
       redirects: TableDef<RedirectRow, 'from_path' | 'to_path'>;
     };
     Views: {

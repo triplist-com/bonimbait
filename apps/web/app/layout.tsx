@@ -1,15 +1,21 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Heebo } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/Layout/Header';
 import Footer from '@/components/Layout/Footer';
 import StructuredData from '@/components/StructuredData';
 import Analytics from '@/components/Analytics';
+import PageViewTracker from '@/components/analytics/PageViewTracker';
+import SiteChromeGate from '@/components/platform/SiteChromeGate';
 import ConsultationCTA from '@/components/leads/ConsultationCTA';
 import { SITE_URL, absoluteUrl } from '@/lib/site';
+import { primary } from '@/lib/design/tokens';
 
+// Heebo (variable 100-900). `subsets` only controls preloading: every subset's
+// @font-face (latin, latin-ext, …) is still emitted and loads on demand. Only
+// the Hebrew file is preloaded so the fonts don't compete with the LCP image.
 const heebo = Heebo({
-  subsets: ['hebrew', 'latin'],
+  subsets: ['hebrew'],
   variable: '--font-heebo',
   display: 'swap',
 });
@@ -62,6 +68,13 @@ export const metadata: Metadata = {
     dir: 'rtl',
   },
   manifest: '/manifest.json',
+  icons: {
+    apple: '/apple-touch-icon.png',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: primary[600],
 };
 
 export default function RootLayout({
@@ -75,19 +88,20 @@ export default function RootLayout({
         {/* Skip to content link for accessibility */}
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:right-2 focus:z-[100] focus:bg-primary focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-medium"
+          className="sr-only focus:not-sr-only focus:fixed focus:start-3 focus:top-3 focus:z-[100] focus:rounded-xl focus:bg-ink-900 focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lift"
         >
-          דלג לתוכן הראשי
+          דלגו לתוכן הראשי
         </a>
         <div className="min-h-screen flex flex-col">
-          <Header />
+          {/* SiteChromeGate: /platform/* (pitch site) has its own shell. */}
+          <SiteChromeGate><Header /></SiteChromeGate>
           <main id="main-content" className="flex-1">
             {children}
           </main>
-          <Footer />
+          <SiteChromeGate><Footer /></SiteChromeGate>
         </div>
-        {/* Site-wide floating consultation + WhatsApp buttons (Leads workstream). */}
-        <ConsultationCTA variant="floating" source="site" />
+        {/* The site's single floating action (consultation, WhatsApp, ask). /platform/* has its own shell. */}
+        <SiteChromeGate><ConsultationCTA variant="floating" source="site" /></SiteChromeGate>
         <StructuredData
           data={{
             '@context': 'https://schema.org',
@@ -106,6 +120,7 @@ export default function RootLayout({
           }}
         />
         <Analytics />
+        <PageViewTracker />
       </body>
     </html>
   );

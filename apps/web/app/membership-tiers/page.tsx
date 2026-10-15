@@ -24,6 +24,7 @@ import {
 import ConsultationCTA from '@/components/leads/ConsultationCTA';
 import PlanLeadForm from '@/components/commerce/PlanLeadForm';
 import StructuredData from '@/components/StructuredData';
+import { YouTubeFacade } from '@/components/ui/YouTubeFacade';
 import { absoluteUrl } from '@/lib/site';
 import { onlinePaymentsEnabled } from '@/lib/payments';
 
@@ -98,18 +99,7 @@ export default async function MembershipTiersPage() {
               </a>
             </div>
           </div>
-          <div className="overflow-hidden rounded-3xl shadow-card-hover">
-            <div className="relative aspect-video bg-gray-900">
-              <iframe
-                src={`https://www.youtube-nocookie.com/embed/${HERO.youtubeId}?rel=0`}
-                title="בונים בית — מלווים אתכם עד המפתח"
-                loading="lazy"
-                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                className="absolute inset-0 h-full w-full"
-              />
-            </div>
-          </div>
+          <YouTubeFacade youtubeId={HERO.youtubeId} title="בונים בית — מלווים אתכם עד המפתח" poster={HERO.poster} priority className="shadow-card-hover" />
         </div>
       </section>
 
@@ -185,7 +175,7 @@ export default async function MembershipTiersPage() {
       <CtaBand
         title={
           <>
-            מצאתם את המסלול? <span className="text-secondary-300">בואו נתחיל.</span>
+            מצאתם את המסלול? <span className="text-primary-300">בואו נתחיל.</span>
           </>
         }
         text="בפגישת הייעוץ הקצרה נכיר אתכם, נלמד את דרישות הפרויקט, נבחן את התקציב, ונתאים יחד את מסלול הניהול שנכון לכם."

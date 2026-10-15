@@ -13,6 +13,23 @@
 | `NEXTAUTH_SECRET` | No | NextAuth.js secret for session encryption |
 | `ADMIN_EMAILS` | No | Comma-separated list of admin email addresses |
 
+### Content Autopilot (apps/web, see docs/platform/AUTOPILOT.md)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `CRON_SECRET` | Yes (for the cron) | Bearer secret for `/api/cron/youtube-watch`; Vercel Cron sends it automatically |
+| `YOUTUBE_CHANNEL_ID` | No | Channel to watch (default: the בונים בית channel) |
+| `PODCAST_RSS_URL` | No | Podcast RSS feed to watch too |
+| `AUTOPILOT_AUTO_PROCESS` | No | `true`: the cron also processes new videos (never publishes). Default `false` |
+| `AUTOPILOT_AUTO_PROCESS_LIMIT` | No | Videos per cron run, 1-5 (default 1) |
+| `AUTOPILOT_MAX_USD_PER_VIDEO` | No | Budget gate per processing run, USD (default 0.10) |
+| `AUTOPILOT_MONTHLY_BUDGET_USD` | No | Budget gate per rolling 30 days, USD (default 2) |
+| `AUTOPILOT_AUDIO_TRANSCRIPTION` | No | `true` enables OpenAI transcription of uploaded audio |
+| `AUTOPILOT_SEARCH` | No | `off` disables runtime search fusion (kill switch) |
+| `AUTOPILOT_SEARCH_TIMEOUT_MS` | No | Hard cap for the knowledge-store query in search (default 800) |
+
+Also uses `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY` and `ANTHROPIC_API_KEY`.
+
 ## Render (Backend - apps/api)
 
 | Variable | Required | Description |

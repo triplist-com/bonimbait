@@ -11,6 +11,7 @@ import { HONEYPOT_FIELD } from '@/lib/leads/constants';
 import { validateLead } from '@/lib/leads/schemas';
 import { isConstructionStage, isRegionSlug } from '@/lib/constants/community';
 import { whatsappLink } from '@/lib/directory/format';
+import { trackServer } from '@/lib/analytics/server';
 
 /**
  * Anti-scraping limits for the phone reveal, on top of submitLead's generic
@@ -108,6 +109,7 @@ async function handleLead(mode: Mode, formData: FormData): Promise<LeadFormState
   if (mode === 'contact' || !result.lead) return { status: 'contact_sent' };
 
   const contact = await revealBusinessContact(createAdminClient(), businessId);
+  await trackServer('phone_reveal', { business_id: businessId }, { ip, userId: user?.id ?? null });
   return {
     status: 'revealed',
     phone: contact?.phone ?? null,

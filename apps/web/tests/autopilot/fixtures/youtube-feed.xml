@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/" xmlns="http://www.w3.org/2005/Atom">
+ <link rel="self" href="http://www.youtube.com/feeds/videos.xml?channel_id=UCCehs0A1gUmOUtZIhvkXVJQ"/>
+ <id>yt:channel:Cehs0A1gUmOUtZIhvkXVJQ</id>
+ <yt:channelId>Cehs0A1gUmOUtZIhvkXVJQ</yt:channelId>
+ <title>בונים בית</title>
+ <link rel="alternate" href="https://www.youtube.com/channel/UCCehs0A1gUmOUtZIhvkXVJQ"/>
+ <author>
+  <name>בונים בית</name>
+  <uri>https://www.youtube.com/channel/UCCehs0A1gUmOUtZIhvkXVJQ</uri>
+ </author>
+ <published>2012-09-15T20:02:25+00:00</published>
+  <entry>
+  <id>yt:video:EeMos4VM2oU</id>
+  <yt:videoId>EeMos4VM2oU</yt:videoId>
+  <yt:channelId>UCCehs0A1gUmOUtZIhvkXVJQ</yt:channelId>
+  <title>חיפוי אבן פראית: כמה זה עולה ומה חשוב לבדוק בשטח?!</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=EeMos4VM2oU"/>
+  <author>
+   <name>בונים בית</name>
+   <uri>https://www.youtube.com/channel/UCCehs0A1gUmOUtZIhvkXVJQ</uri>
+  </author>
+  <published>2026-10-11T18:30:05+00:00</published>
+  <updated>2026-10-11T20:48:14+00:00</updated>
+  <media:group>
+   <media:title>חיפוי אבן פראית: כמה זה עולה ומה חשוב לבדוק בשטח?!</media:title>
+   <media:content url="https://www.youtube.com/v/EeMos4VM2oU?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i2.ytimg.com/vi/EeMos4VM2oU/hqdefault.jpg" width="480" height="360"/>
+   <media:description>📌 מתכננים לבנות בית? קבעו עכשיו פגישת ייעוץ חינמית לתכנון תקציב הבנייה שלכם » https://tinyurl.com/mry7yanj
+</media:description>
+   <media:community>
+    <media:starRating count="26" average="5.00" min="1" max="5"/>
+    <media:statistics views="4693"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:trfkU0TW8RI</id>
+  <yt:videoId>trfkU0TW8RI</yt:videoId>
+  <yt:channelId>UCCehs0A1gUmOUtZIhvkXVJQ</yt:channelId>
+  <title>איך מתקינים ויטרינת ענק של 270 ק&quot;ג בלי טעויות?</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=trfkU0TW8RI"/>
+  <author>
+   <name>בונים בית</name>
+   <uri>https://www.youtube.com/channel/UCCehs0A1gUmOUtZIhvkXVJQ</uri>
+  </author>
+  <published>2026-09-08T18:31:38+00:00</published>
+  <updated>2026-10-08T19:36:33+00:00</updated>
+  <media:group>
+   <media:title>איך מתקינים ויטרינת ענק של 270 ק&quot;ג בלי טעויות?</media:title>
+   <media:content url="https://www.youtube.com/v/trfkU0TW8RI?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i1.ytimg.com/vi/trfkU0TW8RI/hqdefault.jpg" width="480" height="360"/>
+   <media:description>📌 מתכננים לבנות בית? קבעו עכשיו פגישת ייעוץ חינמית לתכנון תקציב הבנייה שלכם » https://tinyurl.com/mry7yanj
+</media:description>
+   <media:community>
+    <media:starRating count="30" average="5.00" min="1" max="5"/>
+    <media:statistics views="3782"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:not-a-video</id>
+  <yt:videoId>bad</yt:videoId>
+  <title>entry with an invalid id</title>
+ </entry>
+</feed>

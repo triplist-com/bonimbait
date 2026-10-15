@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { searchRuntimeSegments } from '@/lib/autopilot/fusion';
 
 /** A transcript segment of a video (search-index.*). */
 export interface SegmentHit {
@@ -200,6 +201,11 @@ export async function semanticSearch(
   qn = Math.sqrt(qn) || 1;
   for (let i = 0; i < qvec.length; i++) qvec[i] /= qn;
 
+  // Content Autopilot: published runtime videos (pgvector), queried while the
+  // static rows are scored and fused into the same RRF below. Fail-open (~800 ms
+  // cap, [] when unconfigured or down); YouTube ids with static segments win.
+  const runtimeP = kinds.includes('video') ? searchRuntimeSegments(qvec, { staticMeta: idx.meta }) : Promise.resolve([]);
+
   const { matrix, norms, meta, dim, normText } = idx;
   const rows: number[] = [];
   for (let i = 0; i < meta.length; i++) if (kinds.includes(meta[i].kind)) rows.push(i);
@@ -216,20 +222,31 @@ export async function semanticSearch(
     cosScores[r] = { i, s: cos[i] };
     kwScores[r] = { i, s: weightedKeywordScore(normText[i], terms, idf) };
   }
+  // Runtime rows join the same rankings as virtual rows N..N+R-1 (same IDF weights).
+  const runtime = await runtimeP;
+  const N = meta.length;
+  runtime.forEach((h, j) => {
+    rows.push(N + j);
+    cosScores.push({ i: N + j, s: h.cos });
+    kwScores.push({ i: N + j, s: weightedKeywordScore(normalizeHebrewToken(h.text), terms, idf) });
+  });
   const cosRank = cosScores.sort((a, b) => b.s - a.s);
   // Many rows tie on keyword overlap; break ties by cosine, not by row order
   // (row order is alphabetical by YouTube id, which favoured arbitrary videos).
-  const kwRank = kwScores.sort((a, b) => b.s - a.s || (cos[b.i] ?? 0) - (cos[a.i] ?? 0));
+  const cosAt = (i: number) => (i < N ? cos[i] : runtime[i - N].cos);
+  const kwRank = kwScores.sort((a, b) => b.s - a.s || cosAt(b.i) - cosAt(a.i));
   const K = 60;
   const KW_WEIGHT = 1.5; // keyword signal is highly diagnostic for niche Hebrew queries
-  const rrf = new Float64Array(meta.length);
+  const rrf = new Float64Array(N + runtime.length);
   for (let r = 0; r < cosRank.length; r++) rrf[cosRank[r].i] += 1 / (K + r + 1);
   for (let r = 0; r < kwRank.length; r++) {
     if (kwRank[r].s > 0) rrf[kwRank[r].i] += KW_WEIGHT / (K + r + 1);
   }
 
   const merged = rows.slice().sort((a, b) => rrf[b] - rrf[a]);
-  return merged.slice(0, topK).map((i) => ({ ...meta[i], score: rrf[i], cos: cos[i] }) as SearchHit);
+  return merged
+    .slice(0, topK)
+    .map((i) => (i < N ? { ...meta[i], score: rrf[i], cos: cos[i] } : { ...runtime[i - N], score: rrf[i] }) as SearchHit);
 }
 
 /** Video segments only (the /api/search result list). */

@@ -7,6 +7,8 @@ import { getPublicDb } from '@/lib/content/db';
 import { listPublishedBusinesses } from '@/lib/db/businesses';
 import { businessHref } from '@/lib/directory/format';
 import { listingHref } from '@/lib/directory/listing';
+import { checkAiBudget, recordAiUsage } from '@/lib/guard/aiBudget';
+import { usageFromAnthropic } from '@/lib/guard/aiPricing';
 import type { ProsCta } from '@/lib/types';
 
 /**
@@ -62,7 +64,11 @@ const ClassifierOutput = z.object({
   specialty: z.number().int().describe('number from the list, or 0 for none'),
 });
 
-async function classifySpecialty(query: string, options: SpecialtyOption[]): Promise<SpecialtyOption | null> {
+async function classifySpecialty(
+  query: string,
+  options: SpecialtyOption[],
+  isDemo: boolean,
+): Promise<SpecialtyOption | null> {
   const list = options.map((o, i) => `${i + 1}. ${o.name}`).join('\n');
   const client = new Anthropic({ timeout: 20_000, maxRetries: 1 });
   const response = await client.messages.parse({
@@ -73,6 +79,7 @@ async function classifySpecialty(query: string, options: SpecialtyOption[]): Pro
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: `Specialties:\n${list}\n\nQuestion: ${query}` }],
   });
+  await recordAiUsage({ route: 'pros_classifier', model: CLASSIFIER_MODEL, usage: usageFromAnthropic(response.usage), isDemo });
   if (response.stop_reason === 'refusal') return null;
   const picked = response.parsed_output?.specialty ?? 0;
   return options[picked - 1] ?? null;
@@ -82,13 +89,15 @@ async function classifySpecialty(query: string, options: SpecialtyOption[]): Pro
  * Specialty + up to three published pros for the question, or null when no
  * specialty fits. Never throws: the CTA is optional, the answer is not.
  */
-export async function matchPros(query: string): Promise<ProsCta | null> {
+export async function matchPros(query: string, opts: { isDemo?: boolean } = {}): Promise<ProsCta | null> {
   try {
     const db = getPublicDb();
     if (!db || !process.env.ANTHROPIC_API_KEY) return null;
+    // Over the daily AI budget (or AI switched off): skip the optional CTA.
+    if (!(await checkAiBudget()).ok) return null;
     const options = await listActiveSpecialties();
     if (options.length === 0) return null;
-    const specialty = await classifySpecialty(query, options);
+    const specialty = await classifySpecialty(query, options, Boolean(opts.isDemo));
     if (!specialty) return null;
 
     const { items } = await listPublishedBusinesses(db, { specialtyId: specialty.id, pageSize: MAX_PROS });

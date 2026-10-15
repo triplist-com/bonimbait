@@ -14,6 +14,7 @@ import RatingBadge from '@/components/directory/RatingBadge';
 import Gallery from '@/components/directory/Gallery';
 import { ContactBusinessForm, ShowPhoneButton } from '@/components/directory/ContactLead';
 import { ReviewList, ScoreSummary } from '@/components/directory/Reviews';
+import TrackEvent from '@/components/analytics/TrackEvent';
 
 // Public data only (no cookies), so profiles are cached and refreshed every 5 minutes.
 export const revalidate = 300;
@@ -282,6 +283,10 @@ export default async function BusinessPage({ params }: Props) {
       </div>
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structured) }} />
+      <TrackEvent
+        name="pro_profile_view"
+        props={{ business_id: business.id, business_slug: business.slug, specialty: specialties[0]?.name }}
+      />
     </div>
   );
 }

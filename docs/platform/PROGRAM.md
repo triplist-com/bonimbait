@@ -62,6 +62,44 @@ interaction becomes a qualified, routed, measurable lead for the owner's service
 | P6 | **Growth Engine** | A budget planner as the lead magnet, feeding the ₪6,900 plan and the free consultation. Plus programmatic SEO (specialty × region), and video key moments and FAQ rich results. | More organic traffic and more consultations booked. |
 | F | **Foundation** | Owner-brand design system, speed, URL parity, Hebrew admin, analytics, security. | Zero-risk switch, no WordPress/Elementor/Zapier upkeep. |
 
+### 3.1 Strategy update (2026-10-14): this overrides the table above where they differ
+
+**One line.** An advisor and a personal workspace that turn every builder's question into a **project file** for
+the owner's consult team and partners.
+
+**The money link (Must, every squad):**
+- Every lead has a human-readable ID (e.g. `BB-26-000123`) that shows in the admin and the Command Center.
+- Every consult booking carries a project file: Calendly prefill or a native booking.
+- Every partner exposure, click and lead is attributable.
+
+| Pillar | Priority | Hebrew name | Key changes | Demo wow moment |
+|---|---|---|---|---|
+| P1 Advisor | **Must** | Config `NEXT_PUBLIC_ADVISOR_NAME`. Default "שאלו את בונים בית"; "שאלו את תומר" waits for the owner's approval. | Cite and **play the exact moment**. Up to 3 follow-ups. Lead moments for consult, budget planner, pros and partner offers. Put a date on cost answers ("נכון ל-2026"). Refuse questions outside the library. "שתפו בוואטסאפ". Could: `/embed/advisor`. | On a phone: "כמה עולה שלד לבית של 200 מ״ר ב-2026?" streams the owner's own figure (~₪800K) and plays the podcast at the exact second. Then follow-up chips and "תקציב ראשוני ב-3 דקות". |
+| P2 Hub | **Must** | הבית שלי · תיק פרויקט | Use the owner's **7 stages**: רכישה · תכנון · היתר/מכרז · שלד · תשתיות · גמרים · אכלוס. Onboarding follows "מיפוי מצב → מפת דרך אישית → ליווי" in ≤ 5 fields (region, stage, m², budget, timeline). The output is a **scored project file**. Free forever. | 60-second onboarding → personal roadmap with videos per stage and "מה עושים השבוע" → book a consult → the file sits in the consult queue with its score. |
+| P3 Revenue | **Must** | מנוע ההכנסות · פורטל השותפים · דוח שותף | Partner tiers use the owner's names, **חברים / שותפים / שגרירים**. Prices are admin-editable; seed them from his public /strategic-partners/ page. **Viewable impression:** ≥50% visible for ≥1s while the user was active in the last 60s, with a 30-minute dedup. Attribution is last-click within 4 hours. Add **intent attribution**: category questions, shortlists and quote requests, by stage and region. Leads route to the owner's inbox by default, with rules per partner. | A partner report for a fictional "חלונות הגליל": exposures → builders asking about windows → quote requests → deals. An automated case study, for every partner, every month. |
+| P4 Command | **Must** for the demo / **Should** with real data | חדר הבקרה | Six tiles: pipeline ₪, consults booked, plan mix, top leads by score, partner health, AI usage. Two lists: hot leads, and **"השאלות שעוד לא עניתם עליהן"** (questions with weak sources become the next videos). | "Your audience asked 46 times about X and you have no video on it: these are your next 10 videos." |
+| P5 Autopilot | **Should** (one video end to end is a Must) | טייס אוטומטי לתוכן | Uploaded video → RSS detection → captions → chapters and key moments → draft page → one-click approve → answerable within the hour. | "Uploaded at 9:00; at 9:40 it has a page, chapters, and the advisor quotes it." |
+| P6 Growth | Planner **Must** · Video Clip markup **Should** · programmatic SEO pages **Won't** · FAQ rich results **Won't** | תקציב ראשוני ב-3 דקות | Recalibrate the planner. The ₪7,000/m² constant is stale; the owner's 2026 figure is 12–14K ₪/m² for planning plus build, ex-VAT, with the shell ≈ ₪800K for 200 m². Admin-editable price book. Output a ±15% range by stage, plus three "פה הכי קל לחרוג" video moments. CTA: free consult → "דיוק של 3%–5%" (the בונים תקציב plan). | A branded estimate the owner would be proud to send, with one-tap consult booking and the project file attached. |
+| **P7 Bonim.Os** | **Should** (demo-grade, plus a real "project manager" role over assigned clients) | Bonim.Os · מערכת הליווי ללקוחות הניהול | The Hub's managed-client mode: budget vs actual (versions), milestones, payment-approval log, documents, site-photo feed. **Won't:** live camera, e-signatures. | A managed project, live, in the owner's brand. |
+| F Foundation | **Must** | מעבר בלי סיכון | Owner brand, mobile-first, LCP < 2.5s on key pages, parity 1214/1214. Should: a token-scoped admin API (posts, media, videos) so the owner's AI agents can publish. | The parity report, and old vs new speed side by side. |
+
+**Demo rules.**
+- The demo order is P1 → P6 → P2 → P4 → P3 → P7 → P5 → F.
+- Builder screens use real content.
+- Leads, partners and pipeline use fixtures only, under "תצוגת הדגמה · נתונים לדוגמה".
+- Everything must work at 390px.
+
+**Copy rules.**
+- Tomer's voice: practical, "מהשטח", warm, direct. Plural imperative.
+- No hype words.
+- No "AI" in builder-facing headlines; say "תשובה מהשטח". "בינה מלאכותית" is fine in small print.
+- Keep the hero "אתכם עד המפתח".
+- Numbers stay LTR. Cost figures are dated.
+
+**WhatsApp.**
+- Share buttons on answers and planner results are a Must.
+- An advisor inside WhatsApp is a Won't for this program; it needs a WhatsApp Business API account.
+
 ## 4. Team and waves
 
 The orchestrator runs each wave's agents in parallel. A wave starts after the previous wave is
@@ -78,10 +116,11 @@ merged into `feature/platform` and passes the gates.
 | B | `hub` | P2 | 3112 |
 | B | `revenue` | P3 | 3113 |
 | B | `command` | P4 | 3114 |
-| B | `growth` | P6 | 3115 |
+| B | `growth` | P6 (budget planner + video Clip markup; no programmatic SEO) | 3115 |
 | B | `pitch`: Sales Experience | `/platform/` pitch site + guided demo tour; sales kit in `sales/` | 3116 |
 | C | `qa` | E2E, parity, Lighthouse, a11y, security, cost guard | 3121 |
 | C | `polish` | Cross-site visual consistency pass, the "wow" details | 3122 |
+| C | `bonimos` | P7 Bonim.Os: the hub's managed-client mode, demo-grade plus the project-manager role | 3123 |
 
 ## 5. Rules of engagement (all squads)
 
@@ -202,6 +241,48 @@ Use timestamps inside your range.
 ### Navigation
 - Site and admin navigation are config-driven: `lib/nav.ts` and `lib/admin/nav.ts`, created in Wave A.
 - To add an entry, add one config line.
+
+### Project file contract (the money link)
+
+The project file is how every lead and consult booking carries context. Three Wave B squads produce data
+for it and one squad assembles it, so the shape is fixed here and everyone builds against it in parallel.
+
+```ts
+// lib/project-file/types.ts — owned by `revenue`; others import the type only.
+// Stages are the owner's 7, ids from lib/stages.ts (BuildStage['id']):
+// purchase | planning | permit | frame | infrastructure | finishing | moving-in.
+export interface ProjectFile {
+  version: 1;
+  stage?: BuildStage['id'];          // import type { BuildStage } from '@/lib/stages'
+  regionSlug?: string;               // regions.slug (14 canonical)
+  sizeM2?: number;
+  budgetRangeNis?: [number, number]; // whole shekels
+  targetMoveIn?: string;             // ISO month, e.g. '2027-09'
+  questions?: { q: string; at: string }[];  // last ≤ 10 advisor questions
+  plannerEstimate?: { totalMin: number; totalMax: number; at: string; inputs: Record<string, unknown> };
+  savedCount?: number;
+  shortlistBusinessIds?: string[];
+  source?: { utm?: Record<string, string>; landing?: string; lastTouch?: string };
+}
+```
+
+Client-side producers write a snapshot to `localStorage` (anonymous visitors), with the server as the source of truth for members:
+
+| Key | Writer | Content |
+|---|---|---|
+| `bb.advisor.recent` | advisor | `{ q, at }[]`, the last 10 questions |
+| `bb.planner.last` | growth | `plannerEstimate` |
+| `bb.hub.draft` | hub | the onboarding answers (stage, regionSlug, sizeM2, budgetRangeNis, targetMoveIn) |
+| `bb.shortlist` | hub | business ids |
+
+`revenue` builds the rest of the chain:
+- `collectProjectFile()`, which merges the client snapshots, plus the hub project for signed-in members;
+- the scoring (0–100, with reasons);
+- storage in `leads.payload.project_file`;
+- the consult booking flow, which:
+  - creates a `consultation` lead with the file **before** opening the Calendly embed;
+  - prefills Calendly name and email and passes the lead's short ID in `utm_content`;
+  - listens for Calendly's `calendly.event_scheduled` postMessage and marks the lead booked.
 
 ### Owner brand
 - The owner's brand is magenta (≈ `#E6195B`; the live Calendly embed uses `#fc3565`), black and white, with photos of Tomer and podcast art.

@@ -16,6 +16,7 @@ export default function robots(): MetadataRoute.Robots {
           '/checkout/',
           '/partner-portal/',
           '/partner-portal-2/',
+          '/platform/', // pitch site and demo views (also noindex)
           // WordPress leftovers that no longer exist.
           '/wp-admin/',
           '/wp-login.php',
