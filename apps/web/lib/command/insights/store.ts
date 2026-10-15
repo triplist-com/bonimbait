@@ -1,8 +1,9 @@
 import 'server-only';
 
 import { getVideo } from '@/app/api/_lib/data';
-import { semanticSearch } from '@/app/api/_lib/semantic';
+import { semanticSearch, type SearchHit } from '@/app/api/_lib/semantic';
 import { embedTexts } from '@/lib/autopilot/embed';
+import { isTitleOnly } from '@/lib/knowledge/segment-text';
 import { checkAiBudget, recordAiUsage } from '@/lib/guard/aiBudget';
 import type { Json } from '@/lib/db/types';
 import { commandServiceDb, type CommandDb } from '../db';
@@ -135,6 +136,28 @@ export const resolveDoc: DocResolver = (hit) => {
   return v ? { title: v.title, href: videoHref(hit.youtube_id, hit.start_time) } : null;
 };
 
+/**
+ * Hits deep enough that, after title-only rows are dropped, a probe still has
+ * its top documents.
+ */
+export const SEARCH_DEPTH = 60;
+
+/**
+ * Search hits -> coverage probes. Title-only rows (videos without captions,
+ * indexed by title alone: lib/knowledge/segment-text.ts) are skipped: a title
+ * that matches the question says nothing about whether the video answers it,
+ * and counting it would hide a real gap.
+ */
+export function probeHitsFrom(hits: readonly SearchHit[]): ProbeHit[] {
+  return hits
+    .filter((h) => !isTitleOnly(h))
+    .map((h): ProbeHit =>
+      h.kind === 'video'
+        ? { kind: 'video', youtube_id: h.youtube_id, start_time: h.start_time, cos: h.cos }
+        : { kind: 'post', slug: h.slug, title: h.title, cos: h.cos },
+    );
+}
+
 /** Production dependencies: the real search, OpenAI embeddings, Claude, the AI budget and the DB. */
 export function productionInsightsDeps(): InsightsDeps {
   return {
@@ -154,12 +177,8 @@ export function productionInsightsDeps(): InsightsDeps {
       return { vectors: result.vectors, tokens: result.usage.input_tokens ?? 0 };
     },
     async search(query, vector) {
-      const hits = await semanticSearch(query, 30, ['video', 'post'], { queryVector: vector });
-      return hits.map((h): ProbeHit =>
-        h.kind === 'video'
-          ? { kind: 'video', youtube_id: h.youtube_id, start_time: h.start_time, cos: h.cos }
-          : { kind: 'post', slug: h.slug, title: h.title, cos: h.cos },
-      );
+      const hits = await semanticSearch(query, SEARCH_DEPTH, ['video', 'post'], { queryVector: vector });
+      return probeHitsFrom(hits);
     },
     resolve: resolveDoc,
     label: (clusters, timeoutMs) => labelClusters(clusters, { timeoutMs }),
