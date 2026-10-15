@@ -24,7 +24,7 @@ New records:
   kind                             video | podcast | live (channel inventory)
 
 Run after build_search_index.py --embed-only (the centroids need the vectors):
-  scripts/.venv/bin/python -m scripts.knowledge.build_catalog --base feature/platform [--dry-run]
+  scripts/.venv/bin/python -m scripts.knowledge.build_catalog --base 095a3d5 [--dry-run]   (095a3d5: the 2026-03 catalog of 200)
 """
 
 from __future__ import annotations

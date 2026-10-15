@@ -47,7 +47,7 @@ def legacy_pages() -> list[dict]:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--before", default="feature/platform", help="git revision of the before state")
+    ap.add_argument("--before", default="095a3d5", help="git revision of the before state (095a3d5: the program start, the 2026-03 index)")
     args = ap.parse_args()
 
     inv = json.loads(inventory_path().read_text(encoding="utf-8"))

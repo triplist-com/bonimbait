@@ -117,9 +117,9 @@ $P -m scripts.knowledge.build_segments
 $P scripts/build_search_index.py --dry-run
 $P scripts/build_search_index.py --embed-only --max-cost 0.50
 # 4. catalog (rebuilt from the base revision, so every added record is re-decided)
-$P -m scripts.knowledge.build_catalog --base feature/platform
+$P -m scripts.knowledge.build_catalog --base 095a3d5
 $P -m scripts.knowledge.summarize --dry-run          # then without --dry-run (batch)
-$P -m scripts.knowledge.build_catalog --base feature/platform   # merges the AI summaries
+$P -m scripts.knowledge.build_catalog --base 095a3d5   # merges the AI summaries
 # 5. index
 $P scripts/build_search_index.py
 # 6. numbers, quality, load time
