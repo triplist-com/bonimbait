@@ -1,5 +1,22 @@
 # AI search coverage of legacy content (Wave 2 analysis)
 
+> **Update 2026-10-14 (platform `knowledge` squad).** The whole channel has been inventoried and
+> every video with Hebrew captions is now indexed. Current numbers, method and quality check:
+> [`docs/platform/KNOWLEDGE_COVERAGE.md`](platform/KNOWLEDGE_COVERAGE.md). What changed against
+> this analysis:
+> - The "none" caption status is **not** an artefact of the 2026-03 rate limits.
+>   - The re-probe ran sequentially at about 250 videos an hour with yt-dlp 2026.08.19 and
+>     had no blocks.
+>   - A second player client (`web`) confirmed the result: it sees no caption tracks for these
+>     videos, while it does see the (PO-token-gated) tracks of captioned ones.
+>   - Every uncaptioned video has **no video language set** on YouTube. Every auto-captioned one
+>     is set to Hebrew.
+>   - So the cheapest fix is probably free: set "Video language: Hebrew" in YouTube Studio (a
+>     bulk edit), then re-run `scripts/knowledge/fetch_captions.py --recheck-none`.
+> - Posts are indexed (5,233 chunks, see section 2), as recommended below.
+>
+> The rest of this page is the original analysis.
+
 This is an analysis only. No paid API calls or embeddings were run; the orchestrator decides in Wave 3.
 - Reproduce with `scripts/.venv/bin/python scripts/migrate/search_coverage.py`.
 - The per-video detail is in `data/migration/search_coverage.json`.

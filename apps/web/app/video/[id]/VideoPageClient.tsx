@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import VideoPlayer from '@/components/VideoPlayer';
@@ -28,9 +28,13 @@ function VideoContent({ initialVideo, initialRelated }: InitialData) {
   const [openTranscript, setOpenTranscript] = useState(false);
   const [playerTime, setPlayerTime] = useState(0);
   const [playRequested, setPlayRequested] = useState(false);
+  const playerRef = useRef<HTMLDivElement>(null);
+  // Jump to a moment (chapter / key point): play from it and bring the player into view.
   const seek = (seconds: number) => {
     setPlayerTime(seconds);
     setPlayRequested(true);
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    playerRef.current?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
   };
 
   // Deep link (?t=157, from an AI answer): read after mount, not via
@@ -123,13 +127,15 @@ function VideoContent({ initialVideo, initialRelated }: InitialData) {
         </nav>
 
         {/* Video Player */}
-        <VideoPlayer
-          youtubeId={video.youtube_id}
-          title={video.title}
-          startTime={playerTime}
-          playing={playRequested}
-          poster={video.thumbnail_url}
-        />
+        <div ref={playerRef}>
+          <VideoPlayer
+            youtubeId={video.youtube_id}
+            title={video.title}
+            startTime={playerTime}
+            playing={playRequested}
+            poster={video.thumbnail_url}
+          />
+        </div>
 
         {/* Video Info */}
         <div className="mt-6 mb-8">
@@ -171,6 +177,35 @@ function VideoContent({ initialVideo, initialRelated }: InitialData) {
           variant="full"
           onTimestampClick={seek}
         />
+
+        {/* Chapters from the YouTube description */}
+        {video.chapters && video.chapters.length > 0 && (
+          <section
+            aria-labelledby="chapters-heading"
+            className="bg-white border border-ink-100 rounded-2xl p-5 mb-5 shadow-card"
+          >
+            <h2 id="chapters-heading" className="text-title-sm text-ink-900 mb-3">
+              פרקים בסרטון
+            </h2>
+            <ol className="space-y-1 max-h-96 overflow-y-auto">
+              {video.chapters.map((ch) => (
+                <li key={ch.start_time}>
+                  <button
+                    type="button"
+                    onClick={() => seek(ch.start_time)}
+                    className="w-full flex items-start gap-3 py-2 px-3 rounded-xl hover:bg-primary-50 focus-visible:bg-primary-50 transition-colors text-start"
+                    aria-label={`דלגו לדקה ${formatTimestamp(ch.start_time)}: ${ch.title}`}
+                  >
+                    <span dir="ltr" className="text-xs text-primary-700 font-mono font-medium mt-0.5 flex-shrink-0">
+                      {formatTimestamp(ch.start_time)}
+                    </span>
+                    <span className="text-sm text-ink-800 leading-relaxed">{ch.title}</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
 
         {/* Transcript Accordion */}
         {video.segments && video.segments.length > 0 && (

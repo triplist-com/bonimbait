@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getVideo } from '../../_lib/data';
+import { keyPointsWithTimes, videoChapters } from '@/lib/knowledge/video-detail';
 
 export async function GET(
   _request: NextRequest,
@@ -25,9 +26,9 @@ export async function GET(
     thumbnail_url: video.thumbnail_url,
     view_count: video.view_count,
     summary: video.summary || undefined,
-    key_points: video.key_points?.length
-      ? video.key_points.map((text) => ({ text }))
-      : undefined,
+    key_points: keyPointsWithTimes(video),
+    chapters: videoChapters(video),
+    kind: video.kind,
     costs_data: video.costs?.length
       ? video.costs.map((c) => ({
           item: c.item,
