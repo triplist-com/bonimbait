@@ -120,29 +120,8 @@ export interface MatchedPro {
 export interface ProsCta {
   specialty: { slug: string; name: string; href: string };
   pros: MatchedPro[];
-}
-
-export interface AnswerResponse {
-  answer: string;
-  sources: AnswerSource[];
-  confidence: 'high' | 'medium' | 'low';
-}
-
-export interface PregeneratedAnswer {
-  answer: string;
-  sources: Array<{
-    video_id?: string;
-    youtube_id?: string;
-    title?: string;
-    timestamp?: number;
-  }>;
-  key_points: string[];
-  costs_data: Array<Record<string, unknown>>;
-  tips: string[];
-  warnings: string[];
-  confidence: number;
-  query: string;
-  pregenerated: boolean;
+  /** The visitor's region when the list was narrowed to it (advisor, region-aware pros). */
+  region?: { slug: string; name: string } | null;
 }
 
 // --- Pagination ---

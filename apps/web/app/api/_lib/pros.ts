@@ -85,11 +85,26 @@ async function classifySpecialty(
   return options[picked - 1] ?? null;
 }
 
+/** A region by slug (cached with the specialties' TTL). */
+const regionCache = new Map<string, { at: number; row: { id: string; slug: string; name: string } | null }>();
+async function findRegion(slug: string): Promise<{ id: string; slug: string; name: string } | null> {
+  const hit = regionCache.get(slug);
+  if (hit && Date.now() - hit.at < SPECIALTY_TTL_MS) return hit.row;
+  const db = getPublicDb();
+  if (!db) return null;
+  const { data } = await db.from('regions').select('id, slug, name').eq('slug', slug).eq('is_nationwide', false).maybeSingle();
+  regionCache.set(slug, { at: Date.now(), row: data ?? null });
+  return data ?? null;
+}
+
 /**
  * Specialty + up to three published pros for the question, or null when no
- * specialty fits. Never throws: the CTA is optional, the answer is not.
+ * specialty fits. With `regionSlug` (the visitor's region, from their project
+ * file) the list prefers pros who work there, nationwide ones included, and
+ * falls back to everyone when the region has none. Never throws: the CTA is
+ * optional, the answer is not.
  */
-export async function matchPros(query: string, opts: { isDemo?: boolean } = {}): Promise<ProsCta | null> {
+export async function matchPros(query: string, opts: { isDemo?: boolean; regionSlug?: string } = {}): Promise<ProsCta | null> {
   try {
     const db = getPublicDb();
     if (!db || !process.env.ANTHROPIC_API_KEY) return null;
@@ -100,13 +115,19 @@ export async function matchPros(query: string, opts: { isDemo?: boolean } = {}):
     const specialty = await classifySpecialty(query, options, Boolean(opts.isDemo));
     if (!specialty) return null;
 
-    const { items } = await listPublishedBusinesses(db, { specialtyId: specialty.id, pageSize: MAX_PROS });
+    const region = opts.regionSlug ? await findRegion(opts.regionSlug) : null;
+    let { items } = region
+      ? await listPublishedBusinesses(db, { specialtyId: specialty.id, regionId: region.id, pageSize: MAX_PROS })
+      : await listPublishedBusinesses(db, { specialtyId: specialty.id, pageSize: MAX_PROS });
+    const inRegion = Boolean(region) && items.length > 0;
+    if (region && items.length === 0) ({ items } = await listPublishedBusinesses(db, { specialtyId: specialty.id, pageSize: MAX_PROS }));
     if (items.length === 0) return null;
     return {
+      region: inRegion && region ? { slug: region.slug, name: region.name } : null,
       specialty: {
         slug: specialty.slug,
         name: specialty.name,
-        href: listingHref({ specialty: specialty.slug }),
+        href: listingHref(inRegion && region ? { specialty: specialty.slug, region: region.slug } : { specialty: specialty.slug }),
       },
       pros: items.map((b) => ({
         slug: b.slug,

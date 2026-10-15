@@ -111,7 +111,7 @@ export default function RuntimeVideoPage({ video, related }: { video: RuntimeVid
           />
         </Suspense>
 
-        <AskAboutVideo questions={s.suggested_questions} />
+        <AskAboutVideo questions={s.suggested_questions} youtubeId={video.youtube_id} />
 
         <div className="mt-12">
           <ConsultationCTA variant="card" source="video-page" />

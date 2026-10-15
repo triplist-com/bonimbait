@@ -25,7 +25,7 @@ export const DEMO_VIEWS: readonly DemoView[] = [
     pillar: 'P1',
     title: 'היועץ החכם',
     description: 'שיחה בעברית שמבוססת על הסרטונים, המאמרים והפודקאסטים, מנגנת את הרגע המדויק בסרטון ומציעה את השאלה הבאה.',
-    status: 'planned',
+    status: 'ready',
   },
   {
     slug: 'hub',

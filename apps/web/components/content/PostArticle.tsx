@@ -14,6 +14,7 @@ import ArticleBody from './ArticleBody';
 import Breadcrumbs from './Breadcrumbs';
 import CommunityCTA from './CommunityCTA';
 import ConsultationCTA from '@/components/leads/ConsultationCTA';
+import AskAbout from '@/components/advisor/AskAbout';
 import SaveButton from '@/components/hub/SaveButton';
 import { isEnabled } from '@/lib/flags';
 import { PostGrid } from './PostCard';
@@ -126,6 +127,7 @@ export default async function PostArticle({ post }: { post: PostRow }) {
           <div className="min-w-0 max-w-3xl">
             <TocInline items={toc} />
             <ArticleBody html={html} />
+            <AskAbout kind="post" id={post.slug} className="mt-12" />
             <div className="mt-12">
               <ConsultationCTA variant="card" source="post-footer" />
             </div>

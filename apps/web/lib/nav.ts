@@ -105,14 +105,14 @@ export function advisorName(env: string | undefined = process.env.NEXT_PUBLIC_AD
 }
 
 /**
- * The advisor entry. Today it is the AI search page; the advisor squad
- * (Wave B) points it at /ask/ by changing `href` here. Builder-facing copy
- * says "תשובה מהשטח", not "AI".
+ * The advisor entry: /ask/ (the advisor squad's page; /search/ keeps the
+ * results grid with a short answer preview). Builder-facing copy says
+ * "תשובה מהשטח", not "AI".
  */
 export const AI_ENTRY = {
   label: advisorName(),
   shortLabel: 'שאלו',
-  href: '/search/',
+  href: '/ask/',
   queryParam: 'q',
 } as const;
 
