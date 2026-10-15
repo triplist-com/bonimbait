@@ -270,6 +270,18 @@ drop policy if exists "owner delete" on public.partner_deals;
 create policy "owner delete" on public.partner_deals
   for delete to authenticated using (public.revenue_owns_business(business_id));
 
+-- Public badges: which published business is on which tier. Subscriptions
+-- themselves stay private (price, provider, dates); this view exposes only
+-- what every visitor sees on a business card. Owner-privileged like
+-- whatsapp_groups_public, so it works for anonymous ISR pages.
+create or replace view public.partner_badges as
+  select s.business_id, t.slug as tier_slug, t.name as tier_name, t.badge_label, t.rank
+  from public.partner_subscriptions s
+  join public.partner_tiers t on t.id = s.tier_id
+  join public.businesses b on b.id = s.business_id
+  where s.status in ('active', 'past_due') and t.is_active and b.status = 'published';
+
+grant select on public.partner_badges to anon, authenticated;
 grant select on public.partner_tiers, public.partner_campaigns to anon, authenticated;
 grant select on public.partner_subscriptions to authenticated;
 grant select, insert, update, delete on public.partner_deals to authenticated;

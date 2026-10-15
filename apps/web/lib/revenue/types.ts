@@ -181,7 +181,12 @@ export type RevenueDatabase = {
       partner_deals: Table<PartnerDealRow, Pick<PartnerDealRow, 'business_id'> & Partial<PartnerDealRow>>;
       lead_routing_rules: Table<LeadRoutingRuleRow, Pick<LeadRoutingRuleRow, 'name' | 'target'> & Partial<LeadRoutingRuleRow>>;
     };
-    Views: Shared['Views'];
+    Views: Shared['Views'] & {
+      partner_badges: {
+        Row: { business_id: string; tier_slug: string; tier_name: string; badge_label: string; rank: number };
+        Relationships: [];
+      };
+    };
     Functions: Shared['Functions'] & {
       revenue_business_metrics: {
         Args: { p_business_id: string; p_from: string; p_to: string; p_patterns?: string[] };

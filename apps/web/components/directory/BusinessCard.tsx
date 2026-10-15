@@ -7,6 +7,8 @@ import { listingHref } from '@/lib/directory/listing';
 import { buttonClasses } from '@/components/ui/Button';
 import BusinessLogo from './BusinessLogo';
 import RatingBadge from './RatingBadge';
+import PartnerTierBadge from '@/components/revenue/PartnerTierBadge';
+import type { PartnerBadge } from '@/lib/revenue/tiers';
 
 const MAX_REGIONS = 4;
 
@@ -15,11 +17,14 @@ export default function BusinessCard({
   specialties,
   regions,
   stats,
+  badge,
 }: {
   business: DirectoryEntry;
   specialties: Map<string, SpecialtyRow>;
   regions: Map<string, RegionRow>;
   stats: BusinessReviewStatsRow | undefined;
+  /** Partner tier badge (revenue squad). */
+  badge?: PartnerBadge | null;
 }) {
   const href = businessHref(business.slug);
   // Primary specialty first, as on the live cards.
@@ -44,8 +49,9 @@ export default function BusinessCard({
               {business.name}
             </Link>
           </h2>
-          <div className="mt-1">
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
             <RatingBadge percent={stats?.rating_percent} count={stats?.review_count ?? 0} />
+            <PartnerTierBadge badge={badge} />
           </div>
         </div>
       </div>
