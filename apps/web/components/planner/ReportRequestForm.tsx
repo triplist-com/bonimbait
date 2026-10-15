@@ -5,6 +5,7 @@
  * `budget_report` lead carrying the estimate (lib/planner/actions.ts).
  */
 import { useFormState, useFormStatus } from 'react-dom';
+import Script from 'next/script';
 import { CircleCheck, Send } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
@@ -12,6 +13,9 @@ import { Input } from '@/components/ui/Input';
 import { HONEYPOT_FIELD } from '@/lib/leads/constants';
 import { requestBudgetReport } from '@/lib/planner/actions';
 import { INITIAL_REPORT_REQUEST } from '@/lib/planner/report-request';
+
+// Same anti-spam as components/leads/LeadForm.tsx: the widget only when Turnstile is configured.
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
 function Submit() {
   const { pending } = useFormStatus();
@@ -63,6 +67,12 @@ export default function ReportRequestForm({ query }: { query: string }) {
         <Input name="full_name" autoComplete="name" />
       </Field>
       <Submit />
+      {TURNSTILE_SITE_KEY && (
+        <div className="sm:col-span-3">
+          <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
+          <div className="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY} data-language="he" />
+        </div>
+      )}
       {formError && (
         <p role="alert" className="text-body-sm text-danger-700 sm:col-span-3">
           {formError}

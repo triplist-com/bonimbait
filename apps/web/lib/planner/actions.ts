@@ -13,7 +13,7 @@ import { getUser } from '@/lib/auth/session';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { submitLead } from '@/lib/leads/submit';
 import { clientIpFromHeaders } from '@/lib/leads/spam';
-import { HONEYPOT_FIELD } from '@/lib/leads/constants';
+import { HONEYPOT_FIELD, TURNSTILE_FIELD } from '@/lib/leads/constants';
 import { estimateBudget } from './engine';
 import { loadPriceBook } from './price-book';
 import { isCompleteInput, parsePlannerQuery, plannerQuery } from './prefill';
@@ -57,7 +57,7 @@ export async function requestBudgetReport(_prev: ReportRequestState, fd: FormDat
     sourceUrl: reportPath,
     memberId,
     ip: clientIpFromHeaders(headers()),
-    spam: { honeypot: fd.get(HONEYPOT_FIELD) },
+    spam: { honeypot: fd.get(HONEYPOT_FIELD), turnstileToken: fd.get(TURNSTILE_FIELD) },
   });
 
   if (!result.ok) {
