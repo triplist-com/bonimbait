@@ -67,7 +67,7 @@ export default async function DigestPage({ searchParams }: { searchParams: { dem
         title="תצוגה מקדימה של המייל השבועי"
         srcDoc={digest.html}
         sandbox=""
-        className="h-[1500px] w-full rounded-2xl border border-ink-100 bg-white shadow-card"
+        className="h-[1180px] w-full rounded-2xl border border-ink-100 bg-white shadow-card"
       />
     </div>
   );

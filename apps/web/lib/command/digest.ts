@@ -87,7 +87,13 @@ export function buildDigest(
     ? `<p style="margin:0 0 6px;font-size:14px;color:${ink[900]};">${atRisk
         .map((p) => `<span style="color:${p.status === 'at_risk' ? danger[700] : warning[700]};font-weight:700;">${escapeHtml(PARTNER_STATUS_LABELS[p.status])}:</span> ${escapeHtml(p.name)}${p.pace != null ? ` (<span dir="ltr">${Math.round(p.pace * 100)}%</span> מהיעד)` : ''}`)
         .join('<br>')}</p>`
-    : `<p style="margin:0;font-size:14px;color:${ink[700]};">${data.partners.rows.length ? 'כל השותפים בקצב.' : 'עוד אין נתוני שותפים.'}</p>`;
+    : `<p style="margin:0;font-size:14px;color:${ink[700]};">${
+        data.partners.rows.length === 0
+          ? 'עוד אין נתוני שותפים.'
+          : data.partners.rows.every((r) => r.status === 'no_tier')
+            ? `<span dir="ltr">${escapeHtml(formatCount(data.partners.impressions.current))}</span> חשיפות נצפות השבוע. עוד אין מסלולי שותפים מוגדרים, אז אין יעד להשוות אליו.`
+            : 'כל השותפים בקצב.'
+      }</p>`;
 
   const capColor = data.ai.capStatus === 'reached' ? danger[700] : data.ai.capStatus === 'near' ? warning[700] : success[700];
   const capText = data.ai.capStatus === 'reached' ? 'הגיע לתקרה' : data.ai.capStatus === 'near' ? 'קרוב לתקרה' : data.ai.capStatus === 'off' ? 'כבוי' : 'בטווח התקרה';

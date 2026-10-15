@@ -54,7 +54,8 @@ export const saveExpectedValues = adminAction('admin', async ({ db, profile }, f
   }
   revalidatePath('/admin/');
   revalidatePath('/admin/insights/pipeline/');
-  return { ok: true, message: upserts.length ? `נשמר. ${upserts.length} ערכים שונים מברירת המחדל.` : 'נשמר. כל הערכים לפי ברירת המחדל.' };
+  const changed = upserts.length === 1 ? 'ערך אחד שונה' : `${upserts.length} ערכים שונים`;
+  return { ok: true, message: upserts.length ? `נשמר. ${changed} מברירת המחדל.` : 'נשמר. כל הערכים לפי ברירת המחדל.' };
 });
 
 /** Back to the defaults. */
