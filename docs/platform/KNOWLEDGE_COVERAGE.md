@@ -377,8 +377,8 @@ quantisation and no loader change; `semantic.ts` loads the index as before.
   - Each video gets a summary, 4–6 key points with the second each is discussed, and the prices,
     tips and warnings stated in the video.
   - Output is schema-constrained JSON, and the 2026-03 summaries were left untouched.
-- **Legacy pages:** they link to `/video/<id>/` ("סיכום AI עם חותמות זמן") whenever one of their
-  `video_pages.youtube_ids` is in the catalog with a transcript. That link is the "legacy page with
+- **Legacy pages:** they link to `/video/<id>/` (the "סיכום הסרטון, עם חותמות זמן" card) whenever
+  one of their `video_pages.youtube_ids` is in the catalog with a transcript. That link is the "legacy page with
   AI coverage" counted above. The DB was only read.
 
 ### 5. Answer route and ranking (minimal edits)
