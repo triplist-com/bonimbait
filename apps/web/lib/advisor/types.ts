@@ -6,6 +6,7 @@
  *   1. { type: 'sources', ... }   right after retrieval, before the model call
  *   2. { type: 'chunk', content }  answer text deltas (the follow-up trailer is held back)
  *   3. { type: 'done', ... }       final sources, follow-ups, confidence, lead context
+ *   ({ type: 'reset' } before a replacement chunk: the model declined mid-answer)
  *   or { type: 'error', message }  the stream broke
  * Older clients that only read `chunk` and `done` keep working.
  */
@@ -135,6 +136,10 @@ export type AdvisorEvent =
       /** Present on real answers: lets the visitor share this exact answer. */
       share?: { payload: AdvisorSharePayload; signature: string };
     }
+  /** Discard the answer text streamed so far (the model declined mid-answer). */
+  | { type: 'reset' }
+  /** Development dry runs only: the prompt the model would get. */
+  | { type: 'debug'; system: string; system_chars: number; user_turn: string; user_chars: number }
   | { type: 'error'; message: string };
 
 /** A previous turn sent with a follow-up (the server keeps no conversation state). */
@@ -161,4 +166,6 @@ export interface AdvisorRequest {
   focus?: AdvisorFocus;
   /** regions.slug from the visitor's project file, for region-aware pros. */
   region?: string;
+  /** Development only (ignored in production): stop before the model call and return the prompt. */
+  dryRun?: boolean;
 }

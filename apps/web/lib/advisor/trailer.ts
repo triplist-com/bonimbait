@@ -58,11 +58,16 @@ export class TrailerSplitter {
       const before = this.pending.slice(0, m.index);
       this.trailer = this.pending.slice(m.index + m[0].length);
       this.pending = '';
-      return this.show(before);
+      // What leads into the marker (blank lines, a rule, "**") is never shown.
+      const full = cleanAnswerTail(this.visible + before);
+      return this.show(full.length > this.visible.length ? full.slice(this.visible.length) : '');
     }
-    const hold = heldTailLength(this.pending);
-    const out = this.pending.slice(0, this.pending.length - hold);
-    this.pending = this.pending.slice(this.pending.length - hold);
+    let cut = this.pending.length - heldTailLength(this.pending);
+    // Also hold trailing spaces and markup until real text follows: if the marker comes
+    // next they are dropped, otherwise they go out with the next delta.
+    while (cut > 0 && /[\s*#_-]/.test(this.pending[cut - 1])) cut -= 1;
+    const out = this.pending.slice(0, cut);
+    this.pending = this.pending.slice(cut);
     return this.show(out);
   }
 

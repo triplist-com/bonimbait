@@ -120,6 +120,8 @@ export interface MatchedPro {
 export interface ProsCta {
   specialty: { slug: string; name: string; href: string };
   pros: MatchedPro[];
+  /** The visitor's region when the list was narrowed to it (advisor, region-aware pros). */
+  region?: { slug: string; name: string } | null;
 }
 
 export interface AnswerResponse {

@@ -27,17 +27,28 @@ describe('TrailerSplitter', () => {
     const s = new TrailerSplitter();
     expect(s.push('מייל: info@')).toBe('מייל: info');
     expect(s.push('bonimbayit.co.il')).toBe('@bonimbayit.co.il');
-    expect(s.push(' סוף @@FOL')).toBe(' סוף ');
+    expect(s.push(' סוף @@FOL')).toBe(' סוף');
     expect(s.push('LOWUPS@@\nשאלה אחת?')).toBe('');
     expect(s.end()).toBe('');
     expect(s.followups()).toEqual(['שאלה אחת?']);
   });
 
-  it('tolerates spacing, case and a bold-wrapped marker', () => {
-    const { s, shown } = streamThrough('תשובה קצרה.\n\n**@@ followups @@**\nשאלה ראשונה?\n', 4);
-    expect(shown.trim().replace(/\*+$/, '').trim()).toBe('תשובה קצרה.');
-    expect(s.answer).toBe('תשובה קצרה.');
-    expect(s.followups()).toEqual(['שאלה ראשונה?']);
+  it('tolerates spacing, case and a bold-wrapped marker; streams exactly the clean answer', () => {
+    for (const size of [1, 4, 9, 100]) {
+      const { s, shown } = streamThrough('תשובה קצרה.\n\n**@@ followups @@**\nשאלה ראשונה?\n', size);
+      expect(shown).toBe('תשובה קצרה.');
+      expect(s.answer).toBe('תשובה קצרה.');
+      expect(s.followups()).toEqual(['שאלה ראשונה?']);
+    }
+  });
+
+  it('releases held spaces and markup once text follows', () => {
+    const s = new TrailerSplitter();
+    expect(s.push('מחיר **')).toBe('מחיר');
+    expect(s.push('800 אלף** ו-')).toBe(' **800 אלף** ו');
+    expect(s.push('עוד')).toBe('-עוד');
+    expect(s.push('\n- ')).toBe('');
+    expect(s.end()).toBe('\n- ');
   });
 
   it('without a marker, everything is answer and there are no follow-ups', () => {

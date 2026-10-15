@@ -80,11 +80,13 @@ export const EVENT_CATALOG = {
   answer_requested: event(
     'server',
     'An AI answer was requested (POST /api/answer/stream), before the rate-limit and budget checks.',
-    z.object({ query: freeText(300), ...advisorTurn }),
+    z.object({ query: freeText(300), origin: text(20).optional(), ...advisorTurn }),
   ),
   answer_completed: event(
     'server',
-    'An AI answer finished streaming (POST /api/answer/stream). Low confidence = a content gap.',
+    'An AI answer finished streaming (POST /api/answer/stream). Low confidence = a content gap: ' +
+      'top_similarity is the best source cosine, n_sources the number of sources shown, refused set when the ' +
+      'library had nothing close (lib/advisor/confidence.ts).',
     z.object({
       query: freeText(300),
       sources: count,
@@ -94,6 +96,28 @@ export const EVENT_CATALOG = {
       has_pros: z.boolean().optional(),
       output_tokens: count.optional(),
       cost_usd: z.number().min(0).max(100).optional(),
+      // Advisor (P1): retrieval quality, for "השאלות שעוד לא עניתם עליהן" (P4).
+      top_similarity: z.number().min(-1).max(1).optional(),
+      n_sources: count.optional(),
+      cited: count.optional(), // distinct sources the answer cites
+      refused: z.enum(['out_of_scope', 'low_confidence']).optional(),
+      degraded: text(20).optional(),
+      rewritten: z.boolean().optional(), // follow-up rewritten to a standalone query
+      standalone_query: freeText(300).optional(),
+      followups: count.optional(),
+      focus: z.enum(['video', 'post']).optional(),
+      origin: text(20).optional(),
+      first_token_ms: count.optional(),
+      ...advisorTurn,
+    }),
+  ),
+  answer_shared: event(
+    'client',
+    'An advisor answer was shared (WhatsApp, copy link or the native share sheet); creates /ask/a/<id>/.',
+    z.object({
+      channel: z.enum(['whatsapp', 'copy', 'native']),
+      share_id: text(32).optional(),
+      query: freeText(300).optional(),
       ...advisorTurn,
     }),
   ),
