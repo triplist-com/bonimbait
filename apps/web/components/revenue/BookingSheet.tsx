@@ -15,7 +15,7 @@
  *
  * A bottom sheet on phones, a dialog from `sm` up.
  */
-import { useCallback, useEffect, useId, useState, useTransition, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, useTransition, type FormEvent, type ReactNode } from 'react';
 import { ArrowLeft, CalendarCheck, CircleCheck, PhoneCall } from 'lucide-react';
 import { Dialog, Drawer } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
@@ -30,7 +30,7 @@ import { mergeProjectFiles } from '@/lib/project-file/sanitize';
 import type { ProjectFile } from '@/lib/project-file/types';
 import { calendlyBookingUrl } from '@/lib/revenue/calendly';
 import { markConsultBooked, startConsultBooking, type BookingMode } from '@/lib/revenue/actions/booking';
-import { loadMyProjectFile } from '@/lib/revenue/actions/project-file';
+import { loadMyBookingDefaults, type BookingContact } from '@/lib/revenue/actions/project-file';
 import ProjectFileSummary from './ProjectFileSummary';
 
 type Step = 'details' | 'calendly' | 'done';
@@ -83,23 +83,43 @@ export default function BookingSheet({ open, onClose, source, calendlyBase, foot
   const [booked, setBooked] = useState(false);
   const [pending, start] = useTransition();
   const hasCalendly = Boolean(calendlyBookingUrl(calendlyBase, source));
+  const formRef = useRef<HTMLFormElement>(null);
+  const [contact, setContact] = useState<BookingContact | null>(null);
 
   // A fresh read of the visitor's file every time the sheet opens; a member's
-  // hub project then fills it in (it wins single facts, as on the server).
+  // hub project then fills it in (it wins single facts, as on the server), and
+  // their own name, phone and email prefill the form.
   useEffect(() => {
     if (!open) return;
     let live = true;
     const local = collectProjectFile();
     setFile(local);
-    loadMyProjectFile()
-      .then((member) => {
-        if (live && member) setFile(mergeProjectFiles(local, member));
+    loadMyBookingDefaults()
+      .then(({ file: member, contact: mine }) => {
+        if (!live) return;
+        if (member) setFile(mergeProjectFiles(local, member));
+        setContact(mine);
       })
       .catch(() => undefined);
     return () => {
       live = false;
     };
   }, [open]);
+
+  // Prefill only empty fields: never overwrite what the visitor already typed.
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form || !contact || step !== 'details') return;
+    const fields: Array<[string, string | undefined]> = [
+      ['full_name', contact.fullName],
+      ['phone', contact.phone],
+      ['email', contact.email],
+    ];
+    for (const [name, value] of fields) {
+      const input = form.elements.namedItem(name);
+      if (value && input instanceof HTMLInputElement && !input.value) input.value = value;
+    }
+  }, [contact, step, open]);
 
   const close = useCallback(() => {
     onClose();
@@ -173,7 +193,7 @@ export default function BookingSheet({ open, onClose, source, calendlyBase, foot
       {step === 'details' && (
         <>
           <ProjectFileSummary file={file} />
-          <form noValidate onSubmit={submit} className="grid grid-cols-1 gap-4 sm:grid-cols-2" aria-busy={pending}>
+          <form ref={formRef} noValidate onSubmit={submit} className="grid grid-cols-1 gap-4 sm:grid-cols-2" aria-busy={pending}>
             {formError && (
               <p role="alert" className="rounded-xl bg-danger-50 px-4 py-3 text-sm text-danger-700 sm:col-span-2">
                 {formError}
