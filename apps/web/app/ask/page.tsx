@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import AdvisorExperience from '@/components/advisor/AdvisorExperience';
+import AdvisorOff from '@/components/advisor/AdvisorOff';
 import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
 import { isEnabled } from '@/lib/flags';
 import { getKnowledgeStats } from '@/lib/home/data';
@@ -43,6 +44,14 @@ function AskShell() {
 }
 
 export default async function AskPage() {
+  if (!isEnabled('advisor')) {
+    return (
+      <Suspense fallback={<AskShell />}>
+        <AskShell />
+        <AdvisorOff />
+      </Suspense>
+    );
+  }
   const stats = await getKnowledgeStats();
   return (
     <Suspense fallback={<AskShell />}>

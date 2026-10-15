@@ -93,18 +93,31 @@ describe('feature flags', () => {
     expect(parseFlagValue('maybe')).toBeUndefined();
     expect(parseFlagValue(undefined)).toBeUndefined();
     expect(isEnabled('analytics', {})).toBe(true);
-    expect(isEnabled('hub', {})).toBe(false);
-    expect(isEnabled('hub', { FLAG_HUB: '1' })).toBe(true);
+    expect(isEnabled('hub', {})).toBe(true);
+    expect(isEnabled('hub', { FLAG_HUB: '0' })).toBe(false);
+    expect(isEnabled('hub', { FLAG_HUB: 'garbage' })).toBe(true);
     expect(isEnabled('analytics', { FLAG_ANALYTICS: 'off' })).toBe(false);
     expect(isEnabled('analytics', { FLAG_ANALYTICS: 'garbage' })).toBe(true);
   });
 
-  it('snapshots every flag; ops switches default on, dark launches off', () => {
+  it('launch defaults: every pillar on, each with an off switch; the Won\'t stays off', () => {
     const snap = allFlags({});
     expect(Object.keys(snap).sort()).toEqual(Object.keys(FLAGS).sort());
-    expect(snap.analytics && snap.aiAnswers).toBe(true);
-    for (const name of ['advisor', 'hub', 'revenue', 'commandCenter', 'budgetPlanner', 'programmaticSeo', 'autopilot'] as const) {
-      expect(snap[name], name).toBe(false);
+    const pillars = ['analytics', 'aiAnswers', 'advisor', 'hub', 'revenue', 'commandCenter', 'budgetPlanner', 'autopilot'] as const;
+    for (const name of pillars) {
+      expect(snap[name], name).toBe(true);
+      expect(isEnabled(name, { [flagEnvName(name)]: 'false' }), `${name} off`).toBe(false);
+    }
+    expect(snap.programmaticSeo).toBe(false);
+  });
+
+  it('lists the hosted migrations each pillar needs, all of them in the repo', async () => {
+    const { readdirSync } = await import('node:fs');
+    const { fileURLToPath } = await import('node:url');
+    const dir = fileURLToPath(new URL('../../../../supabase/migrations/', import.meta.url));
+    const files = new Set(readdirSync(dir).map((f) => f.replace(/\.sql$/, '')));
+    for (const [name, def] of Object.entries(FLAGS) as Array<[string, { migrations?: readonly string[] }]>) {
+      for (const m of def.migrations ?? []) expect(files.has(m), `${name}: ${m}`).toBe(true);
     }
   });
 });

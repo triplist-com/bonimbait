@@ -47,7 +47,7 @@ export const ADMIN_NAV: readonly AdminNavGroup[] = [
       { href: '/admin/taxonomy/', label: 'קטגוריות, תגיות וכותבים' },
       { href: '/admin/pages/', label: 'עמודים' },
       { href: '/admin/videos/', label: 'עמודי וידאו' },
-      { href: '/admin/autopilot/', label: 'אוטופיילוט תוכן' },
+      { href: '/admin/autopilot/', label: 'אוטופיילוט תוכן', flag: 'autopilot' },
       { href: '/admin/media/', label: 'ספריית מדיה' },
     ],
   },
