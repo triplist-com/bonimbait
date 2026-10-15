@@ -60,7 +60,11 @@ export function ProjectFilePanel({ data }: { data: HubViewData }) {
       value: file.plannerEstimate ? <MoneyRange min={file.plannerEstimate.totalMin} max={file.plannerEstimate.totalMax} /> : null,
       fill: '/calculator/',
     },
-    { key: 'saved', label: 'תוכן שמור', value: file.savedCount ? <><span className="num">{file.savedCount}</span> פריטים</> : null },
+    {
+      key: 'saved',
+      label: 'תוכן שמור',
+      value: !file.savedCount ? null : file.savedCount === 1 ? 'פריט אחד' : <><span className="num">{file.savedCount}</span> פריטים</>,
+    },
     {
       key: 'shortlist',
       label: 'בעלי מקצוע',

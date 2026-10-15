@@ -234,6 +234,8 @@ export function PlannerRebasePrompt({ currentBasis, currentAt }: { currentBasis:
     }
     startTransition(async () => {
       const res = await actions.rebaseFromPlanner(p);
+      // The action's refresh can bring the router's own address (with ?saved=planner) back.
+      window.setTimeout(takeSavedFromPlanner, 0);
       if (res.ok) toast({ title: 'התקציב עודכן לפי המתכנן. הגרסה הקודמת נשמרה.', tone: 'success' });
       else {
         toast({ title: res.message ?? 'לא הצלחנו לעדכן. נסו שוב.', tone: 'error' });
