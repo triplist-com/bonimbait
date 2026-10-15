@@ -80,6 +80,8 @@ export default async function PartnerSubscriptionsPage() {
           {
             key: 'a',
             header: <span className="sr-only">פעולות</span>,
+            // relative: the sr-only label is absolutely positioned; keep it inside the table's scroll box on phones.
+            className: 'relative',
             render: (s) => (
               <span className="flex flex-wrap gap-1.5">
                 {s.status !== 'active' && <ActionButton action={setSubscriptionStatus.bind(null, s.id, 'active')}>הפעלה</ActionButton>}

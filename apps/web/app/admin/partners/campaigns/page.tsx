@@ -103,6 +103,8 @@ export default async function PartnerCampaignsPage({ searchParams }: { searchPar
           {
             key: 'a',
             header: <span className="sr-only">פעולות</span>,
+            // relative: the sr-only label is absolutely positioned; keep it inside the table's scroll box on phones.
+            className: 'relative',
             render: (x) => (
               <span className="flex flex-wrap gap-1.5">
                 {x.status !== 'active' && <ActionButton action={setCampaignStatus.bind(null, x.id, 'active')}>הפעלה</ActionButton>}

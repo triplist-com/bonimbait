@@ -111,7 +111,7 @@ export default function ConsultQueue({
         ))}
       </nav>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] xl:grid-cols-[minmax(0,27rem)_minmax(0,1fr)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] xl:grid-cols-[minmax(0,27rem)_minmax(0,1fr)]">
         <section aria-label="הפניות בתור" className={cn(focus && 'hidden lg:block')}>
           <p className="mb-3 text-sm text-ink-600">
             {items.length === 0 ? 'אין פניות בשלב הזה.' : (

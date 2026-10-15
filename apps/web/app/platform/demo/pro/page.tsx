@@ -20,7 +20,8 @@ export default function ProPortalDemoPage() {
           <PartnerTierBadge badge={pro.business.badge} />
         </p>
       </header>
-      <PortalDashboard view={pro} reportHref="/platform/demo/partner/" demo />
+      {/* No report link: the demo's partner report belongs to another business (/platform/demo/partner/). */}
+      <PortalDashboard view={pro} demo />
     </div>
   );
 }

@@ -77,7 +77,7 @@ export default async function LeadRoutingPage({ searchParams }: { searchParams: 
                 <th scope="col" className="px-2 py-2 text-start font-medium">מתי</th>
                 <th scope="col" className="px-2 py-2 text-start font-medium">לאן</th>
                 <th scope="col" className="px-2 py-2 text-start font-medium">מצב</th>
-                <th scope="col" className="px-2 py-2 text-start font-medium"><span className="sr-only">פעולות</span></th>
+                <th scope="col" className="relative px-2 py-2 text-start font-medium"><span className="sr-only">פעולות</span></th>
               </tr>
             </thead>
             <tbody>
