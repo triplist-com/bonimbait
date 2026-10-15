@@ -3,6 +3,7 @@
  * Add yours with one line (keep the file per squad: lib/demo/fixtures/<squad>.ts).
  */
 import { advisorDemo } from './advisor';
+import { bonimosDemo } from './bonimos';
 import { commandDemo } from './command';
 import { foundationDemo } from './foundation';
 import { growthDemo } from './growth';
@@ -16,6 +17,7 @@ export const DEMO_FIXTURES = {
   growth: growthDemo,
   hub: hubDemo,
   revenue: revenueDemo,
+  bonimos: bonimosDemo,
 } as const;
 
 export type DemoFixtureName = keyof typeof DEMO_FIXTURES;

@@ -37,6 +37,14 @@ const ADMIN_ONLY = new Set([
   // Command Center: the owner's expected value per lead (lib/admin/actions/command.ts).
   'saveExpectedValues',
   'resetExpectedValues',
+  // Bonim.Os: the manager roster and managed clients (lib/admin/actions/bonimos.ts).
+  'addBonimosManager',
+  'updateBonimosManager',
+  'removeBonimosManager',
+  'startBonimosClient',
+  'assignBonimosManager',
+  'unassignBonimosManager',
+  'endBonimosClient',
 ]);
 
 async function loadActions(): Promise<Array<[string, (...args: unknown[]) => Promise<{ ok: boolean; error?: string }>]>> {

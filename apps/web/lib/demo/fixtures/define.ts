@@ -28,7 +28,8 @@ export type DemoSquad =
   | 'revenue'
   | 'command'
   | 'growth'
-  | 'pitch';
+  | 'pitch'
+  | 'bonimos';
 
 export type DemoFixtureContext = {
   gen: DemoGenerator;

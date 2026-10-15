@@ -277,6 +277,46 @@ export const EVENT_CATALOG = {
     z.object({ category: text(40), mime_type: text(60).optional(), size_kb: count.optional() }),
   ),
 
+  // --- Bonim.Os, the managed-client mode (P7) ---------------------------------
+  // Server facts only; never amounts, names or free text (link by project id).
+  bonimos_approval_requested: event(
+    'server',
+    'A contractor payment request was recorded in a managed project (Bonim.Os).',
+    z.object({
+      project_id: id,
+      category: text(40),
+      stage: text(40).optional(),
+      actor_role: z.enum(['owner', 'manager']),
+      has_attachment: z.boolean().optional(),
+      has_milestone: z.boolean().optional(),
+    }),
+  ),
+  bonimos_approval_reviewed: event(
+    'server',
+    "The project manager reviewed a payment request: passed it to the client, or rejected it.",
+    z.object({ project_id: id, outcome: z.enum(['approved', 'rejected']), adjusted: z.boolean().optional(), category: text(40).optional() }),
+  ),
+  bonimos_approval_approved: event(
+    'server',
+    'The client approved a payment request the manager had reviewed.',
+    z.object({ project_id: id, category: text(40).optional(), hours_waiting: count.optional() }),
+  ),
+  bonimos_photo_uploaded: event(
+    'server',
+    'Site photos were added to a managed project (one event per upload batch).',
+    z.object({ project_id: id, count: count, stage: text(40).optional(), actor_role: z.enum(['owner', 'manager']) }),
+  ),
+  bonimos_budget_version_created: event(
+    'server',
+    'A project manager approved a new budget version for a managed project.',
+    z.object({ project_id: id, version_no: count, basis: text(20).optional(), categories_changed: count.optional() }),
+  ),
+  bonimos_manager_assigned: event(
+    'server',
+    'An admin assigned a project manager to a managed project, or removed one.',
+    z.object({ project_id: id, action: z.enum(['assigned', 'removed']) }),
+  ),
+
   // --- Growth (P6) ------------------------------------------------------------
   planner_started: event(
     'both',

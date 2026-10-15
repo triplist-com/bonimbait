@@ -12,7 +12,7 @@ export type DemoView = {
   slug: string;
   squad: DemoSquad;
   /** Product pillar from docs/platform/PROGRAM.md §3. */
-  pillar: 'P1' | 'P2' | 'P3' | 'P4' | 'P5' | 'P6' | 'F';
+  pillar: 'P1' | 'P2' | 'P3' | 'P4' | 'P5' | 'P6' | 'P7' | 'F';
   title: string;
   description: string;
   status: DemoViewStatus;
@@ -75,6 +75,15 @@ export const DEMO_VIEWS: readonly DemoView[] = [
     pillar: 'P6',
     title: 'מתכנן התקציב',
     description: 'מחשבון תקציב שמפיק דוח הערכה מקצועי ומוביל לפגישת הייעוץ.',
+    status: 'ready',
+  },
+  {
+    slug: 'bonimos',
+    squad: 'bonimos',
+    pillar: 'P7',
+    title: 'Bonim.Os',
+    description:
+      'שורה 3.3 במחירון, אמיתית: פרויקט מנוהל של 180 מ״ר בשפלה בשלב השלד. תקציב מול ביצוע, לוח זמנים, אישור תשלום שמחכה ללקוח ותמונות מהשטח, מעיני המנהלת ומעיני הלקוח.',
     status: 'ready',
   },
   {
