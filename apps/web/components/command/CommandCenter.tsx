@@ -10,6 +10,7 @@ import { minutesBetween } from '@/lib/command/period';
 import type { CommandCenterData, PeriodDays } from '@/lib/command/types';
 import ColumnSpark from './ColumnSpark';
 import HotLeadsList from './HotLeadsList';
+import JourneyStrip from './JourneyStrip';
 import PeriodSelector from './PeriodSelector';
 import UnansweredList from './UnansweredList';
 import { CapBadge, PartnerStatusBadge } from './badges';
@@ -102,6 +103,8 @@ export default function CommandCenter({
       </div>
 
       {data.pending && <PendingStrip pending={data.pending} />}
+
+      <JourneyStrip journey={data.journey} vs={vs} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {/* 1. Pipeline */}

@@ -311,6 +311,48 @@ describe('buildCommandCenter', () => {
     expect(data.consults.daily).toHaveLength(7);
   });
 
+  it('reads every pillar into the journey strip: advisor, planner and hub events, consult leads, the hub aggregates', () => {
+    const data = buildCommandCenter(
+      inputs({
+        events: [
+          { day: '2026-10-13', name: 'answer_requested', events: 40, visitors: 30 },
+          { day: '2026-10-05', name: 'answer_requested', events: 20, visitors: 15 },
+          { day: '2026-10-13', name: 'planner_completed', events: 6, visitors: 6 },
+          { day: '2026-10-12', name: 'hub_onboarding_completed', events: 3, visitors: 3 },
+          { day: '2026-10-13', name: 'consult_booked', events: 2, visitors: 2 },
+        ],
+        leads: [lead({ createdAt: '2026-10-13T10:00:00Z' })],
+        hub: {
+          onboarded: 4,
+          prevOnboarded: 2,
+          projects: 50,
+          byStage: [
+            { stage: 'permit', projects: 20 },
+            { stage: 'frame', projects: 10 },
+            { stage: 'unknown', projects: 15 },
+            { stage: 'planning', projects: 5 },
+          ],
+        },
+      }),
+    );
+    const step = (id: string) => data.journey.steps.find((s) => s.id === id)!;
+    expect(data.journey.steps.map((s) => s.id)).toEqual(['questions', 'planner', 'maps', 'consult_requests', 'consults_booked']);
+    expect(step('questions').value).toMatchObject({ current: 40, previous: 20, pct: 100 });
+    expect(step('planner').value.current).toBe(6);
+    expect(step('maps').value.current).toBe(3);
+    expect(step('consult_requests').value.current).toBe(1);
+    expect(step('consults_booked').value.current).toBe(2);
+    expect(data.journey.hub).toMatchObject({ joined: { current: 4, previous: 2, pct: 100 }, projects: 50 });
+    // The top stages, by share of all onboarded projects ('unknown' never listed).
+    expect(data.journey.hub!.topStages).toEqual([
+      { stage: 'permit', label: 'היתר/מכרז', share: 0.4 },
+      { stage: 'frame', label: 'שלד', share: 0.2 },
+      { stage: 'planning', label: 'תכנון', share: 0.1 },
+    ]);
+    // Without the hub's aggregates (migration missing, not staff), the strip still renders.
+    expect(buildCommandCenter(inputs()).journey.hub).toBeNull();
+  });
+
   it('ranks hot leads by score, then recency, and flags the cap status', () => {
     const data = buildCommandCenter(
       inputs({
