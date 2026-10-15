@@ -12,6 +12,8 @@ import { absoluteUrl } from '@/lib/site';
 import type { Video } from '@/lib/types';
 import VideoPageClient from './VideoPageClient';
 import { loadIndexedVideoDetail, loadRelatedIndexedVideos } from '@/lib/content/indexed-video';
+import StructuredData from '@/components/StructuredData';
+import { TITLE_ONLY_ROBOTS, isTitleOnlyVideo, staticVideoJsonLd } from '@/lib/seo/video-pages';
 
 /**
  * /video/<param>/ accepts two forms (PARITY_PLAN URL rule 3):
@@ -72,6 +74,8 @@ export async function generateMetadata({ params }: VideoPageProps): Promise<Meta
   return {
     title: video.title,
     description,
+    // Title-only catalog entries (no transcript): reachable, but kept out of the index.
+    ...(isTitleOnlyVideo(video) ? { robots: TITLE_ONLY_ROBOTS } : {}),
     alternates: { canonical: absoluteUrl(`/video/${params.id}/`) },
     openGraph: {
       title: video.title,
@@ -146,5 +150,12 @@ export default async function VideoPage({ params }: VideoPageProps) {
   // player poster is in the first HTML (LCP), not fetched after hydration.
   const initialVideo = loadIndexedVideoDetail(decodeSlug(params.id));
   const initialRelated = initialVideo ? loadRelatedIndexedVideos(initialVideo) : [];
-  return <VideoPageClient initialVideo={initialVideo} initialRelated={initialRelated} />;
+  const record = safeGetVideo(params.id);
+  return (
+    <>
+      {/* VideoObject + key moments (Clip, or SeekToAction); none for title-only videos. */}
+      {record && <StructuredData data={staticVideoJsonLd(record, absoluteUrl(`/video/${record.youtube_id}/`))} />}
+      <VideoPageClient initialVideo={initialVideo} initialRelated={initialRelated} />
+    </>
+  );
 }

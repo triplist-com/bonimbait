@@ -6,10 +6,9 @@ import Link from 'next/link';
 import VideoPlayer from '@/components/VideoPlayer';
 import VideoGrid from '@/components/VideoGrid';
 import ContentSummary from '@/components/ContentSummary';
-import StructuredData from '@/components/StructuredData';
 import { VideoGridSkeleton } from '@/components/Skeleton';
 import { getVideoDetail, getRelatedVideos } from '@/lib/api';
-import { formatTimestamp, thumbnailUrl as getThumbUrl } from '@/lib/types';
+import { formatTimestamp } from '@/lib/types';
 import type { VideoDetail as VideoDetailType, Video } from '@/lib/types';
 
 interface InitialData {
@@ -90,25 +89,9 @@ function VideoContent({ initialVideo, initialRelated }: InitialData) {
     );
   }
 
-  const thumb = video.thumbnail_url || getThumbUrl(video.youtube_id);
-
   return (
     <div className="container-page max-w-5xl">
-      {/* VideoObject structured data */}
-      <StructuredData
-        data={{
-          '@context': 'https://schema.org',
-          '@type': 'VideoObject',
-          name: video.title,
-          description: video.summary || `סרטון בנושא ${video.category_name}`,
-          thumbnailUrl: thumb,
-          uploadDate: video.published_at,
-          duration: `PT${Math.floor(video.duration_seconds / 60)}M${video.duration_seconds % 60}S`,
-          embedUrl: `https://www.youtube.com/embed/${video.youtube_id}`,
-          contentUrl: `https://www.youtube.com/watch?v=${video.youtube_id}`,
-        }}
-      />
-
+      {/* VideoObject + key moments are rendered by the server page (lib/seo/video-pages.ts). */}
       <section className="pt-8 pb-4">
         {/* Breadcrumbs */}
         <nav aria-label="מיקום בניווט" className="flex items-center gap-2 text-sm text-gray-500 mb-6">

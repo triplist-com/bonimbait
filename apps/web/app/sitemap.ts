@@ -7,6 +7,7 @@ import { listSlugs } from '@/lib/content/queries';
 import { listAuthors, listPostCategories, listPublishedPostSlugs } from '@/lib/db/posts';
 import { listPublishedPageSlugs } from '@/lib/db/pages';
 import { listVideoPageSlugs } from '@/lib/db/videos';
+import { isTitleOnlyVideo } from '@/lib/seo/video-pages';
 
 /**
  * One sitemap for every public URL (~1,450 entries, far below the 50,000
@@ -94,6 +95,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const result = getVideos({ page, limit: 100 });
       pages = result.pages;
       for (const v of result.videos) {
+        // Title-only catalog entries (no transcript) are noindex pages: reachable, not listed.
+        if (isTitleOnlyVideo(v)) continue;
         indexed.push(entry(`/video/${v.youtube_id}/`, 0.5, 'monthly', v.published_at || null));
       }
     }
