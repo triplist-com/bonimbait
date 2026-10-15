@@ -4,12 +4,11 @@ import { Suspense } from 'react';
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import SearchBar from '@/components/SearchBar';
-import AiAnswer from '@/components/AiAnswer';
+import AnswerPreview from '@/components/advisor/AnswerPreview';
 import CategoryBar from '@/components/CategoryBar';
 import VideoCard from '@/components/VideoCard';
 import Pagination from '@/components/Pagination';
 import { VideoGridSkeleton, AnswerShimmer } from '@/components/Skeleton';
-import { useStreamingAnswer } from '@/lib/hooks/useStreamingAnswer';
 import { searchVideos } from '@/lib/api';
 import type { SearchResult } from '@/lib/types';
 
@@ -25,17 +24,6 @@ function SearchContent() {
   const [totalPages, setTotalPages] = useState(1);
   const [isLoadingResults, setIsLoadingResults] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-
-  const {
-    answer,
-    sources,
-    pros,
-    confidence,
-    isStreaming,
-    error: answerError,
-    isCostRelated,
-    start: startAnswer,
-  } = useStreamingAnswer();
 
   const fetchResults = useCallback(async () => {
     if (!query) return;
@@ -54,11 +42,8 @@ function SearchContent() {
   }, [query, categorySlug, pageParam]);
 
   useEffect(() => {
-    if (query) {
-      fetchResults();
-      startAnswer(query);
-    }
-  }, [query, fetchResults, startAnswer]);
+    if (query) fetchResults();
+  }, [query, fetchResults]);
 
   const handleSearch = (q: string) => {
     router.push(`/search/?q=${encodeURIComponent(q)}`);
@@ -84,25 +69,10 @@ function SearchContent() {
 
       {query ? (
         <>
-          {/* AI Answer with aria-live for screen reader announcements */}
-          <section className="pb-8 animate-slide-up" aria-label="תשובה מהשטח">
-            <div aria-live="polite" aria-atomic="false">
-              {isStreaming && !answer ? (
-                <AnswerShimmer />
-              ) : (
-                <AiAnswer
-                  answer={answer}
-                  sources={sources}
-                  pros={pros}
-                  confidence={confidence}
-                  isStreaming={isStreaming}
-                  error={answerError}
-                  isCostRelated={isCostRelated}
-                  searchQuery={query}
-                />
-              )}
-            </div>
-          </section>
+          {/* The advisor's answer, short: the full conversation continues on /ask/ */}
+          <div className="pb-8 motion-safe:animate-slide-up">
+            <AnswerPreview query={query} />
+          </div>
 
           {/* Search Results with aria-live */}
           <section className="pb-8" aria-label="תוצאות חיפוש">

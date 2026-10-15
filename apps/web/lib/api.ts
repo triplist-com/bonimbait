@@ -3,12 +3,7 @@ import type {
   VideoDetail,
   Category,
   SearchResponse,
-  AnswerResponse,
-  AnswerSource,
-  AnswerCitation,
-  ProsCta,
   PaginatedVideos,
-  PregeneratedAnswer,
   VideoListParams,
 } from './types';
 
@@ -18,7 +13,6 @@ import type {
 
 // Default timeouts in milliseconds
 const DEFAULT_TIMEOUT = 10_000; // 10s for regular requests
-const STREAM_TIMEOUT = 30_000; // 30s for streaming requests
 
 // Hebrew user-friendly error messages for gateway errors
 const GATEWAY_ERROR_MESSAGES: Record<number, string> = {
@@ -182,168 +176,4 @@ export async function getSuggestions(query: string): Promise<string[]> {
   return data.suggestions;
 }
 
-// ---------------------------------------------------------------------------
-// Pre-generated Answer — instant lookup via 3-tier matching
-// ---------------------------------------------------------------------------
-
-export async function getPregeneratedAnswer(query: string): Promise<PregeneratedAnswer | null> {
-  const base =
-    typeof window !== 'undefined'
-      ? ''
-      : process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-
-  try {
-    const res = await fetch(
-      `${base}/api/answer/pregenerated?q=${encodeURIComponent(query)}`,
-      { headers: { 'Content-Type': 'application/json' } },
-    );
-    if (res.status === 404) return null;
-    if (!res.ok) return null;
-    return (await res.json()) as PregeneratedAnswer;
-  } catch {
-    return null;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// AI Answer — wired to live backend
-// ---------------------------------------------------------------------------
-
-function mapConfidence(score: number): 'high' | 'medium' | 'low' {
-  if (score >= 0.7) return 'high';
-  if (score >= 0.4) return 'medium';
-  return 'low';
-}
-
-export async function getAnswer(query: string): Promise<AnswerResponse> {
-  const raw = await apiFetch<{
-    answer: string;
-    sources: Array<{
-      video_id: string;
-      youtube_id: string;
-      title: string;
-      timestamp: number;
-      relevance_score: number;
-    }>;
-    confidence: number;
-    query: string;
-  }>('/api/answer', {
-    method: 'POST',
-    body: JSON.stringify({ query }),
-  });
-
-  return {
-    answer: raw.answer,
-    sources: raw.sources.map((s) => ({
-      video_id: s.video_id,
-      youtube_id: s.youtube_id,
-      title: s.title,
-      timestamp: s.timestamp,
-    })),
-    confidence: mapConfidence(raw.confidence),
-  };
-}
-
-/**
- * Stream an AI answer via SSE from the backend.
- */
-export function streamAnswer(
-  query: string,
-  onChunk: (text: string) => void,
-  onDone: (
-    sources: AnswerCitation[],
-    confidence: 'high' | 'medium' | 'low',
-    pros: ProsCta | null,
-  ) => void,
-  onError?: (err: Error) => void,
-): AbortController {
-  const controller = new AbortController();
-
-  const base =
-    typeof window !== 'undefined'
-      ? ''
-      : process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-
-  const timeoutId = setTimeout(() => controller.abort(), STREAM_TIMEOUT);
-
-  fetch(`${base}/api/answer/stream`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query }),
-    signal: controller.signal,
-  })
-    .then(async (res) => {
-      if (!res.ok) {
-        throw new Error(`API error ${res.status}: ${res.statusText}`);
-      }
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error('No response body');
-
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        // Keep the last (possibly incomplete) line in the buffer
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const json = line.slice(6).trim();
-          if (!json) continue;
-
-          try {
-            const event = JSON.parse(json) as {
-              type: string;
-              content?: string;
-              sources?: Array<
-                | {
-                    kind?: 'video';
-                    video_id: string;
-                    youtube_id: string;
-                    title: string;
-                    timestamp: number;
-                    relevance_score: number;
-                  }
-                | { kind: 'post'; slug: string; title: string; url: string; relevance_score: number }
-              >;
-              confidence?: number;
-              pros?: ProsCta | null;
-            };
-
-            if (event.type === 'chunk' && event.content) {
-              onChunk(event.content);
-            } else if (event.type === 'done') {
-              const sources: AnswerCitation[] = (event.sources || []).map((s) =>
-                s.kind === 'post'
-                  ? { kind: 'post', slug: s.slug, title: s.title, url: s.url }
-                  : {
-                      kind: 'video',
-                      video_id: s.video_id,
-                      youtube_id: s.youtube_id,
-                      title: s.title,
-                      timestamp: s.timestamp,
-                    },
-              );
-              onDone(sources, mapConfidence(event.confidence ?? 0), event.pros ?? null);
-            }
-          } catch {
-            // skip malformed JSON
-          }
-        }
-      }
-    })
-    .catch((err: Error) => {
-      clearTimeout(timeoutId);
-      if (err.name === 'AbortError') return;
-      if (onError) {
-        onError(err);
-      }
-    });
-
-  return controller;
-}
+// AI answers: lib/advisor/client (the advisor stream, /api/answer/stream).

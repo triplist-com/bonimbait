@@ -62,12 +62,30 @@ export const ADMIN_NAV: readonly AdminNavGroup[] = [
       { href: '/admin/directory/taxonomy/', label: 'תחומים ואזורים' },
     ],
   },
-  { id: 'leads', title: 'לידים', items: [{ href: '/admin/leads/', label: 'תיבת לידים' }] },
+  {
+    id: 'leads',
+    title: 'לידים',
+    items: [
+      { href: '/admin/leads/', label: 'תיבת לידים' },
+      { href: '/admin/consult-queue/', label: 'תור הייעוצים', flag: 'revenue' },
+      { href: '/admin/lead-routing/', label: 'כללי ניתוב', minRole: 'admin', flag: 'revenue' },
+    ],
+  },
+  {
+    id: 'partners',
+    title: 'שותפים',
+    items: [
+      { href: '/admin/partners/', label: 'בריאות שותפים', exact: true, flag: 'revenue' },
+      { href: '/admin/partners/campaigns/', label: 'קמפיינים', flag: 'revenue' },
+      { href: '/admin/partners/subscriptions/', label: 'מנויים', flag: 'revenue' },
+      { href: '/admin/partners/tiers/', label: 'מסלולי שותפות', minRole: 'admin', flag: 'revenue' },
+    ],
+  },
   {
     // P7 Bonim.Os (bonimos squad): managed clients and their project managers.
+    // The managers' own workspace is /manage/ (linked from that screen), outside /admin/.
     id: 'bonimos',
     title: 'Bonim.Os',
-    // The managers' own workspace is /manage/ (linked from that screen), outside /admin/.
     items: [{ href: '/admin/bonimos/', label: 'לקוחות ליווי ומנהלים', minRole: 'admin', flag: 'bonimos' }],
   },
   { id: 'growth', title: 'צמיחה', items: [{ href: '/admin/planner/', label: 'מחירון מתכנן התקציב' }] },

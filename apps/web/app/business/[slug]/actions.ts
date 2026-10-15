@@ -12,6 +12,7 @@ import { validateLead } from '@/lib/leads/schemas';
 import { isConstructionStage, isRegionSlug } from '@/lib/constants/community';
 import { whatsappLink } from '@/lib/directory/format';
 import { trackServer } from '@/lib/analytics/server';
+import { parseProjectFileField } from '@/lib/project-file/sanitize';
 
 /**
  * Anti-scraping limits for the phone reveal, on top of submitLead's generic
@@ -97,6 +98,7 @@ async function handleLead(mode: Mode, formData: FormData): Promise<LeadFormState
     memberId: user?.id ?? null,
     ip,
     spam: { honeypot: formData.get(HONEYPOT_FIELD) },
+    projectFile: parseProjectFileField(formData.get('_project_file')),
   });
 
   if (!result.ok) {

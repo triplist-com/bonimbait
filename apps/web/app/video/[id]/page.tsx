@@ -13,6 +13,7 @@ import type { Video } from '@/lib/types';
 import SaveButton from '@/components/hub/SaveButton';
 import { isEnabled } from '@/lib/flags';
 import VideoPageClient from './VideoPageClient';
+import PartnerOfferSlot from '@/components/revenue/PartnerOfferSlot';
 import { loadIndexedVideoDetail, loadRelatedIndexedVideos } from '@/lib/content/indexed-video';
 import StructuredData from '@/components/StructuredData';
 import { TITLE_ONLY_ROBOTS, isTitleOnlyVideo, staticVideoJsonLd } from '@/lib/seo/video-pages';
@@ -155,11 +156,14 @@ export default async function VideoPage({ params }: VideoPageProps) {
   const saveSlot =
     isEnabled('hub') && initialVideo ? <SaveButton kind="video" refId={initialVideo.youtube_id} title={initialVideo.title} /> : null;
   const record = safeGetVideo(params.id);
+  const partnerSlot = initialVideo ? (
+    <PartnerOfferSlot slot="video-page" context={{ topic: `${initialVideo.title} ${initialVideo.category_name ?? ''}`, placement: 'video' }} />
+  ) : null;
   return (
     <>
       {/* VideoObject + key moments (Clip, or SeekToAction); none for title-only videos. */}
       {record && <StructuredData data={staticVideoJsonLd(record, absoluteUrl(`/video/${record.youtube_id}/`))} />}
-      <VideoPageClient initialVideo={initialVideo} initialRelated={initialRelated} saveSlot={saveSlot} />
+      <VideoPageClient initialVideo={initialVideo} initialRelated={initialRelated} saveSlot={saveSlot} partnerSlot={partnerSlot} />
     </>
   );
 }

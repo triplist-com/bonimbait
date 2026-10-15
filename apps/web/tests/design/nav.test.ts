@@ -76,11 +76,11 @@ describe('site navigation config', () => {
     expect(ACCOUNT_NAV.home).toEqual({ label: 'הבית שלי', href: '/my-home/' });
   });
 
-  it('builds AI entry links from config', () => {
-    expect(aiHref()).toBe('/search/');
-    expect(aiHref('  ')).toBe('/search/');
-    expect(aiHref('כמה עולה שלד?')).toBe(`/search/?q=${encodeURIComponent('כמה עולה שלד?')}`);
-    expect(aiHref('x', { href: '/ask/', queryParam: 'question' })).toBe('/ask/?question=x');
+  it('builds AI entry links from config (the advisor at /ask/)', () => {
+    expect(aiHref()).toBe('/ask/');
+    expect(aiHref('  ')).toBe('/ask/');
+    expect(aiHref('כמה עולה שלד?')).toBe(`/ask/?q=${encodeURIComponent('כמה עולה שלד?')}`);
+    expect(aiHref('x', { href: '/search/', queryParam: 'question' })).toBe('/search/?question=x');
   });
 
   it('reads the advisor display name from NEXT_PUBLIC_ADVISOR_NAME', () => {

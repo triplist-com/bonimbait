@@ -181,6 +181,12 @@ export type LeadListFilter = {
   to?: string;
   /** Free-text match on name, email or phone. */
   q?: string;
+  /** Lead score at least this (leads.score, revenue squad); unscored leads drop out. */
+  minScore?: number;
+  /** Only consultations with a booked meeting (leads.booked_at). */
+  booked?: boolean;
+  /** 'newest' (default) or 'score' (highest first, then newest). */
+  sort?: 'newest' | 'score';
 };
 
 function endOfDay(value: string): string {
@@ -192,11 +198,12 @@ export async function listLeads(db: DbClient, opts: LeadListFilter = {}): Promis
   const page = opts.page ?? 1;
   const pageSize = opts.pageSize ?? 50;
   const { from, to } = pageRange(page, pageSize);
-  let query = db
-    .from('leads')
-    .select('*', { count: 'exact' })
-    .order('created_at', { ascending: false })
-    .range(from, to);
+  let query = db.from('leads').select('*', { count: 'exact' });
+  // score / booked_at are revenue columns (migration 20261014122000), outside the shared row type.
+  if (opts.sort === 'score') query = query.order('score', { ascending: false, nullsFirst: false });
+  query = query.order('created_at', { ascending: false }).range(from, to);
+  if (opts.minScore != null && Number.isFinite(opts.minScore)) query = query.gte('score', opts.minScore);
+  if (opts.booked) query = query.not('booked_at', 'is', null);
   if (opts.status) query = Array.isArray(opts.status) ? query.in('status', opts.status) : query.eq('status', opts.status);
   if (opts.type) query = Array.isArray(opts.type) ? query.in('type', opts.type) : query.eq('type', opts.type);
   if (opts.businessId) query = query.eq('business_id', opts.businessId);

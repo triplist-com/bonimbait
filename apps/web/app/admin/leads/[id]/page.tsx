@@ -12,12 +12,30 @@ import StatusBadge from '@/components/admin/StatusBadge';
 import ActionForm, { SubmitButton } from '@/components/admin/ActionForm';
 import { Section, TextArea } from '@/components/admin/FormField';
 import LeadStatusButtons from '@/components/admin/LeadStatusButtons';
+import ProjectFilePanel from '@/components/revenue/ProjectFilePanel';
+import { consultLeadView, type ConsultLeadRow } from '@/lib/revenue/consult-view';
+import { isEmptyProjectFile } from '@/lib/project-file/sanitize';
 
 export const metadata = { title: 'פרטי ליד' };
 
+/** Payload keys the revenue engine writes; shown in the project-file panel, not as raw fields. */
+const REVENUE_KEYS = new Set(['project_file', 'project_score', 'routing', 'booking']);
+
 function entries(value: Json): Array<[string, string]> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
-  return Object.entries(value).map(([k, v]) => [k, typeof v === 'string' ? v : JSON.stringify(v)]);
+  return Object.entries(value)
+    .filter(([k]) => !REVENUE_KEYS.has(k))
+    .map(([k, v]) => [k, typeof v === 'string' ? v : JSON.stringify(v)]);
+}
+
+/** The lead's project file and score, when it has either. */
+async function projectFilePanel(lead: Awaited<ReturnType<typeof getLeadById>>) {
+  if (!lead) return null;
+  const p = lead.payload && typeof lead.payload === 'object' && !Array.isArray(lead.payload) ? lead.payload : {};
+  if (!p.project_file && !p.project_score) return null;
+  const view = consultLeadView(lead as unknown as ConsultLeadRow, { now: new Date() });
+  if (!view.score && isEmptyProjectFile(view.file)) return null;
+  return <ProjectFilePanel lead={view} now={new Date().toISOString()} compact />;
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -40,6 +58,7 @@ export default async function LeadPage({ params }: { params: { id: string } }) {
     lead.product_id ? db.from('products').select('name').eq('id', lead.product_id).maybeSingle().then((r) => r.data) : null,
     lead.service_plan_id ? db.from('service_plans').select('name').eq('id', lead.service_plan_id).maybeSingle().then((r) => r.data) : null,
   ]);
+  const filePanel = await projectFilePanel(lead);
 
   return (
     <div className="max-w-5xl">
@@ -55,6 +74,7 @@ export default async function LeadPage({ params }: { params: { id: string } }) {
       />
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-5">
+          {filePanel}
           <Section title="פרטי הפנייה">
             <dl>
               <Row label="שם">{lead.full_name}</Row>

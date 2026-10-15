@@ -29,6 +29,7 @@ import {
 import { REGIONS } from '@/lib/constants/community';
 import { lastTouchForVisitor } from '@/lib/analytics/attribution';
 import { currentVisitor, trackServer } from '@/lib/analytics/server';
+import { prepareRevenueLead } from '@/lib/revenue/lead-pipeline';
 import { validateLead, isUuid, type FieldErrors } from './schemas';
 import { notifyLead, type NotifyResult } from './notify';
 import {
@@ -58,6 +59,13 @@ export type SubmitLeadInput = {
   /** Client IP for rate limiting (hashed before storage). */
   ip?: string | null;
   spam?: { honeypot?: unknown; turnstileToken?: unknown };
+  /**
+   * The visitor's project file as the browser assembled it (lib/project-file,
+   * untrusted). Builder leads are always enriched: this is sanitized, merged
+   * with the member's hub snapshot and the form, scored, and stored in
+   * payload.project_file / payload.project_score (+ leads.score).
+   */
+  projectFile?: unknown;
 };
 
 export type SubmitLeadError = 'validation' | 'spam' | 'rate_limited' | 'unavailable' | 'server';
@@ -164,7 +172,23 @@ export async function submitLead(input: SubmitLeadInput): Promise<SubmitLeadResu
     }
 
     // 5b. What brought this visitor in: 4h last touch (lib/analytics/attribution.ts).
-    const attribution = await lastTouchForVisitor(currentVisitor().anonId);
+    const visitor = currentVisitor();
+    const attribution = await lastTouchForVisitor(visitor.anonId);
+
+    // 5c. Revenue engine: the project file and its score, and where the lead goes
+    // (lib/revenue/lead-pipeline.ts; never throws, falls back to default routing).
+    const revenue = await prepareRevenueLead({
+      db,
+      type: input.type,
+      parsed: { regionSlug: parsed.regionSlug, constructionStage: parsed.constructionStage },
+      clientFile: input.projectFile,
+      memberId: input.memberId ?? null,
+      businessId: input.businessId || null,
+      payload: extra,
+      attribution,
+      visitor,
+    });
+    Object.assign(extra, revenue.payload);
 
     // 6. Insert.
     const lead = await insertLeadTrusted(db, {
@@ -202,12 +226,14 @@ export async function submitLead(input: SubmitLeadInput): Promise<SubmitLeadResu
         touch: attribution?.touch,
         touch_medium: attribution?.medium,
         touch_source: attribution?.source ?? undefined,
+        score: revenue.envelope?.score.score,
+        routing: revenue.decision.target,
       },
       { ip: input.ip, userId: input.memberId, path: input.sourceUrl },
     );
 
-    // 7. Notify (never throws; bounded by per-channel timeouts).
-    const notification = await notifyLead(lead, { db });
+    // 7. Notify (never throws; bounded by per-channel timeouts), as the routing rules decided.
+    const notification = await notifyLead(lead, { db, route: revenue.route });
     return { ok: true, lead, notification };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

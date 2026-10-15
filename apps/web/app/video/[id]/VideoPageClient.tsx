@@ -10,15 +10,18 @@ import { VideoGridSkeleton } from '@/components/Skeleton';
 import { getVideoDetail, getRelatedVideos } from '@/lib/api';
 import { formatTimestamp } from '@/lib/types';
 import type { VideoDetail as VideoDetailType, Video } from '@/lib/types';
+import AskAbout from '@/components/advisor/AskAbout';
 
 interface InitialData {
   initialVideo?: VideoDetailType | null;
   initialRelated?: Video[];
   /** Hub slot: the "שמירה" button, rendered by the server page when the hub is on. */
   saveSlot?: ReactNode;
+  /** Sponsored partner offer rendered by the server page (revenue squad); shown after the summary. */
+  partnerSlot?: ReactNode;
 }
 
-function VideoContent({ initialVideo, initialRelated, saveSlot }: InitialData) {
+function VideoContent({ initialVideo, initialRelated, saveSlot, partnerSlot }: InitialData) {
   const params = useParams();
   const id = params.id as string;
   const hasInitial = Boolean(initialVideo);
@@ -237,6 +240,15 @@ function VideoContent({ initialVideo, initialRelated, saveSlot }: InitialData) {
             )}
           </div>
         )}
+
+        {/* Ask the advisor about this video (components/advisor/AskAbout.tsx) */}
+        <AskAbout
+          kind="video"
+          id={video.youtube_id}
+          questions={video.costs_data && video.costs_data.length > 0 ? ['כמה זה עולה לפי הסרטון?', 'מה הנקודות הכי חשובות בסרטון?'] : undefined}
+          className="mb-10"
+        />
+        {partnerSlot && <div className="mb-8">{partnerSlot}</div>}
       </section>
 
       {/* Related Videos */}

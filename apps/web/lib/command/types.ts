@@ -51,9 +51,11 @@ export type LeadFact = {
   sizeM2: number | null;
   /** Budget as the builder gave it, already formatted ("₪1.5M–2M", "1.5 עד 2 מיליון ₪"). */
   budgetLabel: string | null;
-  /** 0-100 from the revenue squad's scoring; null until scored. */
+  /** 0-100 from the revenue squad's scoring (leads.score); null until scored. */
   score: number | null;
   scoreReasons: string[];
+  /** When the consultation was booked (leads.booked_at: Calendly or the consult team); null = not booked. */
+  bookedAt?: string | null;
   /** service_plans.slug for service_plan leads. */
   planSlug: string | null;
   source: LeadSource;
@@ -86,10 +88,21 @@ export type AiUsageDay = { day: string; costUsd: number; calls: number; answerCa
 
 export type PartnerTierId = 'members' | 'partners' | 'ambassadors';
 
+/** A partner's live tier terms (partner_subscriptions + partner_tiers, revenue squad). */
+export type PartnerTierInfo = {
+  label: string;
+  /** What this partner pays per month (locked at purchase), whole shekels. */
+  monthlyPriceNis: number;
+  /** Viewable impressions per 30 days the tier promises; null = no target. */
+  monthlyImpressionTarget: number | null;
+};
+
 export type PartnerFact = {
   id: string;
   name: string;
   tier: PartnerTierId | null;
+  /** Live terms from the partner's subscription; when absent, PARTNER_TIERS defaults apply. */
+  tierInfo?: PartnerTierInfo | null;
   impressions: number;
   clicks: number;
   leads: number;
