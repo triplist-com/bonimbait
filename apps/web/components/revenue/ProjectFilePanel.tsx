@@ -62,12 +62,15 @@ export default function ProjectFilePanel({
   now,
   actions,
   fullRecordHref,
+  compact = false,
 }: {
   lead: ConsultLeadView;
   /** ISO time the view was built (relative dates). */
   now: string;
   actions?: ReactNode;
   fullRecordHref?: string | null;
+  /** Inside a page that already shows the lead's name and contact details (the lead page). */
+  compact?: boolean;
 }) {
   const nowDate = new Date(now);
   const file = lead.file;
@@ -84,7 +87,21 @@ export default function ProjectFilePanel({
   const questions = [...(file.questions ?? [])].reverse();
 
   return (
-    <article aria-labelledby={`lead-${lead.id}`} className="rounded-3xl border border-ink-100 bg-white p-5 shadow-card sm:p-6">
+    <article
+      aria-labelledby={compact ? undefined : `lead-${lead.id}`}
+      aria-label={compact ? 'תיק הפרויקט' : undefined}
+      className="rounded-3xl border border-ink-100 bg-white p-5 shadow-card sm:p-6"
+    >
+      {compact ? (
+        <div className="mb-5 flex items-center gap-4">
+          <ScoreBadge score={lead.score?.score ?? null} band={lead.score?.band ?? null} size="md" showBand />
+          <div>
+            <h2 className="text-title-lg text-ink-900">תיק הפרויקט</h2>
+            <p className="text-sm text-ink-600">הציון והתיק שהגיעו עם הפנייה</p>
+          </div>
+        </div>
+      ) : (
+        <>
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -140,6 +157,8 @@ export default function ProjectFilePanel({
           </a>
         )}
       </div>
+        </>
+      )}
 
       {actions && <div className="mt-4">{actions}</div>}
 

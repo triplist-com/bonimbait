@@ -14,7 +14,21 @@ const STATUS_ALIASES: Record<string, LeadStatus[]> = {
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const UUID = /^[0-9a-f-]{36}$/i;
 
-export type LeadQuery = { type?: string; status?: string; from?: string; to?: string; business?: string; q?: string };
+export type LeadQuery = {
+  type?: string;
+  status?: string;
+  from?: string;
+  to?: string;
+  business?: string;
+  q?: string;
+  /** Revenue filters: '45' | '70' (score bands), '1' (booked only), 'score' (sort). */
+  min_score?: string;
+  booked?: string;
+  sort?: string;
+};
+
+/** The score floors the inbox offers (the scorer's "פושר" and "חם" bands). */
+export const SCORE_FLOORS = ['45', '70'] as const;
 
 /** URL filters -> listLeads() filter (shared by the inbox and the CSV export). */
 export function leadFilterFromQuery(q: LeadQuery): LeadListFilter {
@@ -25,5 +39,8 @@ export function leadFilterFromQuery(q: LeadQuery): LeadListFilter {
   if (q.to && DATE.test(q.to)) filter.to = q.to;
   if (q.business && UUID.test(q.business)) filter.businessId = q.business;
   if (q.q) filter.q = q.q.slice(0, 100);
+  if (q.min_score && (SCORE_FLOORS as readonly string[]).includes(q.min_score)) filter.minScore = Number(q.min_score);
+  if (q.booked === '1') filter.booked = true;
+  if (q.sort === 'score') filter.sort = 'score';
   return filter;
 }

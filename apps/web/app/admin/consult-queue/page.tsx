@@ -5,7 +5,7 @@ import { param } from '@/components/admin/AdminPagination';
 import ConsultQueue from '@/components/revenue/ConsultQueue';
 import { runConsultAction } from '@/lib/revenue/actions/consult';
 import { loadConsultQueue } from '@/lib/revenue/consult-queue';
-import { isConsultStage, type ConsultStage } from '@/lib/revenue/consult-workflow';
+import { CONSULT_TABS, isConsultStage, type ConsultStage } from '@/lib/revenue/consult-workflow';
 import { revenueUserDb } from '@/lib/revenue/db';
 
 export const metadata = { title: 'תור הייעוצים' };
@@ -29,7 +29,13 @@ export default async function ConsultQueuePage({ searchParams }: { searchParams:
   const rawTab = param(searchParams.tab);
   const tab: ConsultStage = isConsultStage(rawTab) && rawTab !== 'spam' ? rawTab : 'queue';
   const leadParam = param(searchParams.lead) ?? null;
-  const data = await loadConsultQueue(revenueUserDb(), { tab, selectedId: leadParam });
+  const db = revenueUserDb();
+  let data = await loadConsultQueue(db, { tab, selectedId: leadParam });
+  // Nothing waiting and no tab chosen: open the first stage that has leads.
+  if (!rawTab && data.items.length === 0) {
+    const next = CONSULT_TABS.find((t) => data.counts[t] > 0);
+    if (next) data = await loadConsultQueue(db, { tab: next, selectedId: leadParam });
+  }
 
   return (
     <div className="max-w-7xl">

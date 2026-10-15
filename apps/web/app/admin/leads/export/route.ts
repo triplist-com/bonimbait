@@ -25,6 +25,9 @@ export async function GET(request: NextRequest) {
     to: sp.get('to') ?? undefined,
     business: sp.get('business') ?? undefined,
     q: sp.get('q') ?? undefined,
+    min_score: sp.get('min_score') ?? undefined,
+    booked: sp.get('booked') ?? undefined,
+    sort: sp.get('sort') ?? undefined,
   });
 
   const db = createClient();
@@ -38,12 +41,14 @@ export async function GET(request: NextRequest) {
   const biz = new Map((businesses ?? []).map((b) => [b.id, b.name]));
 
   const csv = toCsv(
-    ['מספר ליד', 'תאריך', 'סוג', 'סטטוס', 'שם', 'טלפון', 'מייל', 'הודעה', 'עסק', 'עמוד מקור', 'שלב בנייה', 'שדות נוספים', 'שיוך (4 שעות)', 'התראה', 'הועבר אל', 'הערות', 'מזהה'],
-    rows.map((l) => [
+    ['מספר ליד', 'תאריך', 'סוג', 'סטטוס', 'ציון', 'פגישה נקבעה', 'שם', 'טלפון', 'מייל', 'הודעה', 'עסק', 'עמוד מקור', 'שלב בנייה', 'שדות נוספים', 'שיוך (4 שעות)', 'התראה', 'הועבר אל', 'הערות', 'מזהה'],
+    (rows as Array<LeadRow & { score?: number | null; booked_at?: string | null }>).map((l) => [
       l.ref,
       new Date(l.created_at).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' }),
       LEAD_TYPE_LABELS[l.type],
       LEAD_STATUS[l.status]?.label ?? l.status,
+      l.score ?? '',
+      l.booked_at ? new Date(l.booked_at).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' }) : '',
       l.full_name,
       l.phone,
       l.email,
