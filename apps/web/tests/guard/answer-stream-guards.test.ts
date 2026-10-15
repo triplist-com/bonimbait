@@ -136,6 +136,7 @@ describe('/api/answer/stream guards', () => {
       output_tokens: 350,
       has_pros: false,
       cited: 1,
+      source_ids: ['post:עלות-שלד'],
       followups: 1,
     });
     expect(matchPros).toHaveBeenCalledWith('כמה עולה שלד?', { isDemo: false, regionSlug: undefined });

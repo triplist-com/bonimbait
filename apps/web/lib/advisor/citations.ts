@@ -7,6 +7,8 @@
  * disappears together with the space before it. Pure and client-safe.
  */
 
+import type { AdvisorSource } from './types';
+
 export type CiteSegment = { type: 'text'; value: string } | { type: 'cite'; ns: number[] };
 
 const NUM = String.raw`(?:מקור\s*)?\d{1,2}`;
@@ -81,6 +83,18 @@ export function citedNumbers(text: string, maxN: number): number[] {
     for (const n of parseCiteBody(m[1], maxN)) out.add(n);
   }
   return Array.from(out).sort((a, b) => a - b);
+}
+
+/**
+ * The sources a finished answer cites, as the Command Center's ids
+ * ('video:<youtube id>', 'post:<slug>'), in citation order:
+ * `answer_completed.source_ids`.
+ */
+export function citedSourceIds(sources: readonly AdvisorSource[]): string[] {
+  return sources
+    .filter((s) => s.cited)
+    .sort((a, b) => a.n - b.n)
+    .map((s) => (s.kind === 'video' ? `video:${s.youtube_id}` : `post:${s.slug}`));
 }
 
 /** The text without citations (WhatsApp and share previews). */

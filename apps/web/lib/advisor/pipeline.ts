@@ -25,7 +25,7 @@ import { wantsNumbers } from '@/lib/knowledge/moments';
 import { clientIpFromHeaders, hashIp } from '@/lib/leads/spam';
 import { isDemoRequest } from '@/lib/platform/paths';
 import type { ProsCta } from '@/lib/types';
-import { citedNumbers } from './citations';
+import { citedNumbers, citedSourceIds } from './citations';
 import { ANSWER_COST_ESTIMATE_USD, ANSWER_MODEL, PROS_WAIT_MS } from './config';
 import { AnswerStreamError, streamAnswer, type ModelUsagePart } from './model';
 import { postsMeta } from './posts-meta';
@@ -313,6 +313,7 @@ export async function handleAdvisorStream(request: NextRequest): Promise<Respons
               top_similarity: c.confidence.topSimilarity,
               n_sources: c.sources.length,
               cited: c.cited,
+              ...(c.cited > 0 ? { source_ids: citedSourceIds(c.sources) } : {}),
               ...(c.refused ? { refused: c.refused } : {}),
               rewritten: sq.rewritten,
               ...(sq.rewritten ? { standalone_query: sq.query } : {}),

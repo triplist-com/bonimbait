@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { citedNumbers, parseCiteBody, partialCitationTail, splitCitations, stripCitations } from '@/lib/advisor/citations';
+import { citedNumbers, citedSourceIds, parseCiteBody, partialCitationTail, splitCitations, stripCitations } from '@/lib/advisor/citations';
+import type { AdvisorSource } from '@/lib/advisor/types';
 
 describe('splitCitations', () => {
   it('maps [n] to source numbers', () => {
@@ -46,6 +47,14 @@ describe('citedNumbers / parseCiteBody / stripCitations', () => {
   it('refuses huge ranges', () => {
     expect(parseCiteBody('1-40', 50)).toEqual([]);
     expect(parseCiteBody('2 – 4', 5)).toEqual([2, 3, 4]);
+  });
+
+  it('lists the cited sources as Command Center ids, in citation order', () => {
+    const video = (n: number, cited: boolean) =>
+      ({ kind: 'video', n, youtube_id: `yt${n}`, cited }) as unknown as AdvisorSource;
+    const post = (n: number, cited: boolean) => ({ kind: 'post', n, slug: `עלות-${n}`, cited }) as unknown as AdvisorSource;
+    expect(citedSourceIds([post(3, true), video(1, true), video(2, false), post(4, false)])).toEqual(['video:yt1', 'post:עלות-3']);
+    expect(citedSourceIds([])).toEqual([]);
   });
 
   it('strips citations for share text', () => {
