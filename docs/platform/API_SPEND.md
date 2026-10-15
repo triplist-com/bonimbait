@@ -28,5 +28,6 @@ Log every paid run here: amounts and volumes only, never keys.
 | 2026-10-15 | advisor | `/ask/` screenshots on the production build (desktop, mobile), Sonnet 5.5 + pros classifier | 4 answers (18,816 in / 2,615 out) + 4 pros calls | 0.0749 |
 | 2026-10-15 | advisor | Follow-up rewrite (Claude Haiku 5.5) | 1 call, 667 in / 53 out tokens | 0.0001 |
 | 2026-10-15 | advisor | Query embeddings (text-embedding-3-small) for advisor questions and free dry runs | ~100 queries, ~2K tokens | <0.0001 |
+| 2026-10-15 | advisor | Post-merge check: one live answer on the merged production build (mobile), Sonnet 5.5 + pros classifier | 1 answer (4,641 in / 685 out; cache 1,669 written) + 1 pros call | 0.0218 |
 
-**Running total:** ~$1.08 (autopilot ~$0.09 of $0.75; knowledge $0.279 of $1.50; command $0.011 of $0.50; pitch $0.032 of $0.20; advisor $0.657 of $1.00)
+**Running total:** ~$1.11 (autopilot ~$0.09 of $0.75; knowledge $0.279 of $1.50; command $0.011 of $0.50; pitch $0.032 of $0.20; advisor $0.678 of $1.00)

@@ -46,7 +46,7 @@ date ("נכון ל-2026", "מאמר ממרץ 2026", "לפי פרק 109 של הפ
 
 **Citations.** I spot-checked them against the index:
 - "800 850 ... לפני מעם" is in Ep. 109's passage.
-- "35% מעוגת הביצוע" is in Ep. 107's passage.
+- "850 800 שלדים היום" and "35% מעוגת הביצוע" are in Ep. 107's passage.
 - The water-bar price (about 20 ₪ a metre, 2,000-3,000 ₪ for a 100 m² basement) is in the August 2026 waterproofing guide.
 
 **Hebrew.** Natural, plural imperative ("בקשו", "בדקו"), in Tomer's practical tone. There is an
