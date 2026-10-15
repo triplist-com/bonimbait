@@ -150,7 +150,8 @@ export default function PlannerResult({ book, estimate, hubDraft, onEdit, onRest
             </p>
           </div>
           <div className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-2 border-t border-sand-200 pt-5">
-            <ButtonLink href={MY_HOME_HREF} variant="secondary" onClick={saveToHome} iconStart={<Home />}>
+            {/* No prefetch: a personal (possibly auth-gated) page, and the hub owns the route. */}
+            <ButtonLink href={MY_HOME_HREF} variant="secondary" prefetch={false} onClick={saveToHome} iconStart={<Home />}>
               שמרו בבית שלי
             </ButtonLink>
             <a
