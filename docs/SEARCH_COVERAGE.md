@@ -1,18 +1,30 @@
 # AI search coverage of legacy content (Wave 2 analysis)
 
-> **Update 2026-10-14 (platform `knowledge` squad).** The whole channel has been inventoried and
+> **Update 2026-10-15 (platform `knowledge` squad).** The whole channel has been inventoried and
 > every video with Hebrew captions is now indexed. Current numbers, method and quality check:
-> [`docs/platform/KNOWLEDGE_COVERAGE.md`](platform/KNOWLEDGE_COVERAGE.md). What changed against
-> this analysis:
+> [`docs/platform/KNOWLEDGE_COVERAGE.md`](platform/KNOWLEDGE_COVERAGE.md).
+>
+> **Current numbers:**
+> - The channel has 994 uploads (316.0 h). 951 long-form videos (312.5 h) are in scope.
+> - The AI index holds the transcripts of **278 of 951 videos (89.8 h, 29%)**, as 1,774 segments.
+>   That's up from 178 videos (61.2 h).
+> - The other 673 videos (222.7 h) have title-level entries: findable in search and as related
+>   videos, with no moments.
+> - 80 of the 188 legacy `/video/<slug>/` pages have AI coverage, up from 37.
+>
+> **What changed against this analysis:**
 > - The "none" caption status is **not** an artefact of the 2026-03 rate limits.
 >   - The re-probe ran sequentially at about 250 videos an hour with yt-dlp 2026.08.19 and
 >     had no blocks.
->   - A second player client (`web`) confirmed the result: it sees no caption tracks for these
->     videos, while it does see the (PO-token-gated) tracks of captioned ones.
->   - Every uncaptioned video has **no video language set** on YouTube. Every auto-captioned one
->     is set to Hebrew.
+>   - A second player client (`web`) on a sample found no caption tracks for these videos. It does
+>     see the (PO-token-gated) tracks of captioned ones.
+>   - 666 of the 673 uncaptioned videos have **no video language set** on YouTube. 6 have a wrong
+>     one and 1 is set to Hebrew. All 70 newly auto-captioned videos are set to Hebrew.
 >   - So the cheapest fix is probably free: set "Video language: Hebrew" in YouTube Studio (a
 >     bulk edit), then re-run `scripts/knowledge/fetch_captions.py --recheck-none`.
+>     - Confidence is high on the cause. It's medium that YouTube backfills captions for old
+>       uploads, so try a few videos first.
+>     - Embedding all 673 would cost about $0.17. Whisper would cost $40–80.
 > - Posts are indexed (5,233 chunks, see section 2), as recommended below.
 >
 > The rest of this page is the original analysis.
