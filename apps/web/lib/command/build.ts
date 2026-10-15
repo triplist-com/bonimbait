@@ -132,8 +132,9 @@ function planMix(inputs: CommandInputs, window: PeriodWindow, table: ExpectedVal
 
 function unanswered(inputs: CommandInputs): CommandCenterData['unanswered'] {
   if (inputs.insights && inputs.insights.topics.length > 0) {
+    // Low-coverage topics ranked by volume; on a tie, no content at all comes first.
     const open = inputs.insights.topics.filter((t) => t.level !== 'covered');
-    const ordered = [...open].sort((a, b) => (a.level === b.level ? b.asks - a.asks : a.level === 'gap' ? -1 : 1));
+    const ordered = [...open].sort((a, b) => b.asks - a.asks || (a.level === b.level ? 0 : a.level === 'gap' ? -1 : 1));
     const items: UnansweredItem[] = ordered.slice(0, 6).map((t) => ({
       id: t.id,
       label: t.label,

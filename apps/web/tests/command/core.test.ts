@@ -333,7 +333,7 @@ describe('buildCommandCenter', () => {
     expect(buildCommandCenter(inputs({ aiBudgetUsd: 0 })).ai.capStatus).toBe('off');
   });
 
-  it('lists content gaps before partial coverage, and is sparse without activity', () => {
+  it('ranks low-coverage topics by volume (gaps first on a tie), and is sparse without activity', () => {
     const topic = (id: string, level: 'gap' | 'partial' | 'covered', asks: number) => ({
       id,
       rank: 1,
@@ -358,12 +358,12 @@ describe('buildCommandCenter', () => {
       inputs({
         insights: {
           run: { id: 'r', status: 'done', startedAt: now, finishedAt: now, questionCount: 9, askCount: 60, topicCount: 3, costUsd: 0.002, message: null },
-          topics: [topic('partial-big', 'partial', 30), topic('gap-small', 'gap', 9), topic('covered', 'covered', 50)],
+          topics: [topic('gap-small', 'gap', 9), topic('partial-big', 'partial', 30), topic('covered', 'covered', 50), topic('partial-tie', 'partial', 9)],
         },
       }),
     );
-    expect(data.unanswered.items.map((i) => i.id)).toEqual(['gap-small', 'partial-big']);
-    expect(data.unanswered.totalAsks).toBe(39);
+    expect(data.unanswered.items.map((i) => i.id)).toEqual(['partial-big', 'gap-small', 'partial-tie']);
+    expect(data.unanswered.totalAsks).toBe(48);
     expect(data.sparse).toBe(true);
   });
 
