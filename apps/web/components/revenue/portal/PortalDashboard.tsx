@@ -140,7 +140,7 @@ export default function PortalDashboard({
             action={
               reportHref ? (
                 <Link href={reportHref} className="text-sm font-semibold text-primary-700 hover:underline">
-                  הדוח החודשי
+                  דוח שותף
                 </Link>
               ) : null
             }

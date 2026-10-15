@@ -5,6 +5,7 @@ import { getLeadById } from '@/lib/db/leads';
 import { attributionLabelHe } from '@/lib/analytics/attribution';
 import type { Json } from '@/lib/db/types';
 import { LEAD_TYPE_LABELS } from '@/lib/leads/constants';
+import { constructionStageLabel } from '@/lib/constants/community';
 import { saveLeadNotes, setLeadStatus } from '@/lib/admin/actions/leads';
 import { LEAD_STATUS, LEAD_STATUS_ORDER, NOTIFY_STATUS, formatDateTime } from '@/lib/admin/labels';
 import PageHeader from '@/components/admin/PageHeader';
@@ -96,7 +97,7 @@ export default async function LeadPage({ params }: { params: { id: string } }) {
                 <span className="whitespace-pre-line">{lead.message}</span>
               </Row>
               <Row label="אזור">{region?.name}</Row>
-              <Row label="שלב בנייה">{lead.construction_stage}</Row>
+              <Row label="שלב בנייה">{constructionStageLabel(lead.construction_stage) ?? lead.construction_stage}</Row>
               <Row label="עסק">{biz && <Link href={`/admin/directory/businesses/${biz.id}/`} className="text-primary hover:underline">{biz.name}</Link>}</Row>
               <Row label="מוצר / מסלול">{product?.name ?? plan?.name}</Row>
               <Row label="משתמש רשום">{member && (member.email ?? member.id)}</Row>

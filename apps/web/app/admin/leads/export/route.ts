@@ -3,6 +3,7 @@ import { checkRole } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { listLeads } from '@/lib/db/leads';
 import { LEAD_TYPE_LABELS } from '@/lib/leads/constants';
+import { constructionStageLabel } from '@/lib/constants/community';
 import { LEAD_STATUS, NOTIFY_STATUS } from '@/lib/admin/labels';
 import { leadFilterFromQuery } from '@/lib/admin/lead-filters';
 import { toCsv } from '@/lib/admin/csv';
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
       l.message,
       l.business_id ? biz.get(l.business_id) ?? l.business_id : '',
       l.source_url,
-      l.construction_stage,
+      constructionStageLabel(l.construction_stage) ?? l.construction_stage,
       l.payload,
       l.attribution,
       NOTIFY_STATUS[l.notify_status]?.label ?? l.notify_status,
