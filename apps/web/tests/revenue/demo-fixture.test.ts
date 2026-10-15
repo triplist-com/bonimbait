@@ -33,6 +33,11 @@ describe('revenue demo fixtures', () => {
     expect(r.roi.multiple).toBe(6);
     expect(r.partner.name).toBe('חלונות הגליל');
     expect(data.partner.leads.filter((l) => l.deal)).toHaveLength(5);
+    // Last month's report lists last month's leads, newest first.
+    expect(r.month).toBe('2026-09');
+    expect(data.partner.leads.every((l) => l.createdAt.slice(0, 7) === r.month)).toBe(true);
+    const times = data.partner.leads.map((l) => Date.parse(l.createdAt));
+    expect(times).toEqual([...times].sort((a, b) => b - a));
   });
 
   it('gives the shell contractor a believable portal', () => {

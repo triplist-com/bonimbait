@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Logo } from '@/components/ui/Logo';
 import { cn } from '@/lib/cn';
 import type { DealResult } from '@/lib/revenue/actions/portal';
-import type { PartnerReportData } from '@/lib/revenue/report';
+import { funnelValue, type PartnerReportData } from '@/lib/revenue/report';
 import type { ReportLead } from '@/lib/revenue/report-server';
 import DealButton from '../portal/DealButton';
 import PrintButton from './PrintButton';
@@ -68,6 +68,8 @@ export default function PartnerReport({
 }) {
   const max = Math.max(1, ...data.funnel.map((s) => s.value));
   const r = data.roi;
+  // The list is capped (the latest 100); the heading counts them all.
+  const totalLeads = Math.max(leads.length, funnelValue(data.funnel, 'leads'));
 
   return (
     <div id="partner-report" className="space-y-6">
@@ -125,14 +127,18 @@ export default function PartnerReport({
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <Card>
           <h2 className="text-title-lg text-ink-900">מהחשיפה ועד העסקה</h2>
-          <p className="mt-1 text-sm text-ink-600">כל שלב והאחוז שעבר ממנו לשלב הבא.</p>
+          <p className="mt-1 text-sm text-ink-600">המספרים של החודש, שלב אחרי שלב.</p>
           <ol className="mt-5 space-y-4">
             {data.funnel.map((s, i) => (
               <li key={s.key}>
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-semibold text-ink-900">{s.label}</span>
                   <span className="flex items-baseline gap-2">
-                    {s.rate !== null && <span className="text-xs text-ink-500">{PCT.format(s.rate)} מהשלב הקודם</span>}
+                    {s.rate !== null && s.rateOf && (
+                      <span className="text-xs text-ink-500">
+                        <span className="num">{PCT.format(s.rate)}</span> {s.rateOf}
+                      </span>
+                    )}
                     <span className="num text-xl font-extrabold text-ink-900">{NUM.format(s.value)}</span>
                   </span>
                 </div>
@@ -176,8 +182,8 @@ export default function PartnerReport({
             <h2 className="text-title text-ink-900">לעומת החודש הקודם</h2>
             <dl className="mt-3 space-y-2 text-sm">
               {[
-                ['חשיפות נצפות', data.funnel[0].value, data.change.exposures],
-                ['פניות', data.funnel[4].value, data.change.leads],
+                ['חשיפות נצפות', funnelValue(data.funnel, 'exposures'), data.change.exposures],
+                ['פניות', funnelValue(data.funnel, 'leads'), data.change.leads],
                 ['עסקאות', data.deals.count, data.change.deals],
               ].map(([label, value, pct]) => (
                 <div key={String(label)} className="flex items-baseline justify-between gap-3">
@@ -199,8 +205,19 @@ export default function PartnerReport({
       </div>
 
       <Card>
-        <h2 className="text-title-lg text-ink-900">הפניות של החודש ({leads.length})</h2>
-        {!readOnly && <p className="mt-1 text-sm text-ink-600">סגרתם עסקה? סמנו אותה כאן, וההחזר יתעדכן.</p>}
+        <h2 className="text-title-lg text-ink-900">
+          הפניות של החודש (<span className="num">{NUM.format(totalLeads)}</span>)
+        </h2>
+        {(!readOnly || leads.length < totalLeads) && (
+          <p className="mt-1 text-sm text-ink-600">
+            {leads.length < totalLeads && (
+              <>
+                מוצגות <span className="num">{NUM.format(leads.length)}</span> האחרונות.{' '}
+              </>
+            )}
+            {!readOnly && 'סגרתם עסקה? סמנו אותה כאן, וההחזר יתעדכן.'}
+          </p>
+        )}
         {leads.length === 0 ? (
           <p className="mt-4 text-body-sm text-ink-600">לא היו פניות החודש.</p>
         ) : (

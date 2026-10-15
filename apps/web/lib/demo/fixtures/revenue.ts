@@ -19,7 +19,7 @@ import type { ConsultLeadView } from '@/lib/revenue/consult-view';
 import type { ConsultStage } from '@/lib/revenue/consult-workflow';
 import { EMPTY_METRICS, portalKpis, profileCompleteness } from '@/lib/revenue/portal';
 import type { PortalLeadView, PortalTier, PortalView } from '@/lib/revenue/portal-server';
-import { buildPartnerReport, previousMonth } from '@/lib/revenue/report';
+import { buildPartnerReport, nextMonth, previousMonth } from '@/lib/revenue/report';
 import type { ReportLead } from '@/lib/revenue/report-server';
 import { BUDGET_BANDS } from '../data';
 import type { DemoLead } from '../generator';
@@ -209,13 +209,16 @@ export const revenueDemo = defineDemoFixture('revenue', ({ gen, today }) => {
     previous: { ...EMPTY_METRICS, daily: [], impressions: 3_405, leads: 36, deals: 6 },
     deals: dealValues.map((valueAgorot) => ({ valueAgorot })),
   });
+  // The month's latest 10 of its 44 leads, dated inside the report month
+  // (counted back from the evening of its last day, Israel time).
+  const monthLastEvening = Date.parse(`${nextMonth(month)}-01T00:00:00Z`) - 6 * 60 * 60_000;
   const partnerLeads: ReportLead[] = gen
     .fork('partner-leads')
-    .leads(10, { withinMinutes: 28 * 24 * 60 })
+    .leads(10, { withinMinutes: 26 * 24 * 60 })
     .map((l, i) => ({
       id: `demo-partner-lead-${i}`,
       ref: l.ref,
-      createdAt: ago(l.minutesAgo),
+      createdAt: new Date(monthLastEvening - l.minutesAgo * 60_000).toISOString(),
       name: l.person.fullName,
       kindLabel: i % 4 === 3 ? 'הועבר אליכם' : i % 3 === 2 ? 'צפייה בטלפון' : 'בקשת הצעת מחיר',
       statusLabel: i < 5 ? 'נסגר בהצלחה' : i % 2 ? 'נוצר קשר' : 'חדש',

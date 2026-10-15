@@ -2,7 +2,12 @@
  * "דוח שותף": the monthly partner report, as pure functions (unit-tested).
  *
  *   viewable exposures -> clicks -> builders who asked about the trade ->
- *   quote requests -> leads -> deals reported  =>  ROI estimate
+ *   leads -> of them, quote requests -> deals reported  =>  ROI estimate
+ *
+ * Not every step is a subset of the one before it (builders ask about a trade
+ * whether or not they clicked the offer), so a step shows a share only of the
+ * step it is really part of: clicks of exposures, quote requests and deals of
+ * the leads.
  *
  * ROI method (stated on the report): the gross margin of the deals the
  * partner reported this month (deal value x margin rate, 10% unless the
@@ -15,16 +20,23 @@ import type { BusinessMetrics } from './types';
 
 export const DEFAULT_MARGIN_RATE = 0.1;
 
-export type FunnelStepKey = 'exposures' | 'clicks' | 'askers' | 'quotes' | 'leads' | 'deals';
+export type FunnelStepKey = 'exposures' | 'clicks' | 'askers' | 'leads' | 'quotes' | 'deals';
 
 export type FunnelStep = {
   key: FunnelStepKey;
   label: string;
   value: number;
-  /** Share of the previous step (0..1); null for the first step or a zero base. */
+  /** Share (0..1) of the step this one is part of; null when it isn't part of one, or the base is zero. */
   rate: number | null;
+  /** What `rate` is a share of, in Hebrew ("מהחשיפות"); null without a rate. */
+  rateOf: string | null;
   hint: string;
 };
+
+/** A funnel step's value by key (0 when absent). */
+export function funnelValue(funnel: readonly FunnelStep[], key: FunnelStepKey): number {
+  return funnel.find((s) => s.key === key)?.value ?? 0;
+}
 
 export type ReportPartner = {
   id: string;
@@ -115,15 +127,21 @@ export function buildPartnerReport(input: {
   else if (withValue.length === 0) missing = 'סמנו סכום לעסקאות כדי לחשב את ההחזר.';
   const multiple = missing || !cost ? null : Math.round((margin / cost) * 10) / 10;
 
-  const steps: Array<Omit<FunnelStep, 'rate'>> = [
-    { key: 'exposures', label: 'חשיפות נצפות', value: m.impressions, hint: 'ההצעה שלכם נראתה באמת: לפחות חצי ממנה על המסך, שנייה ומעלה' },
-    { key: 'clicks', label: 'לחיצות על ההצעה', value: m.clicks, hint: 'בונים שלחצו כדי לשמוע עוד' },
-    { key: 'askers', label: `בונים ששאלו על ${topic}`, value: m.category_askers, hint: 'שאלות באתר על העבודה שאתם עושים' },
-    { key: 'quotes', label: 'בקשות הצעת מחיר', value: m.quote_requests, hint: 'פניות עם תיק פרויקט שביקשו הצעה' },
-    { key: 'leads', label: 'פניות שהגיעו אליכם', value: m.leads, hint: 'כולל פניות שנותבו אליכם' },
-    { key: 'deals', label: 'עסקאות שדיווחתם', value: dealCount, hint: 'מה שסגרתם מתוך הפניות' },
+  // A share above 100% means the month's numbers aren't nested (deals this month
+  // on last month's leads, say): no share then.
+  const share = (value: number, base: number, of: string) => {
+    const r = value <= base ? rate(value, base) : null;
+    return { rate: r, rateOf: r === null ? null : of };
+  };
+  const none = { rate: null, rateOf: null };
+  const funnel: FunnelStep[] = [
+    { key: 'exposures', label: 'חשיפות נצפות', value: m.impressions, ...none, hint: 'ההצעה שלכם נראתה באמת: לפחות חצי ממנה על המסך, שנייה ומעלה' },
+    { key: 'clicks', label: 'לחיצות על ההצעה', value: m.clicks, ...share(m.clicks, m.impressions, 'מהחשיפות'), hint: 'בונים שלחצו כדי לשמוע עוד' },
+    { key: 'askers', label: `בונים ששאלו על ${topic}`, value: m.category_askers, ...none, hint: 'שאלות באתר על העבודה שאתם עושים' },
+    { key: 'leads', label: 'פניות שהגיעו אליכם', value: m.leads, ...none, hint: 'כל הפניות: הצעות מחיר, טפסים ופניות שנותבו אליכם' },
+    { key: 'quotes', label: 'בקשות הצעת מחיר', value: m.quote_requests, ...share(m.quote_requests, m.leads, 'מהפניות'), hint: 'פניות עם תיק פרויקט שביקשו הצעה' },
+    { key: 'deals', label: 'עסקאות שדיווחתם', value: dealCount, ...share(dealCount, m.leads, 'מהפניות'), hint: 'מה שסגרתם מתוך הפניות' },
   ];
-  const funnel: FunnelStep[] = steps.map((s, i) => ({ ...s, rate: i === 0 ? null : rate(s.value, steps[i - 1].value) }));
 
   const n = (v: number, one: string, many: string) => (v === 1 ? one : `${NUM.format(v)} ${many}`);
   const highlights: string[] = [];

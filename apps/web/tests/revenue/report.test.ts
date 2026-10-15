@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EMPTY_METRICS } from '@/lib/revenue/portal';
-import { buildPartnerReport, monthLabel, nextMonth, partnerHealthStatus, previousMonth } from '@/lib/revenue/report';
+import { buildPartnerReport, funnelValue, monthLabel, nextMonth, partnerHealthStatus, previousMonth } from '@/lib/revenue/report';
 import type { BusinessMetrics } from '@/lib/revenue/types';
 
 const partner = { id: 'p1', name: 'חלונות הגליל', topicTitle: 'חלונות ואלומיניום', tierName: 'שגרירים', monthlyCostAgorot: 299_000 };
@@ -9,20 +9,35 @@ const metrics = (over: Partial<BusinessMetrics>): BusinessMetrics => ({ ...EMPTY
 describe('buildPartnerReport', () => {
   const m = metrics({ impressions: 3940, reach: 2610, clicks: 156, category_askers: 112, quote_requests: 37, leads: 41, assisted_leads: 6 });
 
-  it('walks the funnel from exposures to deals with step rates', () => {
+  it('walks the funnel from exposures to deals, with shares only of the step each is part of', () => {
     const r = buildPartnerReport({ month: '2026-09', partner, metrics: m, deals: Array.from({ length: 9 }, () => ({ valueAgorot: 2_000_000 })) });
     expect(r.funnel.map((s) => [s.key, s.value])).toEqual([
       ['exposures', 3940],
       ['clicks', 156],
       ['askers', 112],
-      ['quotes', 37],
       ['leads', 41],
+      ['quotes', 37],
       ['deals', 9],
     ]);
-    expect(r.funnel[0].rate).toBeNull();
-    expect(r.funnel[3].rate).toBeCloseTo(37 / 112);
+    const share = Object.fromEntries(r.funnel.map((s) => [s.key, s.rate === null ? null : [Math.round(s.rate * 1000) / 1000, s.rateOf]]));
+    expect(share).toEqual({
+      exposures: null,
+      clicks: [0.04, 'מהחשיפות'],
+      askers: null, // asking about the trade doesn't need a click on the offer
+      leads: null,
+      quotes: [0.902, 'מהפניות'],
+      deals: [0.22, 'מהפניות'],
+    });
+    expect(funnelValue(r.funnel, 'leads')).toBe(41);
     expect(r.funnel[2].label).toBe('בונים ששאלו על חלונות ואלומיניום');
     expect(r.monthLabel).toBe('ספטמבר 2026');
+  });
+
+  it('shows no share when the month\'s numbers are not nested', () => {
+    // Deals reported this month on last month's leads: more deals than leads.
+    const r = buildPartnerReport({ month: '2026-09', partner, metrics: metrics({ leads: 2, quote_requests: 3 }), deals: Array.from({ length: 4 }, () => ({ valueAgorot: 1_000_000 })) });
+    expect(r.funnel.find((s) => s.key === 'deals')).toMatchObject({ value: 4, rate: null, rateOf: null });
+    expect(r.funnel.find((s) => s.key === 'quotes')).toMatchObject({ value: 3, rate: null, rateOf: null });
   });
 
   it('estimates ROI as 10% gross margin on reported deals over the monthly cost: x6 for the demo', () => {
