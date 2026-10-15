@@ -5,6 +5,7 @@ import 'server-only';
  * newest), one tab at a time, with the counts for every tab. Runs with the
  * staff member's own session (RLS: staff full access).
  */
+import { attributedPartnerId } from '@/lib/analytics/attribution';
 import type { RevenueDb } from './db';
 import { CONSULT_COLUMNS, consultLeadView, type ConsultLeadRow, type ConsultLeadView } from './consult-view';
 import { CONSULT_TABS, stageFilter, type ConsultStage } from './consult-workflow';
@@ -35,6 +36,9 @@ async function businessNames(db: RevenueDb, rows: ConsultLeadRow[]): Promise<Map
     const file = r.payload && typeof r.payload === 'object' && !Array.isArray(r.payload) ? (r.payload as Record<string, unknown>).project_file : null;
     const list = file && typeof file === 'object' ? (file as Record<string, unknown>).shortlistBusinessIds : null;
     if (Array.isArray(list)) list.forEach((id) => typeof id === 'string' && ids.add(id));
+    // The partner whose offer the builder clicked before asking (the 4-hour last touch).
+    const partner = attributedPartnerId(r.attribution);
+    if (partner) ids.add(partner);
   }
   if (ids.size === 0) return new Map();
   const { data } = await db.from('businesses').select('id, name, slug').in('id', Array.from(ids).slice(0, 200));

@@ -103,5 +103,10 @@ describe('helpers', () => {
     expect(attributionLabelHe(pickLastTouch([partnerClick(3)], LEAD_AT))).toBe('לחיצה על שותף: partner-42 (spring) · 3 דק׳ לפני הפנייה');
     expect(attributionLabelHe(null)).toBe('ישיר / לא ידוע');
     expect(attributionLabelHe({ medium: 'nonsense' })).toBe('ישיר / לא ידוע');
+    // Integration (revenue -> admin): a partner is shown by name; raw ids (business, offer) never.
+    const biz = '11111111-2222-4333-8444-555555555501';
+    const viaOffer = { medium: 'partner', source: biz, campaign: '11111111-2222-4333-8444-555555555503', minutes_before: 0 };
+    expect(attributionLabelHe(viaOffer, (id) => (id === biz ? 'שלד השרון' : null))).toBe('לחיצה על שותף: שלד השרון · 0 דק׳ לפני הפנייה');
+    expect(attributionLabelHe(viaOffer)).toBe('לחיצה על שותף · 0 דק׳ לפני הפנייה');
   });
 });
