@@ -277,6 +277,26 @@ export const LEAD_SPECS = {
     }),
     (d) => ({ ...base(d), whatsappGroupSlug: null, payload: {} }),
   ),
+  /**
+   * "שלחו לי את הדוח" (budget planner report, lib/planner/actions.ts): an email or a
+   * phone is enough. The estimate itself is added server-side as payload context.
+   */
+  budget_report: spec(
+    z
+      .object({
+        full_name: optionalText(),
+        email: optionalEmail,
+        phone: z.preprocess(
+          blankToUndefined,
+          z.string().trim().transform(normalizePhone).refine(isValidPhone, MSG.phone).optional(),
+        ),
+        region: optionalRegion,
+      })
+      .superRefine((d, ctx) => {
+        if (!d.email && !d.phone) ctx.addIssue({ code: 'custom', path: ['email'], message: 'השאירו אימייל או טלפון' });
+      }),
+    (d) => ({ ...base(d), whatsappGroupSlug: null, payload: {} }),
+  ),
   /** "Claim this business" request (Directory, /business/<slug>/claim/). Needs businessId. */
   claim_business: spec(
     z.object({
