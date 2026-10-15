@@ -200,7 +200,7 @@ export default function PlannerApp({
   }, [focusQuestion, hubDraft, mode, setAnswers]);
 
   return (
-    <div ref={rootRef}>
+    <div ref={rootRef} className={mode === 'modal' ? 'p-4 sm:p-6' : undefined}>
       {showResult ? (
         <PlannerResult
           book={book}
@@ -211,6 +211,7 @@ export default function PlannerApp({
           ctaSource={mode === 'modal' ? 'planner-modal' : mode === 'demo' ? 'planner-demo' : 'planner-result'}
           today={today ? new Date(today) : undefined}
           persist={mode !== 'demo'}
+          compact={mode === 'modal'}
         />
       ) : (
         <div

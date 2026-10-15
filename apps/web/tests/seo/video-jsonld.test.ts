@@ -228,7 +228,7 @@ describe('title-only pages stay out of the index', () => {
     expect(thin.robots).toEqual({ index: false, follow: true });
     const full = await generateMetadata({ params: { id: transcribed.youtube_id } });
     expect(full.robots).toBeUndefined();
-  });
+  }, 30_000); // imports the whole video route (all three page kinds): slow under a full parallel run
 
   it('are left out of sitemap.xml (and transcribed ones are listed)', async () => {
     const { default: sitemap } = await import('@/app/sitemap');
@@ -237,5 +237,5 @@ describe('title-only pages stay out of the index', () => {
     expect(has(titleOnly.youtube_id)).toBe(false);
     expect(has(transcribed.youtube_id)).toBe(true);
     for (const v of videos.filter(isTitleOnlyVideo).slice(0, 50)) expect(has(v.youtube_id), v.youtube_id).toBe(false);
-  });
+  }, 30_000);
 });

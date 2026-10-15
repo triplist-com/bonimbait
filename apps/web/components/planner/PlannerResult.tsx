@@ -37,6 +37,8 @@ export interface PlannerResultProps {
   today?: Date;
   /** Write bb.planner.last on save (off in the demo). */
   persist?: boolean;
+  /** One column throughout (the narrow modal under an AI answer). */
+  compact?: boolean;
 }
 
 function WhatsAppGlyph() {
@@ -65,7 +67,7 @@ function budgetVerdict(estimate: PlannerEstimate, budget: [number, number]): str
   return 'ההערכה בתוך התקציב שהגדרתם. הטווח עדיין רחב: בתקציב מפורט מצמצמים אותו ל-3%-5%.';
 }
 
-export default function PlannerResult({ book, estimate, hubDraft, onEdit, onRestart, ctaSource = 'planner-result', today, persist = true }: PlannerResultProps) {
+export default function PlannerResult({ book, estimate, hubDraft, onEdit, onRestart, ctaSource = 'planner-result', today, persist = true, compact = false }: PlannerResultProps) {
   const [withVat, setWithVat] = useState(false);
   const [saved, setSaved] = useState(false);
   const { input } = estimate;
@@ -86,7 +88,7 @@ export default function PlannerResult({ book, estimate, hubDraft, onEdit, onRest
   return (
     <div className="space-y-12 sm:space-y-16" data-planner-result>
       {/* Summary + next step */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start">
+      <div className={compact ? 'grid grid-cols-1 gap-5' : 'grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start'}>
         <EstimateSummary
           estimate={estimate}
           headingId="planner-total"
@@ -210,10 +212,10 @@ export default function PlannerResult({ book, estimate, hubDraft, onEdit, onRest
           פה הכי קל לחרוג
         </SectionTitle>
         <p className="-mt-2 mb-5 max-w-2xl text-body text-ink-600">שלושה מקומות שבהם תקציב כמו שלכם בורח הכי מהר. כל אחד עם הרגע המדויק בפודקאסט שבו תומר וצורי מסבירים אותו.</p>
-        <OverrunWarnings estimate={estimate} />
+        <OverrunWarnings estimate={estimate} stacked={compact} />
       </section>
 
-      <section aria-labelledby="planner-sources" className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <section aria-labelledby="planner-sources" className={compact ? 'grid grid-cols-1 gap-6' : 'grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]'}>
         <div>
           <SectionTitle id="planner-sources" eyebrow={asOfBadge(estimate.validAsOf)}>
             מאיפה המספרים

@@ -10,10 +10,10 @@ import MomentPlayer from './MomentPlayer';
  * moment that explains it. On screen the moment plays inline; in print it is a
  * link with its time. Server-safe (MomentPlayer is the client leaf).
  */
-export function OverrunWarnings({ estimate, print = false }: { estimate: PlannerEstimate; print?: boolean }) {
+export function OverrunWarnings({ estimate, print = false, stacked = false }: { estimate: PlannerEstimate; print?: boolean; stacked?: boolean }) {
   const warnings = selectOverrunWarnings(estimate.input);
   return (
-    <ol className={print ? 'grid gap-3' : 'grid gap-4 lg:grid-cols-3'}>
+    <ol className={print || stacked ? 'grid gap-3' : 'grid gap-4 lg:grid-cols-3'}>
       {warnings.map((w, i) => (
         <li key={w.id} className="flex flex-col rounded-3xl border border-ink-100 bg-white p-5 shadow-card break-inside-avoid sm:p-6">
           <div className="flex items-start justify-between gap-3">
