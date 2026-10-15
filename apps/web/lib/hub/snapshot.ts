@@ -4,10 +4,13 @@
  * completeness meter the builder sees. Pure and client-safe; the server entry
  * point is getMemberProjectSnapshot() in lib/hub/server.ts.
  */
+import { mergeProjectFiles } from '@/lib/project-file/sanitize';
+import type { ProjectFile } from '@/lib/project-file/types';
 import { projectToDraft } from './onboarding';
 import type {
   HubBudgetVersionRow,
   HubDraft,
+  HubMode,
   HubProjectRow,
   PlannerEstimate,
   ProjectFileSnapshot,
@@ -87,6 +90,19 @@ export function buildLocalSnapshot(
     new Set([...shortlistIds, ...saved.filter((s) => s.kind === 'business').map((s) => s.ref)]),
   );
   return file;
+}
+
+/**
+ * The file a consult booking from the hub sends, as the consult team will see
+ * it: the browser's snapshots (collectProjectFile(): bb.hub.draft,
+ * bb.planner.last, bb.advisor.recent, bb.shortlist, saved items) and the
+ * member's server snapshot, which wins single facts, exactly as
+ * components/revenue/BookingSheet.tsx and lib/project-file/server.ts merge
+ * them. The demo shows its fixture only, never what's in the browser.
+ */
+export function consultFile(mode: HubMode, hubFile: ProjectFileSnapshot, browser: ProjectFile | null): ProjectFile {
+  if (mode === 'demo' || !browser) return { ...hubFile };
+  return mode === 'member' ? mergeProjectFiles(browser, hubFile) : mergeProjectFiles(hubFile, browser);
 }
 
 export type CompletenessKey =
