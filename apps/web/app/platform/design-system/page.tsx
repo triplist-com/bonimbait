@@ -25,7 +25,8 @@ import { COLOR_SCALES, brandHex, dataViz, ink, motion, semantic } from '@/lib/de
 import { BUILD_STAGES } from '@/lib/stages';
 import { calculateCost } from '@/lib/calculator';
 import { BUDGET_TEASER } from '@/lib/home/content';
-import { getStageArticleCounts } from '@/lib/home/data';
+import { getKnowledgeStats, getStageArticleCounts } from '@/lib/home/data';
+import { loadPriceBook } from '@/lib/planner/price-book';
 import { OverlayDemos, TabsDemo, ToastDemo, TooltipDemo } from './Demos';
 
 export const metadata: Metadata = {
@@ -124,10 +125,11 @@ const TYPE_SCALE: Array<[string, string, string]> = [
 ];
 
 export default async function DesignSystemPage() {
-  const counts = await getStageArticleCounts();
+  const [counts, stats, priceBook] = await Promise.all([getStageArticleCounts(), getKnowledgeStats(), loadPriceBook()]);
   const stageBars = BUILD_STAGES.map((s) => ({ label: s.label, value: counts[s.categorySlug.normalize('NFC')] ?? 0 }));
   const maxBar = Math.max(1, ...stageBars.map((b) => b.value));
-  const budget = calculateCost({ ...BUDGET_TEASER.example.answers, special_features: [] });
+  // The owner's current price book (the admin price book), as on the homepage.
+  const budget = calculateCost({ ...BUDGET_TEASER.example.answers, special_features: [] }, priceBook.book);
 
   return (
     <>
@@ -625,9 +627,9 @@ export default async function DesignSystemPage() {
             </Example>
             <Example title="Stat">
               <div className="grid grid-cols-3 gap-4">
-                <Stat value="178" label="סרטונים" />
-                <Stat value="61" label="שעות צפייה" />
-                <Stat value="806" label="מאמרים" />
+                <Stat value={stats.videos.toLocaleString('he-IL')} label="סרטונים" />
+                <Stat value={stats.hours.toLocaleString('he-IL')} label="שעות וידאו" />
+                <Stat value={stats.articles.toLocaleString('he-IL')} label="מאמרים" />
               </div>
             </Example>
           </div>

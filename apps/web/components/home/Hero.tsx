@@ -18,7 +18,7 @@ const STAT_ICONS = [PlayCircle, Clock, BookOpen];
 export default function Hero({ stats }: { stats: KnowledgeStats }) {
   const parts = [
     stats.videos > 0 && { value: stats.videos, label: 'סרטונים' },
-    stats.hours > 0 && { value: stats.hours, label: 'שעות צפייה' },
+    stats.hours > 0 && { value: stats.hours, label: 'שעות וידאו' },
     stats.articles > 0 && { value: stats.articles, label: 'מאמרים' },
   ].filter(Boolean) as Array<{ value: number; label: string }>;
   const whatsapp = COMMUNITY_STATS.find((s) => s.id === 'whatsapp');

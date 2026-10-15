@@ -17,8 +17,8 @@ describe('homepage knowledge stats', () => {
   });
 
   it('formats the hero line with Hebrew plurals and skips zeros', () => {
-    expect(formatKnowledgeLine({ videos: 178, hours: 61, articles: 806 })).toBe('178 סרטונים · 61 שעות צפייה · 806 מאמרים');
-    expect(formatKnowledgeLine({ videos: 1, hours: 1, articles: 0 })).toBe('1 סרטון · 1 שעת צפייה');
+    expect(formatKnowledgeLine({ videos: 278, hours: 90, articles: 806 })).toBe('278 סרטונים · 90 שעות וידאו · 806 מאמרים');
+    expect(formatKnowledgeLine({ videos: 1, hours: 1, articles: 0 })).toBe('1 סרטון · 1 שעת וידאו');
     expect(knowledgeParts({ videos: 0, hours: 0, articles: 2 })).toEqual([{ value: '2', label: 'מאמרים' }]);
     expect(hebrewCount(1, 'מאמר', 'מאמרים')).toBe('מאמר אחד');
     expect(hebrewCount(1200, 'מאמר', 'מאמרים')).toBe('1,200 מאמרים');

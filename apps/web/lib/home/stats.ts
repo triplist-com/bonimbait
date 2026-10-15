@@ -50,12 +50,12 @@ export interface KnowledgePart {
 export function knowledgeParts(stats: KnowledgeStats): KnowledgePart[] {
   const parts: KnowledgePart[] = [];
   if (stats.videos > 0) parts.push({ value: stats.videos.toLocaleString('he-IL'), label: stats.videos === 1 ? 'סרטון' : 'סרטונים' });
-  if (stats.hours > 0) parts.push({ value: stats.hours.toLocaleString('he-IL'), label: stats.hours === 1 ? 'שעת צפייה' : 'שעות צפייה' });
+  if (stats.hours > 0) parts.push({ value: stats.hours.toLocaleString('he-IL'), label: stats.hours === 1 ? 'שעת וידאו' : 'שעות וידאו' });
   if (stats.articles > 0) parts.push({ value: stats.articles.toLocaleString('he-IL'), label: stats.articles === 1 ? 'מאמר' : 'מאמרים' });
   return parts;
 }
 
-/** "178 סרטונים · 61 שעות צפייה · 806 מאמרים" */
+/** "278 סרטונים · 90 שעות וידאו · 806 מאמרים" */
 export function formatKnowledgeLine(stats: KnowledgeStats): string {
   return knowledgeParts(stats)
     .map((p) => `${p.value} ${p.label}`)

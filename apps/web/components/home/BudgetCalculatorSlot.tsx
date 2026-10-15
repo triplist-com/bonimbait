@@ -3,6 +3,7 @@ import { ButtonLink } from '@/components/ui/Button';
 import { BUDGET_TEASER } from '@/lib/home/content';
 import { calculateCost } from '@/lib/calculator';
 import { cn } from '@/lib/cn';
+import type { PriceBook } from '@/lib/planner/types';
 
 /** "₪1,724,310" -> "1.72"; millions with two decimals. */
 function millions(n: number): string {
@@ -15,21 +16,25 @@ export interface BudgetCalculatorSlotProps {
   cta?: string;
   /** Today /calculator/; the growth squad (Wave B) can point it at the planner. */
   href?: string;
+  /** The owner's current price book (the page loads it); the seeded book otherwise. */
+  book?: PriceBook;
   className?: string;
 }
 
 /**
  * "מחשבון תקציב" slot: a real example run through the site's calculator
- * (lib/calculator.ts), dated, plus the way in.
+ * (lib/calculator.ts, on the planner engine and the current price book),
+ * dated, plus the way in.
  */
 export default function BudgetCalculatorSlot({
   title = BUDGET_TEASER.title,
   subtitle = BUDGET_TEASER.subtitle,
   cta = BUDGET_TEASER.cta,
   href = BUDGET_TEASER.href,
+  book,
   className,
 }: BudgetCalculatorSlotProps) {
-  const example = calculateCost({ ...BUDGET_TEASER.example.answers, special_features: [...BUDGET_TEASER.example.answers.special_features] });
+  const example = calculateCost({ ...BUDGET_TEASER.example.answers, special_features: [...BUDGET_TEASER.example.answers.special_features] }, book);
   const top = [...example.breakdown].sort((a, b) => b.percentage - a.percentage).slice(0, 4);
   const max = top[0]?.percentage ?? 1;
 
