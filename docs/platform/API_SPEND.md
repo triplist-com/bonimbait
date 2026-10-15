@@ -15,5 +15,8 @@ Log every paid run here: amounts and volumes only, never keys.
 | 2026-10-14 | knowledge | Title-context embeddings of every video segment (178 indexed + 38 new) | 1,468 segments, 2,937,014 tokens | 0.0587 |
 | 2026-10-14 | knowledge | Segment embeddings, second batch (6 videos) | 20 segments, 38,357 tokens | 0.0008 |
 | 2026-10-14 | knowledge | AI summaries + key moments, Claude Haiku 5.5 via the Batches API (50%) | 97 videos, 1,242,801 in / 115,763 out tokens | 0.0911 |
+| 2026-10-15 | command | Content-gap calibration: embeddings of 84 labelled test questions and their topic texts (3 rounds), text-embedding-3-small | 7,667 tokens | 0.0002 |
+| 2026-10-15 | command | Content-gap engine e2e on local seed data (77 questions, 29 topics), 3 refreshes: question embeddings (text-embedding-3-small) | 11,358 tokens | 0.0002 |
+| 2026-10-15 | command | Same 3 refreshes: cluster labels + coverage review, Claude Haiku 5.5 (thinking on, off, on; recorded in `ai_usage` as `insights_labels`) | 26,916 in / 15,099 out tokens | 0.0103 |
 
-**Running total:** ~$0.27 (autopilot ~$0.09 of $0.75; knowledge $0.161 of $1.50)
+**Running total:** ~$0.28 (autopilot ~$0.09 of $0.75; knowledge $0.161 of $1.50; command $0.011 of $0.50)
