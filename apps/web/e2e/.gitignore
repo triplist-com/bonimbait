@@ -1,0 +1,4 @@
+# Signed-in storage states and run fixtures (local test accounts).
+.auth/
+# Traces, screenshots and the JSON report.
+.results/
