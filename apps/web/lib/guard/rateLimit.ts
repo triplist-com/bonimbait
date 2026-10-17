@@ -35,6 +35,8 @@ export const RATE_LIMITS = {
   ai_answer: { limit: 20, windowSec: 10 * 60 },
   /** Generic public form posts per visitor IP. */
   form: { limit: 10, windowSec: 10 * 60 },
+  /** /api/search per visitor IP: each query is a paid embedding plus a vector scan. */
+  search: { limit: 60, windowSec: 60 },
 } as const satisfies Record<string, RateLimitRule>;
 
 export type RateLimitName = keyof typeof RATE_LIMITS;

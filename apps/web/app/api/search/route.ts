@@ -1,19 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { semanticSearchSegments, groupByVideo } from '../_lib/semantic';
 import { getVideo } from '../_lib/data';
+import { rateLimit } from '@/lib/guard/rateLimit';
+import { rateLimitKey } from '@/lib/guard/request';
 import { isTitleOnly, segmentBody } from '@/lib/knowledge/segment-text';
 
 export const runtime = 'nodejs';
 
+/** Every query is a paid embedding and a vector scan: bound its length (QA). */
+const MAX_QUERY_CHARS = 200;
+
 export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
-  const q = (sp.get('q') || '').trim();
+  const q = (sp.get('q') || '').trim().slice(0, MAX_QUERY_CHARS).trim();
   const category = sp.get('category') || undefined;
-  const page = parseInt(sp.get('page') || '1', 10);
-  const limit = parseInt(sp.get('limit') || '20', 10);
+  const page = Math.min(parseInt(sp.get('page') || '1', 10) || 1, 50);
+  const limit = Math.min(parseInt(sp.get('limit') || '20', 10) || 20, 60);
 
   if (!q) {
     return NextResponse.json({ results: [], total: 0, query: q });
+  }
+
+  const limited = await rateLimit('search', rateLimitKey(request.headers));
+  if (!limited.ok) {
+    return NextResponse.json(
+      { results: [], total: 0, query: q, error: 'rate_limited' },
+      { status: 429, headers: { 'retry-after': String(limited.retryAfterSec) } },
+    );
   }
 
   let hits;

@@ -1,14 +1,16 @@
 import 'server-only';
 
 /**
- * Loads a partner's monthly report. The metric RPC authorizes inside (owner,
- * staff or service role), so the same loader serves the partner's own
- * /partner-portal/report/ and the admin's /admin/partners/<id>/report/.
+ * Loads a partner's monthly report, for the business's owner or staff
+ * (canReadBusinessMetrics(), then the service-role metrics RPC), so the same
+ * loader serves the partner's own /partner-portal/report/ and the admin's
+ * /admin/partners/<id>/report/.
  */
 import { israelDay, israelMidnight } from '@/lib/command/period';
 import { LEAD_STATUS } from '@/lib/admin/labels';
 import type { LeadStatus } from '@/lib/db/types';
 import type { RevenueDb } from './db';
+import { businessMetrics, canReadBusinessMetrics } from './metrics';
 import { LIVE_SUBSCRIPTION_STATUSES } from './partner-tiers';
 import { EMPTY_METRICS, parseMetrics } from './portal';
 import { buildPartnerReport, nextMonth, previousMonth, type PartnerReportData } from './report';
@@ -49,6 +51,9 @@ function bounds(month: string): { from: string; to: string } {
 }
 
 export async function loadPartnerReport(db: RevenueDb, businessId: string, month: string): Promise<PartnerReportPage | null> {
+  // The metrics RPC is service-role only: the caller's session must own the
+  // business or be staff (any published business is readable under RLS).
+  if (!(await canReadBusinessMetrics(db, businessId))) return null;
   const { data: business } = await db.from('businesses').select('id, name, slug').eq('id', businessId).maybeSingle();
   if (!business) return null;
   const { data: links } = await db.from('business_specialties').select('specialties(slug)').eq('business_id', businessId);
@@ -60,8 +65,8 @@ export async function loadPartnerReport(db: RevenueDb, businessId: string, month
   const prev = bounds(previousMonth(month));
   const id = businessId;
   const [m, pm, sub, deals, leads] = await Promise.all([
-    db.rpc('revenue_business_metrics', { p_business_id: id, p_from: cur.from, p_to: cur.to, p_patterns: patterns }),
-    db.rpc('revenue_business_metrics', { p_business_id: id, p_from: prev.from, p_to: prev.to, p_patterns: patterns }),
+    businessMetrics(db, id, cur, patterns, { authorized: true }),
+    businessMetrics(db, id, prev, patterns, { authorized: true }),
     db
       .from('partner_subscriptions')
       .select('price_agorot, tier_id, partner_tiers:tier_id(name)')

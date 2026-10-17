@@ -18,6 +18,7 @@ import {
   PaymentVerificationError,
   getPaymentProvider,
   getPaymentProviderForCallback,
+  onlinePaymentsEnabled,
 } from '@/lib/payments';
 import { revenueAdminDb, revenueUserDb, isServiceRoleConfigured } from './db';
 import { checkoutOrderNumber, decideTierPayment } from './subscriptions';
@@ -34,6 +35,9 @@ export async function startTierCheckout(input: {
   customer: { name: string; email: string };
 }): Promise<StartCheckoutResult> {
   if (!UUID_RE.test(input.businessId) || !isServiceRoleConfigured()) return { ok: false, error: 'לא ניתן להתחיל תשלום כרגע.' };
+  // No online payments here (e.g. the mock provider on production): never
+  // leave a pending subscription behind for a checkout that can't happen.
+  if (!onlinePaymentsEnabled()) return { ok: false, error: 'התשלום אונליין סגור כרגע.' };
   // Ownership through the owner's session (RLS): only their own business comes back.
   const own = await revenueUserDb()
     .from('businesses')

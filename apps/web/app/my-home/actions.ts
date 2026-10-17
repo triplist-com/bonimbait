@@ -10,6 +10,8 @@ import { revalidatePath } from 'next/cache';
 import type { User } from '@supabase/supabase-js';
 import { trackServer } from '@/lib/analytics/server';
 import { getUser } from '@/lib/auth/session';
+import { bonimosUserDb } from '@/lib/bonimos/db';
+import { isEnabled } from '@/lib/flags';
 import { budgetCategory, isBudgetCategoryId } from '@/lib/hub/budget';
 import { findChecklistItem, isChecklistItemId } from '@/lib/hub/content';
 import { hubUserDb, type HubDb } from '@/lib/hub/db';
@@ -39,7 +41,7 @@ import {
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 
-export type HubActionError = 'auth' | 'invalid' | 'no_project' | 'limit' | 'server';
+export type HubActionError = 'auth' | 'invalid' | 'no_project' | 'limit' | 'locked' | 'unavailable' | 'server';
 export type HubActionFail = { ok: false; error: HubActionError; message: string };
 export type HubActionResult<T extends object = object> = ({ ok: true } & T) | HubActionFail;
 
@@ -48,6 +50,8 @@ const MESSAGES: Record<HubActionError, string> = {
   invalid: 'חלק מהפרטים לא תקינים. בדקו ונסו שוב.',
   no_project: 'עוד אין לכם פרויקט. התחילו במיפוי קצר של 60 שניות.',
   limit: 'הגעתם למגבלה של הפרויקט. מחקו פריטים ישנים ונסו שוב.',
+  locked: 'את השורה הזו מעדכן מנהל הפרויקט: היא חלק מהתקציב המאושר או מאישור תשלום.',
+  unavailable: 'הבית שלי לא זמין כרגע. נסו שוב מאוחר יותר.',
   server: 'משהו השתבש בשמירה. נסו שוב בעוד רגע.',
 };
 
@@ -57,6 +61,8 @@ function fail(error: HubActionError, message = MESSAGES[error]): HubActionFail {
 
 function fromError(err: unknown): HubActionFail {
   const message = err instanceof Error ? err.message : String(err);
+  // The Bonim.Os budget lock (20261014130000_qa_bonimos_budget_lock.sql).
+  if (/project manager|managed project/i.test(message)) return fail('locked');
   console.error('[hub] action failed:', message);
   return /limit|Too many rows/i.test(message) ? fail('limit') : fail('server');
 }
@@ -64,6 +70,7 @@ function fromError(err: unknown): HubActionFail {
 type Member = { user: User; db: HubDb };
 
 async function member(): Promise<Member | HubActionFail> {
+  if (!isEnabled('hub')) return fail('unavailable');
   if (!isSupabaseConfigured()) return fail('server');
   const user = await getUser();
   if (!user) return fail('auth');
@@ -262,6 +269,9 @@ export async function deleteBudgetItemAction(id: string): Promise<HubActionResul
   const m = await memberProject();
   if ('ok' in m) return m;
   try {
+    // A payment the manager's approval recorded stays in the managed budget
+    // (the database refuses it too; this only gives the friendlier message).
+    if (m.project.mode === 'managed' && (await isApprovalRecorded(id))) return fail('locked');
     const { error } = await m.db
       .from('hub_budget_items')
       .delete()
@@ -274,6 +284,17 @@ export async function deleteBudgetItemAction(id: string): Promise<HubActionResul
   } catch (err) {
     return fromError(err);
   }
+}
+
+/** Whether a budget line was recorded by a Bonim.Os payment approval (RLS: project members). */
+async function isApprovalRecorded(itemId: string): Promise<boolean> {
+  const { data, error } = await bonimosUserDb()
+    .from('bonimos_payment_requests')
+    .select('id')
+    .eq('budget_item_id', itemId)
+    .limit(1);
+  if (error) throw new Error(error.message);
+  return (data ?? []).length > 0;
 }
 
 /** A new budget version from growth's planner result (bb.planner.last). */
@@ -490,7 +511,12 @@ export async function documentUrlAction(id: string): Promise<HubActionResult<{ u
   if (!UUID_RE.test(id)) return fail('invalid');
   const m = await memberProject();
   if ('ok' in m) return m;
-  const { data } = await m.db.from('hub_documents').select('storage_path, file_name').eq('id', id).maybeSingle();
+  const { data } = await m.db
+    .from('hub_documents')
+    .select('storage_path, file_name')
+    .eq('id', id)
+    .eq('project_id', m.project.id)
+    .maybeSingle();
   const doc = data as { storage_path: string; file_name: string } | null;
   if (!doc) return fail('invalid');
   const { data: signed, error } = await createClient().storage.from('hub-docs').createSignedUrl(doc.storage_path, 60);

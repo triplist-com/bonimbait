@@ -15,6 +15,7 @@ import 'server-only';
 import type { User } from '@supabase/supabase-js';
 import type { ConstructionStage } from '@/lib/db/types';
 import { getPublicDb } from '@/lib/content/db';
+import { bonimosUserDb } from '@/lib/bonimos/db';
 import type { PriceBook } from '@/lib/planner/types';
 import { createClient as createUserClient } from '@/lib/supabase/server';
 import { budgetCategory, plannedFromEstimate } from './budget';
@@ -451,6 +452,24 @@ export interface MemberHub {
  * Everything the dashboard renders for a signed-in member, or null when the
  * member has no project yet. Runs as the member (RLS).
  */
+/**
+ * Budget lines a Bonim.Os payment approval recorded, in a managed project
+ * (RLS: project members). Only the project manager changes them
+ * (20261014130000_qa_bonimos_budget_lock.sql), so the hub hides their delete.
+ */
+async function approvalRecordedItems(projectId: string): Promise<Set<string>> {
+  const { data, error } = await bonimosUserDb()
+    .from('bonimos_payment_requests')
+    .select('budget_item_id')
+    .eq('project_id', projectId)
+    .not('budget_item_id', 'is', null);
+  if (error) {
+    console.error('[hub] payment approvals unavailable:', error.message);
+    return new Set();
+  }
+  return new Set(((data ?? []) as Array<{ budget_item_id: string | null }>).flatMap((r) => (r.budget_item_id ? [r.budget_item_id] : [])));
+}
+
 export async function loadMemberHub(user: User, fullName: string | null): Promise<MemberHub | null> {
   const db = hubUserDb();
   const project = await getPrimaryProject(db, user.id);
@@ -481,6 +500,7 @@ export async function loadMemberHub(user: User, fullName: string | null): Promis
 
   const items = (itemsRes.data ?? []) as HubBudgetItemRow[];
   const saved = (savedRes.data ?? []) as HubSavedItemRow[];
+  const lockedItems = project.mode === 'managed' ? await approvalRecordedItems(project.id) : new Set<string>();
   const draft = projectToDraft(project, region?.slug ?? null);
 
   const planned: Record<string, number> = {};
@@ -544,6 +564,7 @@ export async function loadMemberHub(user: User, fullName: string | null): Promis
         status: i.status,
         occurredOn: i.occurred_on,
         createdAt: i.created_at,
+        ...(lockedItems.has(i.id) ? { locked: true } : {}),
       })),
     saved: saved
       .filter((s) => s.kind !== 'business')

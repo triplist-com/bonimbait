@@ -126,6 +126,8 @@ export interface HubBudgetItemView {
   status: BudgetItemStatus | null;
   occurredOn: string | null;
   createdAt: string;
+  /** Recorded by a Bonim.Os payment approval: only the project manager changes it. */
+  locked?: boolean;
 }
 
 export interface HubSavedItemView {
