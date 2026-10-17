@@ -91,6 +91,7 @@ function Kpi({ label, t, icon, days, hint }: { label: string; t: Trend; icon: Re
 export default function PortalDashboard({
   view,
   upgradeAction,
+  upgradeContactHref,
   dealAction,
   reportHref,
   notice,
@@ -99,6 +100,8 @@ export default function PortalDashboard({
   view: PortalView;
   /** Server action for "שדרגו" (redirects to payment); omitted in the demo. */
   upgradeAction?: (fd: FormData) => Promise<void>;
+  /** Without online payments: the tiers link here ("דברו איתנו") instead of a checkout. */
+  upgradeContactHref?: string | null;
   dealAction?: (fd: FormData) => Promise<DealResult>;
   /** The monthly partner report, for subscribed partners. */
   reportHref?: string | null;
@@ -324,7 +327,12 @@ export default function PortalDashboard({
                     </li>
                   ))}
                 </ul>
-                {!current && (
+                {!current && !upgradeAction && !demo && upgradeContactHref && (
+                  <Button asChild fullWidth variant={t.rank > currentRank ? 'primary' : 'outline'} className="mt-5">
+                    <Link href={upgradeContactHref}>{`דברו איתנו על מסלול ${t.name}`}</Link>
+                  </Button>
+                )}
+                {!current && (upgradeAction || demo || !upgradeContactHref) && (
                   <form action={upgradeAction} className="mt-5">
                     <input type="hidden" name="business_id" value={view.business.id} />
                     <input type="hidden" name="tier" value={t.slug} />
@@ -343,7 +351,9 @@ export default function PortalDashboard({
             );
           })}
         </ul>
-        <p className="mt-4 text-caption text-ink-500">התשלום מאובטח. אפשר לבטל בכל חודש. המחירים נכונים ל-2026.</p>
+        <p className="mt-4 text-caption text-ink-500">
+          {upgradeAction || demo || !upgradeContactHref ? 'התשלום מאובטח. אפשר לבטל בכל חודש.' : 'נחזור אליכם ונעביר את העסק למסלול שבחרתם.'} המחירים נכונים ל-2026.
+        </p>
       </section>
 
       {view.business.badge && (

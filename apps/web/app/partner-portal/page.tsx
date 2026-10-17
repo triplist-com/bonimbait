@@ -22,6 +22,7 @@ import { ContactsForm, DetailsForm, MediaForm, TaxonomyForm } from '@/components
 import PortalDashboard from '@/components/revenue/portal/PortalDashboard';
 import PartnerTierBadge from '@/components/revenue/PartnerTierBadge';
 import { isEnabled } from '@/lib/flags';
+import { onlinePaymentsEnabled } from '@/lib/payments';
 import { reportDealAction, upgradeTierAction } from '@/lib/revenue/actions/portal';
 import { revenueUserDb } from '@/lib/revenue/db';
 import { loadPortalView } from '@/lib/revenue/portal-server';
@@ -239,7 +240,10 @@ export default async function PartnerPortalPage({ searchParams }: { searchParams
       {view && (
         <PortalDashboard
           view={view}
-          upgradeAction={upgradeTierAction}
+          // Without online payments (no provider, or mock on production) the
+          // tiers offer a conversation instead of a checkout that can't happen.
+          upgradeAction={onlinePaymentsEnabled() ? upgradeTierAction : undefined}
+          upgradeContactHref="/strategic-partners/"
           dealAction={reportDealAction}
           reportHref={view.subscription ? `/partner-portal/report/?b=${selected.id}` : null}
           notice={searchParams.upgraded === '1' ? 'upgraded' : searchParams.checkout === 'failed' ? 'checkout_failed' : null}
