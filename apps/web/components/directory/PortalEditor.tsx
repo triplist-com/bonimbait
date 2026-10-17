@@ -30,7 +30,7 @@ function Save({ label = 'שמירה' }: { label?: string }) {
 function Status({ state }: { state: PortalState }) {
   if (state.status === 'idle') return null;
   return (
-    <p role="status" className={`text-sm ${state.status === 'saved' ? 'text-emerald-700' : 'text-red-700'}`}>
+    <p role="status" className={`text-sm ${state.status === 'saved' ? 'text-success-700' : 'text-danger-700'}`}>
       {state.message}
     </p>
   );
@@ -103,7 +103,7 @@ export function ContactsForm({
   return (
     <Card title="פרטי קשר">
       <p className="mb-4 text-sm text-gray-600">
-        הטלפון מוצג לגולשים רק אחרי שהשאירו פרטים בטופס &quot;הצג טלפון&quot;.
+        הטלפון מוצג לגולשים רק אחרי שהשאירו פרטים בטופס &quot;הצגת הטלפון&quot;.
         {leadRouting === 'site'
           ? ' הפניות מנותבות דרך צוות בונים בית.'
           : ' הפניות נשלחות ישירות לכתובת האימייל לפניות.'}
@@ -351,7 +351,7 @@ export function MediaForm({
                     <button
                       type="button"
                       onClick={() => setGallery((g) => g.filter((_, k) => k !== i))}
-                      className="rounded px-2 py-1 text-red-600 hover:bg-red-50"
+                      className="rounded px-2 py-1 text-danger-600 hover:bg-danger-50"
                     >
                       הסרה
                     </button>
@@ -365,7 +365,7 @@ export function MediaForm({
           )}
         </div>
         {uploading && <p className="text-sm text-gray-600">מעלה תמונות…</p>}
-        {uploadError && <p className="text-sm text-red-700">{uploadError}</p>}
+        {uploadError && <p className="text-sm text-danger-700">{uploadError}</p>}
         <div className="flex items-center gap-4">
           <Save label="שמירת תמונות" />
           <Status state={state} />

@@ -50,7 +50,7 @@ export default function ConfirmDialog({
   }, [open]);
 
   const confirmClass =
-    tone === 'danger' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-primary hover:bg-primary-700 text-white';
+    tone === 'danger' ? 'bg-danger-600 hover:bg-danger-700 text-white' : 'bg-primary hover:bg-primary-700 text-white';
 
   return (
     <>
@@ -62,7 +62,7 @@ export default function ConfirmDialog({
         }}
         className={
           triggerClassName ??
-          'rounded-lg border border-red-200 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-100'
+          'rounded-lg border border-danger-200 px-3 py-1.5 text-sm text-danger-700 hover:bg-danger-50 focus:outline-none focus:ring-2 focus:ring-danger-100'
         }
       >
         {trigger}
@@ -98,7 +98,7 @@ export default function ConfirmDialog({
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
           {body && <div className="mt-2 text-sm text-gray-600">{body}</div>}
           {children && <div className="mt-4 space-y-3">{children}</div>}
-          {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+          {error && <p className="mt-3 rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger-700">{error}</p>}
           <div className="mt-5 flex justify-end gap-2">
             <button
               type="button"

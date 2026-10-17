@@ -57,7 +57,7 @@ export type LeadFormProps = {
 const inputBase =
   'w-full rounded-xl border bg-white px-4 py-2.5 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2';
 const inputOk = 'border-gray-200 focus:border-primary focus:ring-primary/20';
-const inputBad = 'border-red-400 focus:border-red-500 focus:ring-red-200';
+const inputBad = 'border-danger-500 focus:border-danger-500 focus:ring-danger-200';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
@@ -141,7 +141,7 @@ export default function LeadForm({
 
   if (state.status === 'success') {
     return (
-      <div className={`rounded-2xl border border-green-200 bg-green-50 p-6 text-center ${className}`} role="status">
+      <div className={`rounded-2xl border border-success-200 bg-success-50 p-6 text-center ${className}`} role="status">
         <p className="text-lg font-bold text-gray-900">{state.invite ? 'ברוכים הבאים!' : successTitle}</p>
         {state.invite ? (
           <>
@@ -197,7 +197,7 @@ export default function LeadForm({
       </div>
 
       {formError && (
-        <p role="alert" className="sm:col-span-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p role="alert" className="sm:col-span-2 rounded-xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-700">
           {formError}
         </p>
       )}
@@ -210,7 +210,7 @@ export default function LeadForm({
         const describedBy = err ? `${id}-error` : undefined;
         const clear = () => err && setClientErrors((prev) => ({ ...prev, [f.name]: '' }));
         const errorNode = err ? (
-          <p id={`${id}-error`} className="mt-1 text-sm text-red-600">
+          <p id={`${id}-error`} className="mt-1 text-sm text-danger-600">
             {err}
           </p>
         ) : null;
@@ -231,7 +231,7 @@ export default function LeadForm({
                 />
                 <span>
                   {f.label}
-                  {f.required && <span className="text-red-600"> *</span>}
+                  {f.required && <span className="text-danger-600"> *</span>}
                 </span>
               </label>
               {errorNode}
@@ -242,7 +242,7 @@ export default function LeadForm({
         const label = (
           <label htmlFor={id} className="mb-1 block text-sm font-medium text-gray-700">
             {f.label}
-            {f.required && <span className="text-red-600"> *</span>}
+            {f.required && <span className="text-danger-600"> *</span>}
           </label>
         );
         const common = {

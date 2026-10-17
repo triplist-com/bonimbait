@@ -10,7 +10,7 @@ const IDLE: ClaimState = { status: 'idle' };
 
 function Err({ state, name }: { state: ClaimState; name: string }) {
   const msg = state.status === 'error' ? state.fieldErrors?.[name] : undefined;
-  return msg ? <span className="mt-1 block text-xs text-red-600">{msg}</span> : null;
+  return msg ? <span className="mt-1 block text-xs text-danger-600">{msg}</span> : null;
 }
 
 function Submit() {
@@ -34,7 +34,7 @@ export default function ClaimForm({
   const [state, action] = useFormState(claimBusinessAction, IDLE);
   if (state.status === 'sent') {
     return (
-      <div role="status" className="rounded-xl bg-emerald-50 p-5 text-emerald-800">
+      <div role="status" className="rounded-xl bg-success-50 p-5 text-success-800">
         <p className="font-semibold">הבקשה התקבלה!</p>
         <p className="mt-1">צוות בונים בית יאמת את הפרטים וייצור איתכם קשר. לאחר האישור תוכלו לנהל את העסק בפורטל העסקים.</p>
         <Link href={businessHref} className="mt-3 inline-block font-semibold text-primary underline">
@@ -70,7 +70,7 @@ export default function ClaimForm({
         <textarea name="message" rows={3} className={input} />
       </label>
       {state.status === 'error' && !state.fieldErrors && (
-        <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+        <p role="alert" className="rounded-xl bg-danger-50 p-3 text-sm text-danger-700">
           {state.message}
         </p>
       )}

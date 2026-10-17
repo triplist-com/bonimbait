@@ -375,7 +375,7 @@ export default function RichTextEditor({
         </Btn>
       </div>
       {s?.table && mode === 'visual' && e && (
-        <div className="flex flex-wrap items-center gap-1 border-b border-gray-200 bg-amber-50/60 px-2 py-1 text-xs">
+        <div className="flex flex-wrap items-center gap-1 border-b border-gray-200 bg-warning-50/60 px-2 py-1 text-xs">
           <span className="text-gray-600">טבלה:</span>
           <Btn title="שורה מתחת" onClick={() => e.chain().focus().addRowAfter().run()}>
             + שורה

@@ -85,7 +85,7 @@ function SearchContent() {
 
             {searchError && (
               <div
-                className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm mb-6"
+                className="bg-danger-50 border border-danger-200 rounded-xl p-4 text-danger-700 text-sm mb-6"
                 role="alert"
               >
                 {searchError}

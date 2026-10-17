@@ -139,8 +139,8 @@ export default function MediaBrowser({ onSelect, compact = false }: { onSelect?:
       <p className="text-xs text-gray-500">
         תמונות חדשות נשמרות בתיקייה <span dir="ltr">{uploadFolder()}</span>. עד 10MB לקובץ.
       </p>
-      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-      {notice && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{notice}</p>}
+      {error && <p className="rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger-700">{error}</p>}
+      {notice && <p className="rounded-lg bg-success-50 px-3 py-2 text-sm text-success-700">{notice}</p>}
       <div className={`grid gap-3 ${compact ? 'grid-cols-3 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-6'}`}>
         {entries.map((e) =>
           e.isFolder ? (

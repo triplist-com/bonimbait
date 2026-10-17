@@ -71,7 +71,7 @@ export default function BusinessForm({
             </FormField>
           </div>
           {slugChanged && b?.status === 'published' && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <div className="rounded-lg border border-warning-200 bg-warning-50 p-3 text-sm text-warning-800">
               <Checkbox name="create_redirect" defaultChecked label="ליצור הפניה קבועה (301) מהכתובת הקודמת של העסק" />
             </div>
           )}

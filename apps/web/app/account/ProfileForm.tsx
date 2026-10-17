@@ -77,7 +77,7 @@ export default function ProfileForm({
       {state.message && (
         <p
           role={state.ok ? 'status' : 'alert'}
-          className={`rounded-xl px-4 py-3 text-sm ${state.ok ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}
+          className={`rounded-xl px-4 py-3 text-sm ${state.ok ? 'bg-success-50 text-success-800' : 'bg-danger-50 text-danger-700'}`}
         >
           {state.message}
         </p>

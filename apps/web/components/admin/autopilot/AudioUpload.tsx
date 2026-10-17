@@ -62,7 +62,7 @@ export default function AudioUpload({ id, estimate }: { id: string; estimate: st
         onChange={onChange}
         className="block w-full text-sm text-gray-700 file:me-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200"
       />
-      <p aria-live="polite" className={`mt-2 text-sm empty:hidden ${note?.ok === false ? 'text-red-700' : 'text-gray-600'}`}>
+      <p aria-live="polite" className={`mt-2 text-sm empty:hidden ${note?.ok === false ? 'text-danger-700' : 'text-gray-600'}`}>
         {note?.text ?? ''}
       </p>
     </div>

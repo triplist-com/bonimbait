@@ -18,9 +18,9 @@ export default function Error({
     <div className="container-page py-16 text-center">
       <div className="max-w-md mx-auto">
         {/* Error icon */}
-        <div className="w-20 h-20 mx-auto mb-6 bg-red-50 rounded-full flex items-center justify-center">
+        <div className="w-20 h-20 mx-auto mb-6 bg-danger-50 rounded-full flex items-center justify-center">
           <svg
-            className="w-10 h-10 text-red-500"
+            className="w-10 h-10 text-danger-500"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"

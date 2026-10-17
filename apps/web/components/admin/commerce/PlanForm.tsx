@@ -118,7 +118,7 @@ export default function PlanForm({
                     <td className="p-1"><input className={cell} value={r.max_sqm} onChange={(e) => setPrice(i, { max_sqm: e.target.value })} inputMode="numeric" aria-label="עד מ״ר" /></td>
                     <td className="p-1"><input className={cell} value={r.price} onChange={(e) => setPrice(i, { price: e.target.value })} inputMode="decimal" dir="ltr" aria-label="מחיר" required /></td>
                     <td className="p-1 text-center"><input type="checkbox" checked={r.vat_included} onChange={(e) => setPrice(i, { vat_included: e.target.checked })} aria-label="כולל מע״מ" /></td>
-                    <td className="p-1"><button type="button" className="text-red-700" onClick={() => setRows((x) => x.filter((_, k) => k !== i))}>הסרה</button></td>
+                    <td className="p-1"><button type="button" className="text-danger-700" onClick={() => setRows((x) => x.filter((_, k) => k !== i))}>הסרה</button></td>
                   </tr>
                 ))}
               </tbody>
@@ -153,7 +153,7 @@ export default function PlanForm({
                 <span className="flex gap-1 text-xs">
                   <button type="button" onClick={() => moveFeat(i, -1)} aria-label="למעלה">▲</button>
                   <button type="button" onClick={() => moveFeat(i, 1)} aria-label="למטה">▼</button>
-                  <button type="button" className="text-red-700" onClick={() => setFeats((r) => r.filter((_, k) => k !== i))}>✕</button>
+                  <button type="button" className="text-danger-700" onClick={() => setFeats((r) => r.filter((_, k) => k !== i))}>✕</button>
                 </span>
               </div>
             ))}
@@ -164,9 +164,9 @@ export default function PlanForm({
         <Section title="הגדרות">
           <Checkbox name="is_active" defaultChecked={plan.is_active} label="פעיל (מוצג באתר)" />
           <Checkbox name="is_featured" defaultChecked={plan.is_featured} label="מסלול מומלץ (מודגש)" />
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <div className="rounded-lg border border-warning-200 bg-warning-50 p-3">
             <Checkbox name="is_purchasable_online" defaultChecked={plan.is_purchasable_online} label="ניתן לרכישה ותשלום באתר" />
-            <p className="mt-1 text-xs text-amber-900">כבוי: הכפתור מוביל לשיחת ייעוץ וטופס ליד, והקופה מסרבת לרכישת המסלול.</p>
+            <p className="mt-1 text-xs text-warning-800">כבוי: הכפתור מוביל לשיחת ייעוץ וטופס ליד, והקופה מסרבת לרכישת המסלול.</p>
           </div>
           <FormField label="תווית בטבלת ההשוואה" htmlFor="compare_label">
             <TextInput id="compare_label" name="compare_label" defaultValue={plan.compare_label ?? ''} />
