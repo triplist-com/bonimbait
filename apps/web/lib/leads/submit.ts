@@ -41,6 +41,7 @@ import {
   verifyTurnstile,
 } from './spam';
 import { SITE_CONTACT } from './constants';
+import { cleanSourceUrl } from './source';
 
 export type SubmitLeadInput = {
   type: LeadType;
@@ -107,9 +108,9 @@ function cleanUtm(utm: Record<string, string> | undefined): Record<string, strin
   return out;
 }
 
+/** http(s) URLs and site paths only: staff open it as a link (lib/leads/source.ts). */
 function cleanSource(src: string | null | undefined): string | null {
-  if (!src) return null;
-  return src.slice(0, 500);
+  return cleanSourceUrl(src);
 }
 
 export async function submitLead(input: SubmitLeadInput): Promise<SubmitLeadResult> {

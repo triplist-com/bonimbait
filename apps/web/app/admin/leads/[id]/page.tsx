@@ -5,6 +5,7 @@ import { getLeadById } from '@/lib/db/leads';
 import { attributedPartnerId, attributionLabelHe } from '@/lib/analytics/attribution';
 import type { Json } from '@/lib/db/types';
 import { LEAD_TYPE_LABELS } from '@/lib/leads/constants';
+import { sourceLink } from '@/lib/leads/source';
 import { constructionStageLabel } from '@/lib/constants/community';
 import { saveLeadNotes, setLeadStatus } from '@/lib/admin/actions/leads';
 import { LEAD_STATUS, LEAD_STATUS_ORDER, NOTIFY_STATUS, formatDateTime } from '@/lib/admin/labels';
@@ -52,6 +53,8 @@ export default async function LeadPage({ params }: { params: { id: string } }) {
   const db = createClient();
   const lead = await getLeadById(db, params.id).catch(() => null);
   if (!lead) notFound();
+  // Browser-supplied: only an http(s) URL or a site path becomes a link (never javascript:).
+  const source = sourceLink(lead.source_url);
   const partnerId = attributedPartnerId(lead.attribution);
   const [biz, region, member, product, plan, partner] = await Promise.all([
     lead.business_id ? db.from('businesses').select('id, name').eq('id', lead.business_id).maybeSingle().then((r) => r.data) : null,
@@ -105,10 +108,16 @@ export default async function LeadPage({ params }: { params: { id: string } }) {
               <Row label="מוצר / מסלול">{product?.name ?? plan?.name}</Row>
               <Row label="משתמש רשום">{member && (member.email ?? member.id)}</Row>
               <Row label="עמוד מקור">
-                {lead.source_url && (
-                  <a href={lead.source_url} target="_blank" rel="noopener" dir="ltr" className="break-all text-primary hover:underline">
-                    {decodeURI(lead.source_url)}
+                {source ? (
+                  <a href={source.href} target="_blank" rel="noopener noreferrer" dir="ltr" className="break-all text-primary hover:underline">
+                    {source.label}
                   </a>
+                ) : (
+                  lead.source_url && (
+                    <span dir="ltr" className="break-all">
+                      {lead.source_url}
+                    </span>
+                  )
                 )}
               </Row>
               <Row label="שיוך (4 שעות)">{attributionLabelHe(lead.attribution, (id) => partners.get(id)?.name)}</Row>
