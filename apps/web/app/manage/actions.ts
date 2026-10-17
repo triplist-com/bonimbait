@@ -12,6 +12,7 @@ import { revalidatePath } from 'next/cache';
 import type { User } from '@supabase/supabase-js';
 import { trackServer } from '@/lib/analytics/server';
 import { getUser } from '@/lib/auth/session';
+import { isEnabled } from '@/lib/flags';
 import { isBudgetCategoryId } from '@/lib/hub/budget';
 import { israelToday } from '@/lib/hub/onboarding';
 import {
@@ -74,6 +75,7 @@ type Access = { user: User; db: BonimosDb; role: ProjectRole; project: { id: str
 
 /** The caller, their role in a MANAGED project, and an RLS-bound client. */
 async function access(projectId: unknown): Promise<Access | BonimosActionFail> {
+  if (!isEnabled('bonimos')) return fail('not_found');
   if (!isSupabaseConfigured()) return fail('server');
   if (!isUuid(projectId)) return fail('not_found');
   const user = await getUser();

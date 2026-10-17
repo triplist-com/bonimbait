@@ -11,11 +11,23 @@
  */
 import { revalidatePath } from 'next/cache';
 import { trackServer } from '@/lib/analytics/server';
+import { isEnabled } from '@/lib/flags';
 import { defaultProjectTitle } from '@/lib/hub/onboarding';
 import { findAccountByEmail } from '@/lib/bonimos/admin';
 import { bonimosAdminDb } from '@/lib/bonimos/db';
 import { ActionError, adminAction } from '../guard';
 import { bool, optStr, str, uuidOrNull } from '../form';
+
+/** Bonim.Os is behind FLAG_BONIMOS: while it's off, its admin writes are refused too. */
+function requireBonimos(): void {
+  if (!isEnabled('bonimos')) throw new ActionError('Bonim.Os לא פעיל באתר כרגע.');
+}
+
+/** End every assignment of a manager (their projects keep the history). */
+async function endAssignments(userId: string): Promise<void> {
+  const { error } = await bonimosAdminDb().from('hub_project_members').delete().eq('user_id', userId).eq('role', 'manager');
+  if (error) throw new Error(error.message);
+}
 
 function refresh(): void {
   revalidatePath('/admin/bonimos/');
@@ -37,6 +49,7 @@ function rosterFields(fd: FormData) {
 
 /** Add an existing account to the team of project managers (or update it). */
 export const addBonimosManager = adminAction('admin', async ({ profile }, fd: FormData) => {
+  requireBonimos();
   const fields = rosterFields(fd);
   const account = await findAccountByEmail(str(fd, 'email', 200));
   if (!account) throw new ActionError('לא מצאנו חשבון עם המייל הזה. בקשו מהמנהל להירשם לאתר, ואז הוסיפו אותו.', { email: 'אין חשבון כזה' });
@@ -48,27 +61,30 @@ export const addBonimosManager = adminAction('admin', async ({ profile }, fd: Fo
   return { ok: true, message: `${fields.display_name} בצוות הליווי. אפשר לשבץ ללקוחות.` };
 });
 
+/** Update a manager's card. Deactivating them ends every assignment too, as removing does. */
 export const updateBonimosManager = adminAction('admin', async (_ctx, userId: string, fd: FormData) => {
+  requireBonimos();
   const id = uuidOrNull(userId);
   if (!id) throw new ActionError('מנהל לא נמצא.');
   const fields = rosterFields(fd);
+  const active = bool(fd, 'active');
   const { error } = await bonimosAdminDb()
     .from('bonimos_managers')
-    .update({ ...fields, active: bool(fd, 'active') })
+    .update({ ...fields, active })
     .eq('user_id', id);
   if (error) throw new Error(error.message);
+  if (!active) await endAssignments(id);
   refresh();
-  return { ok: true, message: 'הפרטים עודכנו.' };
+  return { ok: true, message: active ? 'הפרטים עודכנו.' : 'המנהל הושבת והוסר מכל הפרויקטים.' };
 });
 
 /** Remove from the team: every assignment ends too (the projects keep their history). */
 export const removeBonimosManager = adminAction('admin', async (_ctx, userId: string) => {
+  requireBonimos();
   const id = uuidOrNull(userId);
   if (!id) throw new ActionError('מנהל לא נמצא.');
-  const db = bonimosAdminDb();
-  const { error: membersError } = await db.from('hub_project_members').delete().eq('user_id', id).eq('role', 'manager');
-  if (membersError) throw new Error(membersError.message);
-  const { error } = await db.from('bonimos_managers').delete().eq('user_id', id);
+  await endAssignments(id);
+  const { error } = await bonimosAdminDb().from('bonimos_managers').delete().eq('user_id', id);
   if (error) throw new Error(error.message);
   refresh();
   return { ok: true, message: 'המנהל הוסר מהצוות ומכל הפרויקטים.' };
@@ -98,6 +114,7 @@ async function assign(projectId: string, managerId: string, addedBy: string): Pr
  * hub they already use stays exactly as it was: same project, same data.
  */
 export const startBonimosClient = adminAction('admin', async ({ profile }, fd: FormData) => {
+  requireBonimos();
   const account = await findAccountByEmail(str(fd, 'email', 200));
   if (!account) throw new ActionError('לא מצאנו חשבון עם המייל הזה. הלקוח צריך להירשם לאתר קודם (הרשמה בחינם).', { email: 'אין חשבון כזה' });
   const managerId = uuidOrNull(optStr(fd, 'manager_id'));
@@ -130,6 +147,7 @@ export const startBonimosClient = adminAction('admin', async ({ profile }, fd: F
 });
 
 export const assignBonimosManager = adminAction('admin', async ({ profile }, projectId: string, fd: FormData) => {
+  requireBonimos();
   const id = uuidOrNull(projectId);
   const managerId = uuidOrNull(optStr(fd, 'manager_id'));
   if (!id) throw new ActionError('הפרויקט לא נמצא.');
@@ -140,6 +158,7 @@ export const assignBonimosManager = adminAction('admin', async ({ profile }, pro
 });
 
 export const unassignBonimosManager = adminAction('admin', async ({ profile }, projectId: string, fd: FormData) => {
+  requireBonimos();
   const id = uuidOrNull(projectId);
   const managerId = uuidOrNull(optStr(fd, 'manager_id'));
   if (!id || !managerId) throw new ActionError('השיבוץ לא נמצא.');
@@ -152,6 +171,7 @@ export const unassignBonimosManager = adminAction('admin', async ({ profile }, p
 
 /** The managed plan ended: managers leave, the client keeps the hub and all the history. */
 export const endBonimosClient = adminAction('admin', async (_ctx, projectId: string) => {
+  requireBonimos();
   const id = uuidOrNull(projectId);
   if (!id) throw new ActionError('הפרויקט לא נמצא.');
   const db = bonimosAdminDb();
