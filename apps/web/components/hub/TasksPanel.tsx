@@ -105,8 +105,7 @@ export function TasksPanel({ tasks, today }: { tasks: HubTaskView[]; today: stri
               onChange={(e) => setTitle(e.target.value)}
               placeholder="למשל: לשלוח כתב כמויות לקבלנים"
               maxLength={160}
-              wrapperClassName="flex-1"
-              className="flex-1"
+              className="sm:flex-1"
             />
             <label className="sr-only" htmlFor="hub-task-due">
               תאריך יעד
