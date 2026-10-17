@@ -163,14 +163,20 @@ describe.skipIf(!ENABLED)('revenue RLS on the local stack', () => {
   });
 
   it('metrics RPCs: owners and staff only (42501 for everyone else)', async () => {
+    // revenue_business_metrics() is service-role only (QA, 20261014131000): it runs
+    // patterns over every visitor's questions. The app calls it after
+    // canReadBusinessMetrics() (lib/revenue/metrics.ts), which uses these two checks.
     const args = (id: string) => ({ p_business_id: id, p_from: FROM, p_to: TO, p_patterns: [] as string[] });
-    const own = await as.pro.rpc('revenue_business_metrics', args(biz.a));
+    for (const db of [as.pro, as.member, as.staff, anon]) {
+      expect((await db.rpc('revenue_business_metrics', args(biz.a))).error).not.toBeNull();
+    }
+    const own = await admin.rpc('revenue_business_metrics', args(biz.a));
     expect(own.error).toBeNull();
     expect(own.data).toHaveProperty('leads');
-    expect((await as.pro.rpc('revenue_business_metrics', args(biz.b))).error?.code).toBe('42501');
-    expect((await as.member.rpc('revenue_business_metrics', args(biz.a))).error?.code).toBe('42501');
-    expect((await anon.rpc('revenue_business_metrics', args(biz.a))).error).not.toBeNull();
-    expect((await as.staff.rpc('revenue_business_metrics', args(biz.a))).error).toBeNull();
+    expect((await as.pro.rpc('revenue_owns_business', { p_business: biz.a })).data).toBe(true);
+    expect((await as.pro.rpc('revenue_owns_business', { p_business: biz.b })).data).toBe(false);
+    expect((await as.staff.rpc('is_staff')).data).toBe(true);
+    expect((await as.member.rpc('is_staff')).data).toBe(false);
 
     expect((await as.pro.rpc('revenue_peer_rank', { p_business_id: biz.a, p_from: FROM, p_to: TO })).error).toBeNull();
     expect((await as.pro2.rpc('revenue_peer_rank', { p_business_id: biz.a, p_from: FROM, p_to: TO })).error?.code).toBe('42501');

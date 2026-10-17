@@ -197,6 +197,7 @@ export type RevenueDatabase = {
       };
       revenue_peer_rank: { Args: { p_business_id: string; p_from: string; p_to: string }; Returns: Json };
       revenue_partner_overview: { Args: { p_from: string; p_to: string }; Returns: PartnerOverviewRow[] };
+      revenue_owns_business: { Args: { p_business: string }; Returns: boolean };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

@@ -1,8 +1,9 @@
 import 'server-only';
 
 /**
- * Loads the portal for one business, as its owner (RLS and the metric RPCs'
- * own ownership check: a pro only ever gets their own numbers and leads).
+ * Loads the portal for one business, as its owner (RLS, the peer RPC's own
+ * ownership check, and canReadBusinessMetrics() before the service-role
+ * metrics call: a pro only ever gets their own numbers and leads).
  */
 import type { LeadStatus } from '@/lib/db/types';
 import { LEAD_STATUS } from '@/lib/admin/labels';
@@ -14,6 +15,7 @@ import { stageForProfile } from '@/lib/stages';
 import type { ConstructionStage } from '@/lib/db/types';
 import { loadPartnerBadges } from './badges';
 import type { RevenueDb } from './db';
+import { businessMetrics, canReadBusinessMetrics } from './metrics';
 import { EMPTY_METRICS, parseMetrics, parsePeerRank, portalKpis, profileCompleteness, type Completeness, type PortalKpis } from './portal';
 import { topicPatterns, topicsForSpecialty } from './topics';
 import type { BusinessMetrics, PeerRank, PartnerSubscriptionStatus } from './types';
@@ -95,10 +97,16 @@ export async function loadPortalView(db: RevenueDb, business: BusinessInput, con
   const topics = Array.from(new Set(business.specialties.flatMap((s) => topicsForSpecialty(s.slug))));
   const patterns = topicPatterns(topics).slice(0, 12);
   const id = business.id;
+  // The metrics RPC is service-role only: confirm ownership (or staff) as the caller first.
+  const authorized = await canReadBusinessMetrics(db, id);
+  const metricsFor = (range: { from: string; to: string }) =>
+    authorized
+      ? businessMetrics(db, id, range, patterns, { authorized: true })
+      : Promise.resolve({ data: null, error: { message: 'not the owner of this business' } });
 
   const [cur, prev, peer, leadsRes, statsRes, tiersRes, subRes, dealsRes, badges] = await Promise.all([
-    db.rpc('revenue_business_metrics', { p_business_id: id, p_from: from, p_to: to, p_patterns: patterns }),
-    db.rpc('revenue_business_metrics', { p_business_id: id, p_from: prevFrom, p_to: from, p_patterns: patterns }),
+    metricsFor({ from, to }),
+    metricsFor({ from: prevFrom, to: from }),
     db.rpc('revenue_peer_rank', { p_business_id: id, p_from: from, p_to: to }),
     db
       .from('leads')
