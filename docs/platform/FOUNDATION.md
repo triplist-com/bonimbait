@@ -395,10 +395,12 @@ if (!isEnabled('hub')) notFound();             // Server Component / Route Handl
   default.
 - Flags are server-side because env vars are read at runtime. `allFlags()` returns a snapshot.
 - To add a flag, add one entry to `FLAGS` with its default, owner and description.
-- Defaults:
-  - Ops switches are on: `analytics`, `aiAnswers`.
-  - Dark launches are off: `advisor`, `hub`, `revenue`, `commandCenter`, `budgetPlanner`,
-    `programmaticSeo`, `autopilot`.
+- Defaults (launch, set at integration on 2026-10-15):
+  - Every pillar is on: `analytics`, `aiAnswers`, `advisor`, `hub`, `revenue`, `commandCenter`, `bonimos`,
+    `budgetPlanner`, `autopilot`. `FLAG_<NAME>=false` switches one off.
+  - `programmaticSeo` stays off: it's a Won't, and nothing reads it.
+  - Each flag lists the hosted migrations it needs (`migrations` in `FLAGS`; a test checks the
+    files exist). See `docs/platform/INTEGRATION.md`.
 - Demo views render from fixtures, so they never need a flag turned on.
 
 ---

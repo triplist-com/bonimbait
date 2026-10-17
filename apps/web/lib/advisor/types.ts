@@ -10,6 +10,8 @@
  *   or { type: 'error', message }  the stream broke
  * Older clients that only read `chunk` and `done` keep working.
  */
+import type { ProjectStageId } from '@/lib/project-file/types';
+import type { PartnerOffer } from '@/lib/revenue/types';
 
 export type ConfidenceLevel = 'high' | 'medium' | 'low';
 
@@ -72,7 +74,7 @@ export interface AdvisorStats {
   articles: number;
 }
 
-/** A matched pro under the answer (app/api/_lib/pros.ts). */
+/** A matched pro under the answer (app/api/_lib/pros.ts, ordered by rankPros()). */
 export interface AdvisorPro {
   slug: string;
   name: string;
@@ -80,6 +82,8 @@ export interface AdvisorPro {
   city: string | null;
   logo_url: string | null;
   href: string;
+  /** The pro's partner tier, when it has one (it lifted the pro within relevance). */
+  badge?: { tierSlug: string; tierName: string; badgeLabel: string; rank: number } | null;
 }
 
 export interface AdvisorPros {
@@ -131,6 +135,12 @@ export type AdvisorEvent =
       confidence_detail: AdvisorConfidence;
       pros: AdvisorPros | null;
       intent: AdvisorIntent;
+      /**
+       * At most one sponsored partner offer that fits the topic, stage and
+       * region (lib/revenue/offers-server.ts getContextualOffers). Real answers
+       * only; it sits next to the pros, never instead of them.
+       */
+      offer?: PartnerOffer | null;
       degraded?: AdvisorDegraded;
       refused?: AdvisorRefusal;
       /** Present on real answers: lets the visitor share this exact answer. */
@@ -166,6 +176,8 @@ export interface AdvisorRequest {
   focus?: AdvisorFocus;
   /** regions.slug from the visitor's project file, for region-aware pros. */
   region?: string;
+  /** The visitor's build stage (lib/stages.ts id) from their project file, for the partner offer. */
+  stage?: ProjectStageId;
   /** Development only (ignored in production): stop before the model call and return the prompt. */
   dryRun?: boolean;
 }

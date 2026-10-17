@@ -3,6 +3,7 @@ import { isAuthorizedCron } from '@/lib/autopilot/cron-auth';
 import { serviceDb } from '@/lib/autopilot/db';
 import { runWatch } from '@/lib/autopilot/run';
 import { supabaseStore } from '@/lib/autopilot/store';
+import { isEnabled } from '@/lib/flags';
 
 /**
  * Content Autopilot watcher (Vercel Cron, daily; see vercel.json). Detects new
@@ -19,6 +20,8 @@ export async function GET(request: NextRequest) {
   if (!isAuthorizedCron(request.headers.get('authorization'))) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
+  // FLAG_AUTOPILOT=false: no watching (published videos stay in search and answers).
+  if (!isEnabled('autopilot')) return NextResponse.json({ skipped: 'FLAG_AUTOPILOT=false' });
   const db = serviceDb();
   if (!db) return NextResponse.json({ error: 'knowledge store not configured' }, { status: 503 });
 

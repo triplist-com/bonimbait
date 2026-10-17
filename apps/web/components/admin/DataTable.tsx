@@ -26,7 +26,9 @@ export default function DataTable<T>({
   caption?: ReactNode;
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-card">
+    // `relative`: the screen-reader caption (absolutely positioned) stays inside the
+    // scroll box instead of widening the page on phones.
+    <div className="relative overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-card">
       <table className="w-full min-w-[640px] text-sm">
         {caption && <caption className="sr-only">{caption}</caption>}
         <thead>

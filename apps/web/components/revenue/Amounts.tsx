@@ -16,7 +16,7 @@ export function NisShort({ value }: { value: number }) {
   return (
     <>
       <Num>{p.value}</Num>
-      {p.unit ? ` ${p.unit}` : ''} ₪
+      {p.unit ? ` ${p.unit}` : ''}{'\u00a0'}₪
     </>
   );
 }
@@ -33,7 +33,7 @@ export function NisRange({ range }: { range: readonly [number, number] }) {
         <Num>
           {a.value}–{b.value}
         </Num>
-        {b.unit ? ` ${b.unit}` : ''} ₪
+        {b.unit ? ` ${b.unit}` : ''}{'\u00a0'}₪
       </>
     );
   }
@@ -41,7 +41,7 @@ export function NisRange({ range }: { range: readonly [number, number] }) {
     <>
       <Num>{a.value}</Num>
       {a.unit ? ` ${a.unit}` : ''} – <Num>{b.value}</Num>
-      {b.unit ? ` ${b.unit}` : ''} ₪
+      {b.unit ? ` ${b.unit}` : ''}{'\u00a0'}₪
     </>
   );
 }

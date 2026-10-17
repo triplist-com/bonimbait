@@ -3,6 +3,7 @@ import StructuredData from '@/components/StructuredData';
 import { STAGE_CATEGORY_SLUGS } from '@/lib/content/queries';
 import { legacyCategories, loadAllVideoPages, type VideoHubItem } from '@/lib/content/videos';
 import { absoluteUrl } from '@/lib/site';
+import { stageForCategory } from '@/lib/stages';
 import Breadcrumbs from './Breadcrumbs';
 import CommunityCTA from './CommunityCTA';
 import VideoPageCard from './VideoPageCard';
@@ -38,7 +39,9 @@ async function VideoHubContent() {
     for (const c of legacyCategories(v.legacy_categories)) {
       const slug = c.slug.normalize('NFC');
       if (!(STAGE_CATEGORY_SLUGS as readonly string[]).includes(slug)) continue;
-      const entry = byStage.get(slug) ?? { name: c.name, items: [] };
+      // One stage vocabulary (lib/stages.ts): "שלב שלד", not the WordPress category's own wording.
+      const stage = stageForCategory(slug);
+      const entry = byStage.get(slug) ?? { name: stage ? `שלב ${stage.label}` : c.name, items: [] };
       entry.items.push(v);
       byStage.set(slug, entry);
     }

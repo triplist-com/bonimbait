@@ -115,6 +115,8 @@ export interface MatchedPro {
   city: string | null;
   logo_url: string | null;
   href: string;
+  /** Live partner tier (lib/revenue/tiers.ts PartnerBadge), shown as a badge: tiers reorder the list. */
+  badge?: { tierSlug: string; tierName: string; badgeLabel: string; rank: number } | null;
 }
 
 export interface ProsCta {

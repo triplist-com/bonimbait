@@ -156,7 +156,7 @@ export const TOUR_BEATS: readonly TourBeat[] = [
     screen: 'חדר הבקרה במחשב',
     targets: [
       { kind: 'demo', slug: 'command' },
-      { kind: 'site', href: '/admin/command/', label: 'פתחו בניהול', flag: 'commandCenter', staffOnly: true },
+      { kind: 'site', href: '/admin/', label: 'פתחו בניהול', flag: 'commandCenter', staffOnly: true },
     ],
     lines: ['אריחי הצבר, ואז ״השאלות שעוד לא עניתם עליהן״.', 'הקהל שלכם אומר לכם מה לצלם.'],
     figure: { source: 'demo', value: 'צבר פוטנציאלי 1.4 מיליון ₪ · 46 שאלות בלי מענה', label: 'חדר בקרה לדוגמה' },
@@ -174,6 +174,7 @@ export const TOUR_BEATS: readonly TourBeat[] = [
       { kind: 'demo', slug: 'partner' },
       { kind: 'demo', slug: 'revenue' },
       { kind: 'demo', slug: 'pro', label: 'פורטל בעל מקצוע' },
+      { kind: 'site', href: '/admin/partners/', label: 'פתחו בניהול', flag: 'revenue', staffOnly: true },
     ],
     lines: [
       'הדוח של השותף, ואז מסלול השדרוג: חברים, שותפים, שגרירים.',
@@ -214,7 +215,7 @@ export const TOUR_BEATS: readonly TourBeat[] = [
     screen: 'תור הטייס האוטומטי בניהול',
     targets: [
       { kind: 'demo', slug: 'autopilot' },
-      { kind: 'site', href: '/admin/autopilot/', label: 'פתחו בניהול', staffOnly: true },
+      { kind: 'site', href: '/admin/autopilot/', label: 'פתחו בניהול', flag: 'autopilot', staffOnly: true },
     ],
     lines: ['סרטון חדש עולה ומקבל עמוד, פרקים ותשובות.', 'אתם ממשיכים לצלם. השאר קורה לבד.'],
     figure: { source: 'measured', key: 'autopilot', label: 'נמדד על סרטונים מהערוץ' },

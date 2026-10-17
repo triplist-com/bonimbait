@@ -112,10 +112,14 @@ export const EVENT_CATALOG = {
       cost_usd: z.number().min(0).max(100).optional(),
       // Advisor (P1): retrieval quality and the Command Center's content-gap signals
       // ("השאלות שעוד לא עניתם עליהן", P4).
-      top_similarity: z.number().min(-1).max(1).optional(), // best raw cosine among the sources fed to the answer
+      // Best raw cosine among the documents the answer was built on (title-only rows never
+      // count): the same scale as insight_topics.top_similarity (lib/command/insights/coverage.ts).
+      top_similarity: z.number().min(-1).max(1).optional(),
       n_sources: count.optional(), // sources fed to the answer (same as `sources`)
       source_ids: sourceIds.optional(), // the cited sources, in citation order
       cited: count.optional(), // distinct sources the answer cites
+      // 'low_confidence' = a content gap (nothing close); 'out_of_scope' = not about building,
+      // never a gap (command_question_stats leaves it out).
       refused: z.enum(['out_of_scope', 'low_confidence']).optional(),
       degraded: text(20).optional(),
       rewritten: z.boolean().optional(), // follow-up rewritten to a standalone query
@@ -124,6 +128,13 @@ export const EVENT_CATALOG = {
       focus: z.enum(['video', 'post']).optional(),
       origin: text(20).optional(),
       first_token_ms: count.optional(),
+      // The builder's project file (bb.hub.draft or the member's hub project / profile):
+      // the partner portal counts askers in a partner's own regions.
+      region: text(40).optional(), // regions.slug
+      stage: text(40).optional(), // lib/stages.ts id
+      // A sponsored partner offer was shown under the answer (lib/revenue/offers-server.ts).
+      has_offer: z.boolean().optional(),
+      offer_partner: text(120).optional(), // the partner's business id
       ...advisorTurn,
     }),
   ),

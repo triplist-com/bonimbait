@@ -42,6 +42,12 @@ describe('saved item links', () => {
     expect(savedHref('business', 'id', { slug: 'studio' })).toBe('/business/studio/');
     expect(savedHref('business', 'id')).toBe('/recommended/');
     expect(savedHref('answer', 'כמה עולה שלד?')).toMatch(/^\/[a-z]+\/\?q=/);
+    // Integration (advisor -> hub): an answer saved from the advisor opens its snapshot.
+    expect(savedHref('answer', 'Kq7tM2xPa9bWc3Rz')).toBe('/ask/a/Kq7tM2xPa9bWc3Rz/');
+    expect(validateSaveInput({ kind: 'answer', ref: 'Kq7tM2xPa9bWc3Rz', title: 'כמה עולה שלד?', meta: { thumbnail: 'https://i.ytimg.com/vi/vluNH7GTkU4/hqdefault.jpg' } })).toMatchObject({
+      ok: true,
+      value: { kind: 'answer', ref: 'Kq7tM2xPa9bWc3Rz', meta: { thumbnail: 'https://i.ytimg.com/vi/vluNH7GTkU4/hqdefault.jpg' } },
+    });
     expect(savedThumbnail('video', 'gUrvdx_xZjM')).toBe('https://i.ytimg.com/vi/gUrvdx_xZjM/mqdefault.jpg');
     expect(savedThumbnail('post', 'x')).toBeNull();
   });

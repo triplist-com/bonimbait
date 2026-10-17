@@ -27,6 +27,7 @@ import {
   getStageArticleCounts,
 } from '@/lib/home/data';
 import { HERO_MOMENT } from '@/lib/home/content';
+import { loadPriceBook } from '@/lib/planner/price-book';
 import { BUILD_STAGES } from '@/lib/stages';
 import { absoluteUrl } from '@/lib/site';
 
@@ -51,7 +52,7 @@ function momentPercent(): number | undefined {
 }
 
 export default async function Home() {
-  const [stats, stageCounts, media, pros, prosTotal, benefits, plans] = await Promise.all([
+  const [stats, stageCounts, media, pros, prosTotal, benefits, plans, priceBook] = await Promise.all([
     getKnowledgeStats(),
     getStageArticleCounts(),
     getHomeMedia(4),
@@ -59,6 +60,7 @@ export default async function Home() {
     countPublishedPros(),
     getHomeBenefits(3),
     getHomePlans(),
+    loadPriceBook(),
   ]);
 
   return (
@@ -95,7 +97,7 @@ export default async function Home() {
 
       <MediaRails podcasts={media.podcasts} videos={media.videos} />
       <ProsShowcase pros={pros} total={prosTotal} />
-      <BudgetCalculatorSlot />
+      <BudgetCalculatorSlot book={priceBook.book} />
       <BenefitsTeaser items={benefits} />
       <SocialProof />
       <PlansTeaser plans={plans} />

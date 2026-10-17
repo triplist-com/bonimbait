@@ -10,6 +10,8 @@
  * Every access is wrapped: private mode, a full quota or disabled storage
  * never breaks the page. Client-safe (no-ops on the server).
  */
+import type { ProjectStageId } from '@/lib/project-file/types';
+import { BUILD_STAGES } from '@/lib/stages';
 import type { AdvisorDegraded, AdvisorRefusal, AdvisorSharePayload, AdvisorSource } from '../types';
 
 export const RECENT_KEY = 'bb.advisor.recent';
@@ -146,4 +148,11 @@ export function sharePayloadOf(turn: StoredTurn): AdvisorSharePayload {
 export function draftRegion(): string | undefined {
   const draft = readJson<{ regionSlug?: unknown }>('bb.hub.draft');
   return typeof draft?.regionSlug === 'string' && /^[a-z0-9-]{2,40}$/.test(draft.regionSlug) ? draft.regionSlug : undefined;
+}
+
+/** The visitor's build stage from the hub draft (a lib/stages.ts id), for the partner offer. */
+export function draftStage(): ProjectStageId | undefined {
+  const draft = readJson<{ stage?: unknown }>('bb.hub.draft');
+  const stage = draft?.stage;
+  return typeof stage === 'string' && BUILD_STAGES.some((s) => s.id === stage) ? (stage as ProjectStageId) : undefined;
 }

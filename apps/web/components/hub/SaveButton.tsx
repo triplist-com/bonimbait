@@ -60,6 +60,9 @@ export default function SaveButton({
   meta,
   className,
   size = 'sm',
+  prepare,
+  label = 'שמירה',
+  savedLabel = 'נשמר',
 }: {
   kind: Exclude<SavedKind, 'business'>;
   refId: string;
@@ -67,6 +70,13 @@ export default function SaveButton({
   meta?: Record<string, string>;
   className?: string;
   size?: 'sm' | 'md';
+  /**
+   * Runs before the first save and returns the ref to store (null = failed),
+   * e.g. an advisor answer publishes its snapshot and saves its share id.
+   */
+  prepare?: () => Promise<string | null>;
+  label?: string;
+  savedLabel?: string;
 }) {
   const { saved, ready } = useSaved(kind, refId);
   const [busy, setBusy] = useState(false);
@@ -77,7 +87,14 @@ export default function SaveButton({
     if (busy) return;
     const next = !saved;
     setBusy(true);
-    const res = await toggleSaved({ kind, ref: refId, title, meta }, next);
+    const ref = !saved && prepare ? await prepare().catch(() => null) : refId;
+    if (!ref) {
+      setBusy(false);
+      setMessage(null);
+      setHint('error');
+      return;
+    }
+    const res = await toggleSaved({ kind, ref, title, meta }, next);
     setBusy(false);
     if (!res.ok) {
       setMessage(res.message);
@@ -85,7 +102,7 @@ export default function SaveButton({
       return;
     }
     if (next) {
-      track('hub_item_saved', { item_type: kind, item_id: refId });
+      track('hub_item_saved', { item_type: kind, item_id: ref });
       setHint(res.where);
     } else {
       setHint(null);
@@ -105,7 +122,7 @@ export default function SaveButton({
         )}
       >
         {saved ? <BookmarkCheck aria-hidden="true" /> : <Bookmark aria-hidden="true" />}
-        {saved ? 'נשמר' : 'שמירה'}
+        {saved ? savedLabel : label}
       </button>
       <SaveNote hint={hint} message={message} onClose={() => setHint(null)} />
     </span>

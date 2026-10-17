@@ -528,12 +528,17 @@ export const commandDemo = defineDemoFixture('command', ({ gen, today }) => {
     const capped = Math.min(3, uncapped);
     const completed = uncapped > 3 ? Math.round(3 / costPerAnswer) : Math.round(requested * 0.97);
     const bookings = Math.round(dailyValue(gen, 'booked', date, { level: 5.6, weeklyGrowth: 0.012, noise: 0.35 }) * share);
+    // The journey strip: planner results and personal roadmaps follow the questions.
+    const plannerRuns = Math.round(requested * 0.085);
+    const roadmaps = Math.round(requested * 0.046);
     events.push(
       { day: date, name: 'answer_requested', events: requested, visitors: Math.round(requested * 0.82) },
       { day: date, name: 'answer_completed', events: completed, visitors: Math.round(completed * 0.82) },
       { day: date, name: 'search_submitted', events: Math.round(requested * 1.55), visitors: Math.round(requested * 1.2) },
       { day: date, name: 'consult_booked', events: Math.round(bookings * 1.1), visitors: bookings },
       { day: date, name: 'lead_submitted', events: leadsPerDay.get(date) ?? 0, visitors: leadsPerDay.get(date) ?? 0 },
+      { day: date, name: 'planner_completed', events: plannerRuns, visitors: plannerRuns },
+      { day: date, name: 'hub_onboarding_completed', events: roadmaps, visitors: roadmaps },
     );
     aiUsage.push({ day: date, costUsd: Math.round(capped * 1e4) / 1e4, calls: requested * 2, answerCalls: completed });
   }
@@ -619,6 +624,18 @@ export function commandDemoInputs(data: CommandDemoData, periodDays: PeriodDays)
   }));
   const todayUtc = new Date(data.now).toISOString().slice(0, 10);
   const today = data.days[data.days.length - 1];
+  // The hub's aggregates: about 4 in 10 builders who make a roadmap open an account.
+  const roadmapsIn = (from: string, to: string) =>
+    data.events
+      .filter((e) => e.name === 'hub_onboarding_completed' && inRange(israelMidnight(e.day) + 12 * 60 * MINUTE, from, to))
+      .reduce((a, e) => a + e.events, 0);
+  const hubProjects = 1_184;
+  const hub = {
+    onboarded: Math.round(roadmapsIn(window.from, window.to) * 0.41),
+    prevOnboarded: Math.round(roadmapsIn(window.prevFrom, window.prevTo) * 0.41),
+    projects: hubProjects,
+    byStage: DEMO_HUB_STAGE_SHARE.map(([stage, share]) => ({ stage, projects: Math.round(hubProjects * share) })),
+  };
   return {
     now: data.now,
     periodDays,
@@ -656,5 +673,18 @@ export function commandDemoInputs(data: CommandDemoData, periodDays: PeriodDays)
       pendingBusinesses: 2,
       openRequests: 3,
     },
+    hub,
   };
 }
+
+/** Where the demo's member projects stand (fictional; the permit and shell stages lead, as in the owner's audience). */
+const DEMO_HUB_STAGE_SHARE: ReadonlyArray<readonly [string, number]> = [
+  ['purchase', 0.08],
+  ['planning', 0.21],
+  ['permit', 0.26],
+  ['frame', 0.19],
+  ['infrastructure', 0.1],
+  ['finishing', 0.11],
+  ['moving-in', 0.03],
+  ['unknown', 0.02],
+];

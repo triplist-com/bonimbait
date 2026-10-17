@@ -1,4 +1,5 @@
 import type { ConstructionStage } from '@/lib/db/types';
+import { BUILD_STAGES } from '@/lib/stages';
 
 /**
  * Community lookup values used by signup/profile/lead forms.
@@ -10,16 +11,23 @@ import type { ConstructionStage } from '@/lib/db/types';
  * work regions only, so member-facing forms use MEMBER_REGIONS.
  */
 
+/**
+ * The member profile stages (profiles.construction_stage), named with the
+ * owner's 7 stages from lib/stages.ts (one vocabulary on every screen:
+ * רכישה · תכנון · היתר/מכרז · שלד · גמרים · אכלוס; תשתיות has no profile
+ * value), in journey order, then the two profile-only values.
+ */
 export const CONSTRUCTION_STAGES: ReadonlyArray<{ value: ConstructionStage; label: string }> = [
-  { value: 'land', label: 'רכישת מגרש' },
-  { value: 'planning', label: 'תכנון' },
-  { value: 'tender', label: 'מכרז קבלנים' },
-  { value: 'frame', label: 'שלד' },
-  { value: 'finishing', label: 'גמרים' },
+  ...BUILD_STAGES.flatMap((s) => (s.profileStage ? [{ value: s.profileStage, label: s.label }] : [])),
   { value: 'design', label: 'עיצוב' },
-  { value: 'moving_in', label: 'כניסה לבית' },
   { value: 'renovation', label: 'שיפוץ' },
 ];
+
+/** The Hebrew name of a profile stage value, or null (unknown values show nothing). */
+export function constructionStageLabel(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return CONSTRUCTION_STAGES.find((s) => s.value === value)?.label ?? null;
+}
 
 export type RegionOption = { slug: string; name: string; isNationwide?: boolean };
 

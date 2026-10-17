@@ -3,22 +3,29 @@ import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { z } from 'zod';
+import { rankAnswerPros, type ProRow } from '@/lib/advisor/pros-rank';
 import { getPublicDb } from '@/lib/content/db';
+import type { DbClient } from '@/lib/db/client';
 import { listPublishedBusinesses } from '@/lib/db/businesses';
 import { businessHref } from '@/lib/directory/format';
 import { listingHref } from '@/lib/directory/listing';
 import { checkAiBudget, recordAiUsage } from '@/lib/guard/aiBudget';
 import { usageFromAnthropic } from '@/lib/guard/aiPricing';
+import { loadPartnerBadges } from '@/lib/revenue/badges';
 import type { ProsCta } from '@/lib/types';
 
 /**
  * "Matching pros" CTA under an AI answer: pick the directory specialty the
- * question is about, then list a few published businesses in it.
+ * question is about, then the best few published businesses in it, ordered by
+ * the revenue squad's rankPros() (region fit, reputation, partner tier;
+ * lib/advisor/pros-rank.ts).
  */
 
 const CLASSIFIER_MODEL = 'claude-haiku-4-5';
 const SPECIALTY_TTL_MS = 10 * 60 * 1000;
 const MAX_PROS = 3;
+/** Pros of the specialty ranked before the top 3 are picked (the biggest specialty has ~30). */
+const CANDIDATE_POOL = 60;
 
 interface SpecialtyOption {
   id: string;
@@ -97,12 +104,47 @@ async function findRegion(slug: string): Promise<{ id: string; slug: string; nam
   return data ?? null;
 }
 
+/** regions.id of the "whole country" regions (cached with the specialties' TTL). */
+let nationwideCache: { at: number; ids: Set<string> } | null = null;
+async function nationwideRegionIds(db: DbClient): Promise<Set<string>> {
+  if (nationwideCache && Date.now() - nationwideCache.at < SPECIALTY_TTL_MS) return nationwideCache.ids;
+  const { data, error } = await db.from('regions').select('id').eq('is_nationwide', true);
+  if (error) throw new Error(error.message);
+  nationwideCache = { at: Date.now(), ids: new Set((data ?? []).map((r) => r.id)) };
+  return nationwideCache.ids;
+}
+
+/**
+ * What rankPros() weighs that the listing lacks: served regions, review stats
+ * and partner tiers. A failed lookup ranks without it (the directory order
+ * still holds), never fails the CTA.
+ */
+async function rankingFacts(db: DbClient, ids: string[]) {
+  const [regions, stats, badges, nationwide] = await Promise.all([
+    db.from('business_regions').select('business_id, region_id').in('business_id', ids),
+    db.from('business_review_stats').select('business_id, review_count, rating_percent').in('business_id', ids),
+    loadPartnerBadges(db),
+    nationwideRegionIds(db).catch(() => new Set<string>()),
+  ]);
+  if (regions.error || stats.error) console.error('[pros] ranking facts partly unavailable:', regions.error?.message ?? stats.error?.message);
+  const regionsByBusiness = new Map<string, string[]>();
+  for (const r of regions.data ?? []) regionsByBusiness.set(r.business_id, [...(regionsByBusiness.get(r.business_id) ?? []), r.region_id]);
+  const statsByBusiness = new Map(
+    (stats.data ?? []).map((s) => [
+      s.business_id,
+      { ratingPercent: s.rating_percent == null ? null : Number(s.rating_percent), reviewCount: Number(s.review_count) || 0 },
+    ]),
+  );
+  return { regionsByBusiness, statsByBusiness, badges, nationwide };
+}
+
 /**
  * Specialty + up to three published pros for the question, or null when no
  * specialty fits. With `regionSlug` (the visitor's region, from their project
- * file) the list prefers pros who work there, nationwide ones included, and
- * falls back to everyone when the region has none. Never throws: the CTA is
- * optional, the answer is not.
+ * file) the candidates are the pros who work there, nationwide ones included,
+ * or everyone when the region has none. rankPros() then orders them: region
+ * fit, reputation, the owner's pick, then the partner-tier boost. Never
+ * throws: the CTA is optional, the answer is not.
  */
 export async function matchPros(query: string, opts: { isDemo?: boolean; regionSlug?: string } = {}): Promise<ProsCta | null> {
   try {
@@ -117,11 +159,20 @@ export async function matchPros(query: string, opts: { isDemo?: boolean; regionS
 
     const region = opts.regionSlug ? await findRegion(opts.regionSlug) : null;
     let { items } = region
-      ? await listPublishedBusinesses(db, { specialtyId: specialty.id, regionId: region.id, pageSize: MAX_PROS })
-      : await listPublishedBusinesses(db, { specialtyId: specialty.id, pageSize: MAX_PROS });
+      ? await listPublishedBusinesses(db, { specialtyId: specialty.id, regionId: region.id, pageSize: CANDIDATE_POOL })
+      : await listPublishedBusinesses(db, { specialtyId: specialty.id, pageSize: CANDIDATE_POOL });
     const inRegion = Boolean(region) && items.length > 0;
-    if (region && items.length === 0) ({ items } = await listPublishedBusinesses(db, { specialtyId: specialty.id, pageSize: MAX_PROS }));
+    if (region && items.length === 0) ({ items } = await listPublishedBusinesses(db, { specialtyId: specialty.id, pageSize: CANDIDATE_POOL }));
     if (items.length === 0) return null;
+
+    const facts = await rankingFacts(db, items.map((b) => b.id));
+    const ranked = rankAnswerPros({
+      rows: items as ProRow[],
+      ...facts,
+      nationwideRegionIds: facts.nationwide,
+      regionId: inRegion && region ? region.id : null,
+      limit: MAX_PROS,
+    });
     return {
       region: inRegion && region ? { slug: region.slug, name: region.name } : null,
       specialty: {
@@ -129,13 +180,14 @@ export async function matchPros(query: string, opts: { isDemo?: boolean; regionS
         name: specialty.name,
         href: listingHref(inRegion && region ? { specialty: specialty.slug, region: region.slug } : { specialty: specialty.slug }),
       },
-      pros: items.map((b) => ({
+      pros: ranked.map((b) => ({
         slug: b.slug,
         name: b.name,
         tagline: b.tagline,
         city: b.city,
         logo_url: b.logo_url,
         href: businessHref(b.slug),
+        badge: b.badge,
       })),
     };
   } catch (err) {

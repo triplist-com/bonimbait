@@ -85,9 +85,13 @@ export type QuestionStatRow = {
   visitors: number;
   asks_this_week: number;
   asks_prev_week: number;
+  /** answer_completed events, out-of-scope refusals excluded (they aren't content gaps). */
   answers: number;
+  /** Mean answer_completed.confidence (0..1, lib/advisor/confidence.ts). */
   avg_confidence: number | null;
+  /** Answers with no sources shown: a low_confidence refusal or a degraded answer. */
   zero_source_answers: number;
+  /** Mean answer_completed.top_similarity: the best raw cosine among each answer's documents. */
   avg_top_similarity: number | null;
   first_seen: string;
   last_seen: string;

@@ -11,6 +11,7 @@ import { getProfile, getUser } from '@/lib/auth/session';
 import { isEnabled } from '@/lib/flags';
 import { israelToday } from '@/lib/hub/onboarding';
 import { loadStagePicks } from '@/lib/hub/picks';
+import { loadPriceBook } from '@/lib/planner/price-book';
 import { createProjectFromSignupMetadata, loadMemberHub } from '@/lib/hub/server';
 import { ManagedHubBand } from '@/components/bonimos/ManagedHubBand';
 import { isProjectManager, loadManagedHubSummary } from '@/lib/bonimos/server';
@@ -33,7 +34,8 @@ export default async function MyHomePage() {
   const user = await getUser();
 
   if (!user) {
-    return <LocalHub picks={await loadStagePicks()} today={israelToday()} />;
+    const [picks, priceBook] = await Promise.all([loadStagePicks(), loadPriceBook()]);
+    return <LocalHub picks={picks} today={israelToday()} book={priceBook.book} />;
   }
 
   const profile = await getProfile();

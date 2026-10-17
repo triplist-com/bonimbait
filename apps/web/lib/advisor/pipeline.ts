@@ -24,10 +24,14 @@ import { EXAMPLE_QUESTIONS } from '@/lib/home/questions';
 import { wantsNumbers } from '@/lib/knowledge/moments';
 import { clientIpFromHeaders, hashIp } from '@/lib/leads/spam';
 import { isDemoRequest } from '@/lib/platform/paths';
+import { getContextualOffers } from '@/lib/revenue/offers-server';
+import type { PartnerOffer } from '@/lib/revenue/types';
 import type { ProsCta } from '@/lib/types';
+import { builderContext, type BuilderContext } from './builder-context';
 import { citedNumbers, citedSourceIds } from './citations';
-import { ANSWER_COST_ESTIMATE_USD, ANSWER_MODEL, PROS_WAIT_MS } from './config';
+import { ANSWER_COST_ESTIMATE_USD, ANSWER_MODEL, OFFER_WAIT_MS, PROS_WAIT_MS } from './config';
 import { AnswerStreamError, streamAnswer, type ModelUsagePart } from './model';
+import { answerOfferContext } from './offer';
 import { postsMeta } from './posts-meta';
 import { SYSTEM_PROMPT, buildUserTurn, historyMessages, type PromptSource } from './prompt';
 import { parseAdvisorRequest } from './request';
@@ -121,6 +125,15 @@ function raceTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
   return Promise.race([p, new Promise<T>((resolve) => (timer = setTimeout(() => resolve(fallback), ms)))]).finally(() => clearTimeout(timer));
 }
 
+/** The one partner offer that fits the answer's topic and the builder's stage and region, or null. Never throws. */
+async function answerOffer(query: string, pros: AdvisorPros | null, ctx: BuilderContext): Promise<PartnerOffer | null> {
+  const [offer] = await getContextualOffers(
+    answerOfferContext({ query, specialtySlug: pros?.specialty.slug, regionSlug: ctx.regionSlug, stage: ctx.stage }),
+    { limit: 1 },
+  );
+  return offer ?? null;
+}
+
 export async function handleAdvisorStream(request: NextRequest): Promise<Response> {
   let body: unknown;
   try {
@@ -150,6 +163,9 @@ export async function handleAdvisorStream(request: NextRequest): Promise<Respons
 
   // Members: resolve the session while retrieval runs (no cookie, no round trip).
   const memberP: Promise<Member | null> = degraded ? Promise.resolve(null) : memberFromRequest(request);
+  // The builder's region and stage (the request, else the member's project file):
+  // region-aware pros, the partner offer and the answer events read it.
+  const contextP: Promise<BuilderContext> = memberP.then((m) => builderContext(req, m)).catch((): BuilderContext => ({}));
   const abort = new AbortController();
   const onClientAbort = () => abort.abort();
   request.signal?.addEventListener?.('abort', onClientAbort);
@@ -177,6 +193,7 @@ export async function handleAdvisorStream(request: NextRequest): Promise<Respons
         refused?: AdvisorRefusal;
         degraded?: AdvisorDegraded;
         pros: AdvisorPros | null;
+        offer?: PartnerOffer | null;
         cited: number;
       } = null;
       let sq: StandaloneQuery = { query: req.query, rewritten: false, via: 'none' };
@@ -188,7 +205,7 @@ export async function handleAdvisorStream(request: NextRequest): Promise<Respons
         const intent = { cost: wantsNumbers(sq.query) || wantsNumbers(req.query) };
         // The pros CTA runs alongside retrieval and the answer (skipped when degraded).
         const prosP: Promise<ProsCta | null> =
-          degraded || req.dryRun ? Promise.resolve(null) : matchPros(sq.query, { isDemo, regionSlug: req.region });
+          degraded || req.dryRun ? Promise.resolve(null) : contextP.then((ctx) => matchPros(sq.query, { isDemo, regionSlug: ctx.regionSlug }));
 
         const r = await retrieve(sq.query, { focus: req.focus });
         const refused = r.confidence.refuse && !degraded;
@@ -269,6 +286,10 @@ export async function handleAdvisorStream(request: NextRequest): Promise<Respons
         const finalSources = sources.map((s) => ({ ...s, cited: cited.includes(s.n) }));
         const followups = splitter.followups(req.query);
         const pros = prosForClient(await raceTimeout(prosP, PROS_WAIT_MS, null));
+        // At most one sponsored offer, next to the pros (never instead of them).
+        // The context is settled by now: the pros match waited for it.
+        const builder = await raceTimeout(contextP, OFFER_WAIT_MS, {} as BuilderContext);
+        const offer = await raceTimeout(answerOffer(sq.query, pros, builder), OFFER_WAIT_MS, null);
         const payload: AdvisorSharePayload = { v: 1, question: req.query, answer, sources: finalSources, followups, at: new Date().toISOString() };
         const signature = answer ? signShare(payload) : null;
         send({
@@ -279,9 +300,10 @@ export async function handleAdvisorStream(request: NextRequest): Promise<Respons
           confidence_detail: confidence,
           pros,
           intent,
+          offer,
           ...(signature ? { share: { payload, signature } } : {}),
         });
-        completed = { kind: 'answer', answer, sources: finalSources, followups, confidence, pros, cited: cited.length };
+        completed = { kind: 'answer', answer, sources: finalSources, followups, confidence, pros, offer, cited: cited.length };
       } catch (err) {
         if (err instanceof AnswerStreamError) usageParts = err.parts;
         if (!abort.signal.aborted) console.error('[advisor] answer failed:', err instanceof Error ? err.message : err);
@@ -299,6 +321,8 @@ export async function handleAdvisorStream(request: NextRequest): Promise<Respons
         }
         if (completed) {
           const c = completed;
+          // Region and stage let the partner portal count askers in a partner's own regions.
+          const builder = await raceTimeout(contextP, OFFER_WAIT_MS, {} as BuilderContext);
           await trackServer(
             'answer_completed',
             {
@@ -308,6 +332,9 @@ export async function handleAdvisorStream(request: NextRequest): Promise<Respons
               latency_ms: Date.now() - startedAt,
               model: usageParts.length > 0 ? modelName : 'none',
               has_pros: Boolean(c.pros),
+              ...(c.offer ? { has_offer: true, offer_partner: c.offer.businessId } : {}),
+              ...(builder.regionSlug ? { region: builder.regionSlug } : {}),
+              ...(builder.stage ? { stage: builder.stage } : {}),
               output_tokens: outputTokens,
               cost_usd: Math.round(costUsd * 1e6) / 1e6,
               top_similarity: c.confidence.topSimilarity,

@@ -35,6 +35,8 @@ export interface AdvisorExperienceProps {
   advisorLabel: string;
   /** "282 סרטונים, 714 מאמרים" for the first screen. */
   libraryLine: string;
+  /** "שמרו בבית שלי" under answers (the server passes isEnabled('hub')). */
+  canSave?: boolean;
 }
 
 function focusFrom(params: URLSearchParams): AdvisorFocus | undefined {
@@ -49,7 +51,7 @@ function reducedMotion(): boolean {
   return typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 }
 
-export default function AdvisorExperience({ advisorLabel, libraryLine }: AdvisorExperienceProps) {
+export default function AdvisorExperience({ advisorLabel, libraryLine, canSave = false }: AdvisorExperienceProps) {
   const params = useSearchParams();
   const advisor = useAdvisor();
   const { turns, busy, ask, stop, newThread, openThread, patchTurn, sharePayload, threadId } = advisor;
@@ -225,6 +227,7 @@ export default function AdvisorExperience({ advisorLabel, libraryLine }: Advisor
                 onFeedback={(v) => patchTurn(turn.id, { feedback: v })}
                 onShareId={(id) => patchTurn(turn.id, { shareId: id })}
                 sharePayload={turn.signature ? sharePayload(turn) : null}
+                canSave={canSave}
               />
             </div>
           ))}

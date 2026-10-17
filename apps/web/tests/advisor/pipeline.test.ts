@@ -6,7 +6,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const h = vi.hoisted(() => ({ tracked: [] as Array<{ name: string; props: Record<string, unknown> }>, rpc: vi.fn() }));
+const h = vi.hoisted(() => ({
+  tracked: [] as Array<{ name: string; props: Record<string, unknown> }>,
+  rpc: vi.fn(),
+  offers: vi.fn(async (..._args: unknown[]): Promise<unknown[]> => []),
+}));
 
 vi.mock('@/app/api/_lib/semantic', () => ({
   semanticSearch: vi.fn(async () => [
@@ -15,6 +19,7 @@ vi.mock('@/app/api/_lib/semantic', () => ({
 }));
 vi.mock('@/app/api/_lib/data', () => ({ getVideo: vi.fn(() => null) }));
 vi.mock('@/app/api/_lib/pros', () => ({ matchPros: vi.fn(async () => null) }));
+vi.mock('@/lib/revenue/offers-server', () => ({ getContextualOffers: h.offers }));
 vi.mock('@/lib/advisor/posts-meta', () => ({ postsMeta: vi.fn(async () => new Map()) }));
 vi.mock('@/lib/advisor/model', async (importOriginal) => {
   const real = await importOriginal<typeof import('@/lib/advisor/model')>();
@@ -55,6 +60,8 @@ beforeEach(() => {
   process.env.ANTHROPIC_API_KEY = 'test-key';
   process.env.LEAD_IP_SALT = 'test-salt';
   h.tracked = [];
+  h.offers.mockReset();
+  h.offers.mockResolvedValue([]);
   resetAiBudgetCache();
   resetRateLimitMemory();
   vi.mocked(streamAnswer).mockReset();
@@ -101,6 +108,54 @@ describe('advisor pipeline', () => {
       { role: 'assistant', content: 'כ-800,000 ₪.' },
     ]);
     expect(input.messages[2].content).toContain('השאלה: איך בוחרים קבלן שלד בבית פרטי?');
+  });
+});
+
+describe('lead moments (integration: advisor -> revenue)', () => {
+  const offer = {
+    campaignId: 'camp-1',
+    businessId: '00000000-0000-4000-8000-0000000000b1',
+    businessName: 'חלונות לדוגמה',
+    businessSlug: 'demo-windows',
+    logoUrl: null,
+    tier: null,
+    headline: 'בדיקת חלונות ללא עלות',
+    body: null,
+    ctaLabel: 'לפרטים',
+    href: '/הטבות-לקהילה/',
+    imageUrl: null,
+    topics: ['windows'],
+  };
+
+  it('a real answer carries one partner offer for its topic, stage and region; the events carry them too', async () => {
+    h.offers.mockResolvedValueOnce([offer]);
+    vi.mocked(streamAnswer).mockImplementation(async (_input, onText) => {
+      onText('תשובה על חלונות [1].');
+      return { parts: [{ model: 'claude-sonnet-5-5', usage: { inputTokens: 3000, outputTokens: 60 } }], stopReason: 'end_turn', model: 'claude-sonnet-5-5' };
+    });
+    const evts = await events(await POST(req({ query: 'איזה פרופיל אלומיניום לבחור לחלונות?', region: 'sharon', stage: 'permit' })));
+    const done = evts.find((e) => e.type === 'done')!;
+    expect(done.offer).toEqual(offer);
+    expect(h.offers).toHaveBeenCalledTimes(1);
+    expect(h.offers.mock.calls[0][0]).toMatchObject({ stage: 'permit', region: 'sharon', placement: 'answer' });
+    expect(String((h.offers.mock.calls[0][0] as { topic: string }).topic)).toContain('אלומיניום');
+    expect(h.offers.mock.calls[0][1]).toEqual({ limit: 1 });
+    const completed = h.tracked.find((t) => t.name === 'answer_completed');
+    expect(completed?.props).toMatchObject({ region: 'sharon', stage: 'permit', has_offer: true, offer_partner: offer.businessId });
+  });
+
+  it('no offer on a refusal; an unknown stage from the browser is dropped', async () => {
+    vi.mocked(streamAnswer).mockImplementation(async (_input, onText) => {
+      onText('אני עונה על שאלות על בניית בית פרטי.\n\n@@FOLLOWUPS@@\nOUT_OF_SCOPE\nכמה עולה שלד?');
+      return { parts: [], stopReason: 'end_turn', model: 'claude-sonnet-5-5' };
+    });
+    const evts = await events(await POST(req({ query: 'מה המתכון הכי טוב לשקשוקה?', stage: 'shakshuka' })));
+    const done = evts.find((e) => e.type === 'done')!;
+    expect(done.offer).toBeUndefined();
+    expect(h.offers).not.toHaveBeenCalled();
+    const completed = h.tracked.find((t) => t.name === 'answer_completed');
+    expect(completed?.props.stage).toBeUndefined();
+    expect(completed?.props.has_offer).toBeUndefined();
   });
 });
 

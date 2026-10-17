@@ -149,7 +149,10 @@ export function buildPartnerReport(input: {
     const where = m.reach > 0 ? `, אצל ${n(m.reach, 'בונה אחד', 'בונים שונים')}` : '';
     highlights.push(`ההצעה שלכם נראתה ${n(m.impressions, 'פעם אחת', 'פעמים')}${where}.`);
   }
-  if (m.category_askers > 0) highlights.push(`${m.category_askers === 1 ? 'בונה אחד שאל' : `${NUM.format(m.category_askers)} בונים שאלו`} באתר על ${topic}.`);
+  if (m.category_askers > 0) {
+    const regional = m.regional_askers > 0 ? ` ${m.regional_askers === 1 ? 'אחד מהם בונה' : `${NUM.format(m.regional_askers)} מהם בונים`} באזורים שאתם עובדים בהם.` : '';
+    highlights.push(`${m.category_askers === 1 ? 'בונה אחד שאל' : `${NUM.format(m.category_askers)} בונים שאלו`} באתר על ${topic}.${regional}`);
+  }
   if (m.quote_requests > 0) {
     highlights.push(`${m.quote_requests === 1 ? 'בונה אחד ביקש' : `${NUM.format(m.quote_requests)} ביקשו`} מכם הצעת מחיר, עם פרטי הפרויקט.`);
   }

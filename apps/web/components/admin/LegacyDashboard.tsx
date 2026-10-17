@@ -48,7 +48,7 @@ export default async function LegacyDashboard() {
 
   return (
     <div className="max-w-6xl space-y-8">
-      <PageHeader title="לוח בקרה" description="מה מחכה לטיפול באתר." />
+      <PageHeader title="חדר הבקרה" description="מה מחכה לטיפול באתר." />
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Card label="לידים חדשים" value={totalNew} href="/admin/leads/?status=new" tone={totalNew ? 'text-primary' : undefined} />

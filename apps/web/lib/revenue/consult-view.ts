@@ -79,7 +79,7 @@ export function parseStoredScore(value: unknown): ProjectScore | null {
 
 export type ConsultViewContext = {
   now: Date;
-  /** Shortlisted business names, by id. */
+  /** Business names by id: the shortlist, and the partner a lead is attributed to. */
   businesses?: Map<string, { name: string; slug: string }>;
 };
 
@@ -106,7 +106,7 @@ export function consultLeadView(row: ConsultLeadRow, ctx: ConsultViewContext): C
     source: {
       cta: typeof payload.cta_source === 'string' ? payload.cta_source : null,
       page: row.source_url,
-      attribution: attributionLabelHe(row.attribution),
+      attribution: attributionLabelHe(row.attribution, (id) => ctx.businesses?.get(id)?.name),
       routing: typeof routing.rule_name === 'string' ? routing.rule_name : null,
     },
     shortlist: (file.shortlistBusinessIds ?? []).map((id) => {

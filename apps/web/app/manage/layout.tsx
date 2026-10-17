@@ -36,7 +36,7 @@ export default async function ManageLayout({ children }: { children: React.React
     if (own.length && isEnabled('hub')) links.push({ href: '/my-home/', label: 'הבית שלי', icon: 'home' });
   }
   return (
-    <BonimosShell links={links} userName={userName}>
+    <BonimosShell links={links} userName={userName} signedIn={Boolean(user)}>
       {children}
     </BonimosShell>
   );

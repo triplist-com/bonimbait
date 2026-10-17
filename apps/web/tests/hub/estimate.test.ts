@@ -1,50 +1,39 @@
 import { describe, expect, it } from 'vitest';
-import { calculateCost } from '@/lib/calculator';
 import { MEMBER_REGIONS } from '@/lib/constants/community';
-import {
-  CALCULATOR_REGION,
-  calculatorSizeKey,
-  estimateFromCalculator,
-  initialEstimate,
-  parsePlannerEstimate,
-} from '@/lib/hub/estimate';
+import { estimateFromCalculator, initialEstimate, parsePlannerEstimate } from '@/lib/hub/estimate';
+import { DEFAULT_PRICE_BOOK } from '@/lib/planner/defaults';
+import { estimateFromProfile } from '@/lib/planner/engine';
+import type { PriceBook } from '@/lib/planner/types';
 
-describe('calculator adapter', () => {
-  it('maps every member region to a calculator region', () => {
-    for (const r of MEMBER_REGIONS) {
-      expect(['north', 'sharon', 'center', 'shfela', 'jerusalem', 'south']).toContain(CALCULATOR_REGION[r.slug]);
-    }
-  });
-
-  it('picks the calculator size bucket', () => {
-    expect(calculatorSizeKey(90)).toBe('up_to_100');
-    expect(calculatorSizeKey(150)).toBe('100_150');
-    expect(calculatorSizeKey(220)).toBe('200_250');
-    expect(calculatorSizeKey(400)).toBe('250_plus');
-  });
-
-  it('calls the calculator and scales to the exact size', () => {
+// Integration (growth -> hub): the hub's estimate is growth's estimateFromProfile()
+// on the owner's current price book, not the legacy calculator buckets.
+describe('the site estimate (estimateFromProfile on the price book)', () => {
+  it('is exactly the planner engine on the project profile: exact m², the member region', () => {
     const estimate = estimateFromCalculator({ sizeM2: 220, regionSlug: 'sharon' })!;
-    expect(estimate.basis).toBe('calculator');
-    expect(estimate.totalMin).toBeGreaterThan(0);
+    const engine = estimateFromProfile({ sizeM2: 220, regionSlug: 'sharon' });
+    expect(estimate).toMatchObject({ basis: 'calculator', totalMin: engine.total.min, totalMax: engine.total.max });
+    expect(estimate.inputs).toMatchObject({ sizeM2: 220, regionSlug: 'sharon', floors: 2, finishLevel: 'standard', size_m2: 220, vat: 'excluded' });
+    expect(estimate.inputs.priceBookAsOf).toBe(DEFAULT_PRICE_BOOK.validAsOf);
     expect(estimate.totalMax).toBeGreaterThan(estimate.totalMin);
-    expect(estimate.inputs).toMatchObject({ house_size: '200_250', region: 'sharon', size_m2: 220 });
+    // Every member region is priced by its own factor (no coarse calculator areas).
+    for (const r of MEMBER_REGIONS) {
+      expect(estimateFromCalculator({ sizeM2: 200, regionSlug: r.slug })!.inputs.regionSlug).toBe(r.slug);
+    }
+    expect(estimateFromCalculator({ sizeM2: 300, regionSlug: 'sharon' })!.totalMin).toBeGreaterThan(estimate.totalMin);
+  });
 
-    // Same answers straight through the calculator, scaled 220 / 225 m².
-    const raw = calculateCost({
-      house_size: '200_250',
-      floors: '2',
-      construction_method: 'blocks',
-      finishing_level: 'standard_high',
-      region: 'sharon',
-      basement: 'no',
-      special_features: [],
-      timeline: 'normal',
-    });
-    expect(Math.abs(estimate.totalMax - (raw.total_max * 220) / 225)).toBeLessThanOrEqual(10_000);
-
-    const bigger = estimateFromCalculator({ sizeM2: 300, regionSlug: 'sharon' })!;
-    expect(bigger.totalMin).toBeGreaterThan(estimate.totalMin);
+  it('follows the price book it is given (the admin price book)', () => {
+    const pricier: PriceBook = {
+      ...DEFAULT_PRICE_BOOK,
+      finishLevels: {
+        ...DEFAULT_PRICE_BOOK.finishLevels,
+        standard: { ...DEFAULT_PRICE_BOOK.finishLevels.standard, perM2Agorot: DEFAULT_PRICE_BOOK.finishLevels.standard.perM2Agorot * 2 },
+      },
+    };
+    const base = estimateFromCalculator({ sizeM2: 200, regionSlug: 'center' })!;
+    const doubled = estimateFromCalculator({ sizeM2: 200, regionSlug: 'center' }, pricier)!;
+    expect(doubled.totalMin).toBeGreaterThan(base.totalMin * 1.8);
+    expect(initialEstimate({ sizeM2: 200, regionSlug: 'center' }, null, pricier)?.totalMin).toBe(doubled.totalMin);
   });
 
   it('says nothing without a size', () => {
