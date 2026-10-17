@@ -85,7 +85,7 @@ export const PILLARS: readonly Pillar[] = [
     wow: 'השאלות שהקהל שלכם שואל ואין לכם עליהן סרטון הופכות לרשימת הצילומים הבאה.',
     icon: 'command',
     demoSlugs: ['command'],
-    site: [{ href: '/admin/command/', label: 'פתחו בניהול', flag: 'commandCenter', staffOnly: true }],
+    site: [{ href: '/admin/', label: 'פתחו בניהול', flag: 'commandCenter', staffOnly: true }],
   },
   {
     id: 'P3',
@@ -95,7 +95,8 @@ export const PILLARS: readonly Pillar[] = [
     wow: 'דוח חודשי לכל שותף: חשיפות, בונים ששאלו על התחום, בקשות הצעה ועסקאות. הקייס סטאדי שלכם, אוטומטי.',
     icon: 'revenue',
     demoSlugs: ['partner', 'revenue', 'pro'],
-    site: [{ href: '/admin/leads/', label: 'פתחו בניהול', staffOnly: true }],
+    // Partner health, with every partner's monthly דוח שותף one click away.
+    site: [{ href: '/admin/partners/', label: 'פתחו בניהול', flag: 'revenue', staffOnly: true }],
   },
   {
     id: 'P7',
@@ -114,7 +115,7 @@ export const PILLARS: readonly Pillar[] = [
     wow: 'סרטון חדש מזוהה לבד, מקבל עמוד ופרקים, ואחרי אישור אחד היועץ כבר מצטט אותו.',
     icon: 'autopilot',
     demoSlugs: ['autopilot'],
-    site: [{ href: '/admin/autopilot/', label: 'פתחו בניהול', staffOnly: true }],
+    site: [{ href: '/admin/autopilot/', label: 'פתחו בניהול', flag: 'autopilot', staffOnly: true }],
   },
   {
     id: 'F',

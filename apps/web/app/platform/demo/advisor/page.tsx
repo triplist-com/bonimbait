@@ -6,7 +6,7 @@ import { advisorDemo } from '@/lib/demo/fixtures/advisor';
 import { monthYear } from '@/lib/advisor/format';
 import { advisorName } from '@/lib/nav';
 
-export const metadata: Metadata = { title: 'היועץ' };
+export const metadata: Metadata = { title: advisorName() };
 export const revalidate = 3600;
 
 /**

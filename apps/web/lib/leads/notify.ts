@@ -23,6 +23,7 @@ import type { DbClient } from '@/lib/db/client';
 import { getLeadRoutingTarget, recordLeadNotification, type LeadRoutingTarget } from '@/lib/db/leads';
 import { SITE_HOST, SITE_NAME, SITE_URL } from '@/lib/site';
 import { LEAD_TYPE_LABELS } from './constants';
+import { constructionStageLabel } from '@/lib/constants/community';
 import { ink } from '@/lib/design/tokens';
 import { projectHeadline } from '@/lib/project-file/format';
 import { sanitizeProjectFile } from '@/lib/project-file/sanitize';
@@ -173,7 +174,7 @@ export function describeLead(lead: LeadRow, business: LeadRoutingTarget | null):
     const recent = (file.questions ?? []).slice(-3).map((q) => q.q);
     if (recent.length) rows.push(['שאלות אחרונות', recent.join('\n')]);
   }
-  if (lead.construction_stage) rows.push(['שלב בנייה', lead.construction_stage]);
+  if (lead.construction_stage) rows.push(['שלב בנייה', constructionStageLabel(lead.construction_stage) ?? lead.construction_stage]);
   if (business) rows.push(['בעל מקצוע', `${business.businessName} (${SITE_URL}/business/${business.businessSlug}/)`]);
   if (lead.message) rows.push(['הודעה', lead.message]);
   if (lead.source_url) rows.push(['עמוד מקור', lead.source_url]);

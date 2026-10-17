@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import AdvisorExperience from '@/components/advisor/AdvisorExperience';
+import AdvisorOff from '@/components/advisor/AdvisorOff';
 import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
+import { isEnabled } from '@/lib/flags';
 import { getKnowledgeStats } from '@/lib/home/data';
 import { advisorName } from '@/lib/nav';
 import { absoluteUrl } from '@/lib/site';
@@ -42,10 +44,18 @@ function AskShell() {
 }
 
 export default async function AskPage() {
+  if (!isEnabled('advisor')) {
+    return (
+      <Suspense fallback={<AskShell />}>
+        <AskShell />
+        <AdvisorOff />
+      </Suspense>
+    );
+  }
   const stats = await getKnowledgeStats();
   return (
     <Suspense fallback={<AskShell />}>
-      <AdvisorExperience advisorLabel={advisorName()} libraryLine={libraryLine(stats.videos, stats.articles)} />
+      <AdvisorExperience advisorLabel={advisorName()} libraryLine={libraryLine(stats.videos, stats.articles)} canSave={isEnabled('hub')} />
     </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { ArrowLeft, BriefcaseBusiness, House } from 'lucide-react';
+import { ArrowLeft, BriefcaseBusiness, House, LogOut } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { cn } from '@/lib/cn';
 
@@ -19,12 +19,15 @@ export function BonimosShell({
   children,
   links,
   userName,
+  signedIn = false,
   current,
   homeHref = '/manage/',
 }: {
   children: ReactNode;
   links: ShellLink[];
   userName?: string | null;
+  /** Shows "התנתקות" (as the admin shell does): the public header, with its account menu, is hidden here. */
+  signedIn?: boolean;
   /** href of the active link. */
   current?: string;
   homeHref?: string;
@@ -77,6 +80,18 @@ export function BonimosShell({
               <span className="hidden sm:inline">לאתר בונים בית</span>
               <ArrowLeft aria-hidden="true" className="size-4 ltr:rotate-180" />
             </Link>
+            {signedIn && (
+              <form action="/auth/signout/" method="post" className="shrink-0">
+                <button
+                  type="submit"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full px-2.5 text-sm font-medium text-ink-600 transition-colors hover:bg-ink-100 hover:text-ink-900 sm:px-3"
+                >
+                  <LogOut aria-hidden="true" className="size-4" />
+                  <span className="hidden sm:inline">התנתקות</span>
+                  <span className="sr-only sm:hidden">התנתקות</span>
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </header>

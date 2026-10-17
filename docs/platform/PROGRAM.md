@@ -131,7 +131,7 @@ merged into `feature/platform` and passes the gates.
 
 ### Environment
 - Copy the shared env file into your worktree:
-  `cp /private/tmp/claude-501/-Users-drorkashi-Projects-bonimbayit/08edb13f-7db1-4836-bb5d-89ddf44939ec/scratchpad/platform.env.local <worktree>/apps/web/.env.local`
+  `cp /Users/drorkashi/Projects/bonimbayit/data/tools/platform.env.local <worktree>/apps/web/.env.local`
   Then set `NEXT_PUBLIC_SITE_URL=http://localhost:<your port>`.
 - Run `cd apps/web && npm ci` in your worktree. `node_modules` isn't shared.
 - Start your server with `npx next dev -p <your port>`. Use only your port, and stop your servers before you finish.
@@ -196,7 +196,7 @@ merged into `feature/platform` and passes the gates.
   - `npm run build`
 - New logic has unit tests (vitest).
 - Look at every new or changed page.
-  - Take desktop (1440) and mobile (390) screenshots with `node /private/tmp/claude-501/-Users-drorkashi-Projects-bonimbayit/08edb13f-7db1-4836-bb5d-89ddf44939ec/scratchpad/pw/shot.mjs <url> <out.png> [--mobile] [--full] [--wait=sel] [--delay=ms] [--click=sel]`.
+  - Take desktop (1440) and mobile (390) screenshots with `node /Users/drorkashi/Projects/bonimbayit/data/tools/pw/shot.mjs <url> <out.png> [--mobile] [--full] [--wait=sel] [--delay=ms] [--click=sel]`.
   - Read the PNGs and fix what looks wrong.
   - The helper also prints console errors and failed requests.
 

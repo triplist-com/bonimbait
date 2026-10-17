@@ -4,6 +4,8 @@
  * (lib/demo/fixtures/command.ts) go through exactly the same math.
  */
 import { LEAD_TYPE_LABELS } from '@/lib/leads/constants';
+import { advisorName } from '@/lib/nav';
+import { stageLabel as buildStageLabel } from '@/lib/project-file/format';
 import { HOT_SCORE, regionLabel, scoreBand, sourceGroupLabel, stageLabel } from './dimensions';
 import { isCountableLead, isOpenLead } from './leads';
 import { expectedValueTable, leadExpectedValue, pipelineSummary, type ExpectedValueTable } from './pipeline';
@@ -13,7 +15,9 @@ import type {
   CommandCenterData,
   CommandInputs,
   DailyEventCount,
+  Delta,
   HotLead,
+  JourneyStep,
   LeadFact,
   PlanMixRow,
   Point,
@@ -183,6 +187,41 @@ function unanswered(inputs: CommandInputs): CommandCenterData['unanswered'] {
   return { source: 'none', totalAsks: 0, items: [], runAt: null };
 }
 
+/**
+ * The builders' journey in the period, one number per pillar: questions to
+ * the advisor (answer_requested), planner results (planner_completed),
+ * personal roadmaps (hub_onboarding_completed: visitors and members), consult
+ * requests and bookings (the consultation leads), and the hub's member
+ * projects from its staff aggregates.
+ */
+export function buildJourney(
+  inputs: Pick<CommandInputs, 'events' | 'hub'>,
+  window: PeriodWindow,
+  lastDayShare: number,
+  consults: { requests: Delta; booked: Delta },
+): CommandCenterData['journey'] {
+  const fromEvents = (name: string): Delta => {
+    const t = dailyTotals(window, eventsByDay(inputs.events, name, 'events'), lastDayShare);
+    return periodDelta(t.current, Math.round(t.previous));
+  };
+  const steps: JourneyStep[] = [
+    { id: 'questions', label: 'שאלות ליועץ', source: advisorName(), value: fromEvents('answer_requested') },
+    { id: 'planner', label: 'תקציבים ראשוניים', source: 'מתכנן התקציב', value: fromEvents('planner_completed') },
+    { id: 'maps', label: 'מפות דרך אישיות', source: 'הבית שלי', value: fromEvents('hub_onboarding_completed') },
+    { id: 'consult_requests', label: 'בקשות ייעוץ', source: 'עם תיק פרויקט', value: consults.requests },
+    { id: 'consults_booked', label: 'פגישות שנקבעו', source: 'ביומן', value: consults.booked },
+  ];
+  const hub = inputs.hub;
+  if (!hub) return { steps, hub: null };
+  const known = hub.byStage.filter((s) => s.stage !== 'unknown' && s.projects > 0);
+  const total = hub.byStage.reduce((a, s) => a + s.projects, 0);
+  const topStages = [...known]
+    .sort((a, b) => b.projects - a.projects)
+    .slice(0, 3)
+    .map((s) => ({ stage: s.stage, label: buildStageLabel(s.stage) ?? s.stage, share: total > 0 ? s.projects / total : 0 }));
+  return { steps, hub: { joined: periodDelta(hub.onboarded, hub.prevOnboarded), projects: hub.projects, topStages } };
+}
+
 /** Too little real activity to read the dashboard (the admin then offers demo data). */
 export const SPARSE_MIN_LEADS = 5;
 export const SPARSE_MIN_QUESTIONS = 30;
@@ -264,6 +303,10 @@ export function buildCommandCenter(inputs: CommandInputs, opts: BuildOptions = {
       dailyQuestions: questions.series,
     },
     leads: { total: periodDelta(curLeads.length, prevLeads.length), daily: fillDaily(window.dayList, leadsDaily) },
+    journey: buildJourney(inputs, window, share, {
+      requests,
+      booked: periodDelta(booked.current, Math.round(booked.previous)),
+    }),
     hotLeads: hotList,
     unanswered: unanswered(inputs),
     pending: inputs.pending,

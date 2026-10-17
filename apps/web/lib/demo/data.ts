@@ -117,7 +117,7 @@ export const BUDGET_BANDS = [
 
 /** Where demo leads come from (labels for lists and charts). */
 export const LEAD_SOURCES = [
-  { key: 'advisor', label: 'שאלה ליועץ החכם', weight: 30 },
+  { key: 'advisor', label: 'שאלה ליועץ', weight: 30 },
   { key: 'business_page', label: 'עמוד בעל מקצוע', weight: 26 },
   { key: 'planner', label: 'מחשבון התקציב', weight: 16 },
   { key: 'consultation', label: 'פגישת ייעוץ', weight: 14 },

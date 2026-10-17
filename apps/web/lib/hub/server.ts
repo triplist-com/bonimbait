@@ -16,6 +16,7 @@ import type { User } from '@supabase/supabase-js';
 import type { ConstructionStage } from '@/lib/db/types';
 import { getPublicDb } from '@/lib/content/db';
 import { bonimosUserDb } from '@/lib/bonimos/db';
+import type { PriceBook } from '@/lib/planner/types';
 import { createClient as createUserClient } from '@/lib/supabase/server';
 import { budgetCategory, plannedFromEstimate } from './budget';
 import { isChecklistItemId } from './content';
@@ -54,6 +55,16 @@ export const PROJECT_COLUMNS =
   'id, created_by, title, stage, region_id, size_m2, budget_min_agorot, budget_max_agorot, target_move_in, mode, status, onboarded_at, source, created_at, updated_at';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/**
+ * The owner's current price book (growth's admin price book, request-cached;
+ * the seeded book when the DB is unavailable). Imported on first use, so this
+ * module stays light for the money link's callers.
+ */
+async function currentPriceBook(): Promise<PriceBook> {
+  const { loadPriceBook } = await import('@/lib/planner/price-book');
+  return (await loadPriceBook()).book;
+}
 
 function fail(context: string, error: { message: string } | null): never {
   throw new Error(`[hub] ${context}: ${error?.message ?? 'unknown error'}`);
@@ -223,14 +234,16 @@ async function ensureBudgetVersion(
   opts: { reestimate?: boolean } = {},
 ): Promise<void> {
   const current = await currentBudgetVersion(db, project.id);
+  // The site's estimate runs on the owner's current price book (growth's admin price book).
+  const book = await currentPriceBook();
   if (!current) {
-    const estimate = initialEstimate(draft, planner);
+    const estimate = initialEstimate(draft, planner, book);
     if (!estimate) return;
     await createBudgetVersion(db, project.id, estimate, estimate.basis === 'planner' ? 'הערכה ממתכנן התקציב' : 'הערכה ראשונית');
     return;
   }
   if (opts.reestimate && current.basis === 'calculator') {
-    const estimate = estimateFromCalculator(draft);
+    const estimate = estimateFromCalculator(draft, book);
     if (estimate) await createBudgetVersion(db, project.id, estimate, 'הערכה מעודכנת', 'פרטי הפרויקט השתנו');
   }
 }
@@ -462,7 +475,7 @@ export async function loadMemberHub(user: User, fullName: string | null): Promis
   const project = await getPrimaryProject(db, user.id);
   if (!project) return null;
 
-  const [region, checklistRes, version, itemsRes, savedRes, docsRes, tasksRes, contactsRes, picks] = await Promise.all([
+  const [region, checklistRes, version, itemsRes, savedRes, docsRes, tasksRes, contactsRes, picks, priceBook] = await Promise.all([
     regionForId(db, project.region_id),
     db.from('hub_checklist_state').select('item_id').eq('project_id', project.id).eq('done', true),
     currentBudgetVersion(db, project.id),
@@ -472,6 +485,7 @@ export async function loadMemberHub(user: User, fullName: string | null): Promis
     db.from('hub_tasks').select('*').eq('project_id', project.id).order('created_at', { ascending: true }).limit(500),
     db.rpc('hub_my_contacts', { p_limit: 20 }),
     loadStagePicks(),
+    currentPriceBook(),
   ]);
   for (const [label, res] of [
     ['checklist', checklistRes],
@@ -504,7 +518,7 @@ export async function loadMemberHub(user: User, fullName: string | null): Promis
         at: plannerEstimate?.at,
         inputs: version.inputs ?? {},
       }
-    : initialEstimate(draft, null);
+    : initialEstimate(draft, null, priceBook);
 
   const shortlist = await loadShortlist(saved);
   const file: ProjectFileSnapshot = buildProjectSnapshot({ project, regionSlug: region?.slug ?? null, currentVersion: version, saved });

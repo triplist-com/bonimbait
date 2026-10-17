@@ -3,6 +3,7 @@ import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import { isEnabled } from '@/lib/flags';
 import { dailyBudgetUsd } from '@/lib/guard/aiBudget';
+import { hubUserDb } from '@/lib/hub/db';
 import { commandTierId, loadPartnerTiers, type PartnerTierRecord } from '@/lib/revenue/partner-tiers';
 import { commandUserDb, selectAll } from './db';
 import type { QuestionStatRow } from './db-types';
@@ -16,6 +17,7 @@ import type {
   CommandInputs,
   DailyEventCount,
   ExpectedValue,
+  HubFacts,
   LeadFact,
   OrderFact,
   PartnerFact,
@@ -34,8 +36,38 @@ import type {
  * always renders.
  */
 
-/** Events the dashboard counts per day. */
-export const DASHBOARD_EVENTS = ['consult_booked', 'answer_requested', 'answer_completed', 'search_submitted', 'lead_submitted'] as const;
+/** Events the dashboard counts per day (the journey strip reads the planner's and the hub's too). */
+export const DASHBOARD_EVENTS = [
+  'consult_booked',
+  'answer_requested',
+  'answer_completed',
+  'search_submitted',
+  'lead_submitted',
+  'planner_completed',
+  'hub_onboarding_completed',
+] as const;
+
+/**
+ * The hub's staff aggregates for this period and the one before (the RPC
+ * counts onboarded projects in the last N days, so the previous period is the
+ * 2N-day count minus this one). Staff only (the RPC checks is_staff()).
+ */
+async function loadHubFacts(periodDays: PeriodDays): Promise<HubFacts> {
+  const db = hubUserDb();
+  const [cur, both] = await Promise.all([
+    db.rpc('hub_staff_aggregates', { p_days: periodDays }),
+    db.rpc('hub_staff_aggregates', { p_days: periodDays * 2 }),
+  ]);
+  if (cur.error || !cur.data) throw new Error(cur.error?.message ?? 'no hub aggregates');
+  const a = cur.data;
+  const doubled = both.error || !both.data ? null : both.data.onboarded_period;
+  return {
+    onboarded: Number(a.onboarded_period) || 0,
+    prevOnboarded: doubled == null ? 0 : Math.max(0, Number(doubled) - (Number(a.onboarded_period) || 0)),
+    projects: Number(a.projects) || 0,
+    byStage: (a.by_stage ?? []).map((s) => ({ stage: String(s.stage), projects: Number(s.projects) || 0 })),
+  };
+}
 
 /** AI routes that answer a builder's question (for the cost-per-question fallback). */
 const ANSWER_ROUTES = new Set(['answer_stream', 'advisor_chat', 'advisor_answer']);
@@ -98,7 +130,7 @@ export async function loadCommandInputs(opts: { periodDays: PeriodDays; now?: nu
   const cdb = commandUserDb();
   const nowIso = new Date(nowMs).toISOString();
 
-  const [regions, plansRaw, leadRows, firstChanges, orderRows, events, aiRows, overrides, insights, pending] = await Promise.all([
+  const [regions, plansRaw, leadRows, firstChanges, orderRows, events, aiRows, overrides, insights, pending, hub] = await Promise.all([
     safe('regions', async () => unwrap(await db.from('regions').select('id, slug, name')), [] as { id: string; slug: string; name: string }[]),
     safe(
       'plans',
@@ -159,6 +191,7 @@ export async function loadCommandInputs(opts: { periodDays: PeriodDays; now?: nu
     ),
     safe('insights', async () => (await loadInsights(cdb)).shown, null),
     safe('pending counts', () => pendingCounts(), null),
+    safe('hub aggregates', () => loadHubFacts(opts.periodDays), null as HubFacts | null),
   ]);
 
   const regionSlugById = new Map(regions.map((r) => [r.id, r.slug]));
@@ -216,6 +249,7 @@ export async function loadCommandInputs(opts: { periodDays: PeriodDays; now?: nu
     topQuestions,
     regionNames,
     pending,
+    hub,
   };
 }
 

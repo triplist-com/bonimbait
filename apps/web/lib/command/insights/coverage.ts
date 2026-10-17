@@ -6,8 +6,16 @@
  * search the AI answers use (app/api/_lib/semantic.ts semanticSearch: cosine
  * and keyword RRF over the static index plus published runtime videos). Its
  * similarity is the best raw cosine among the top documents that search
- * returns, i.e. the sources an answer would cite. The cluster's similarity is
- * the mean over its probes.
+ * returns, i.e. the sources an answer would cite. Title-only rows (videos
+ * without captions) never count (store.ts probeHitsFrom), as in the answers.
+ * The cluster's similarity is the mean over its probes.
+ *
+ * This is the same measure as the advisor's answer_completed.top_similarity
+ * (lib/advisor/confidence.ts: the best raw cosine among the documents the
+ * answer was built on), so a topic's similarity and the similarity its real
+ * answers recorded (command_question_stats.avg_top_similarity) are on one
+ * scale. Out-of-scope refusals (refused = 'out_of_scope') are not content
+ * gaps and are left out of those stats (migration 20261014130600).
  *
  * Calibration (84 questions, the 2026-10 index): Hebrew questions reach 0.50
  * even against unrelated chunks, so raw cosine separates covered from missing

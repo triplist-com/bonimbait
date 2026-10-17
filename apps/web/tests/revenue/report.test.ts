@@ -33,6 +33,13 @@ describe('buildPartnerReport', () => {
     expect(r.monthLabel).toBe('ספטמבר 2026');
   });
 
+  it('says how many askers are in the partner\'s own regions (answer events carry the region)', () => {
+    const r = buildPartnerReport({ month: '2026-09', partner, metrics: metrics({ category_askers: 112, regional_askers: 64 }), deals: [] });
+    expect(r.highlights).toContain('112 בונים שאלו באתר על חלונות ואלומיניום. 64 מהם בונים באזורים שאתם עובדים בהם.');
+    const none = buildPartnerReport({ month: '2026-09', partner, metrics: metrics({ category_askers: 5 }), deals: [] });
+    expect(none.highlights).toContain('5 בונים שאלו באתר על חלונות ואלומיניום.');
+  });
+
   it('shows no share when the month\'s numbers are not nested', () => {
     // Deals reported this month on last month's leads: more deals than leads.
     const r = buildPartnerReport({ month: '2026-09', partner, metrics: metrics({ leads: 2, quote_requests: 3 }), deals: Array.from({ length: 4 }, () => ({ valueAgorot: 1_000_000 })) });

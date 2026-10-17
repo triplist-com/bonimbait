@@ -132,11 +132,25 @@ const MEDIUM_LABELS: Record<LeadAttribution['medium'], string> = {
   referral: 'הפניה מאתר',
 };
 
-/** Hebrew one-liner for the admin, e.g. "קמפיין: facebook (spring) · 12 דק׳ לפני הפנייה". */
-export function attributionLabelHe(value: unknown): string {
+const UUID_LIKE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The id of the partner (businesses.id) a lead is attributed to, when its last touch was a partner click. */
+export function attributedPartnerId(value: unknown): string | null {
+  const a = obj(value) as Partial<LeadAttribution>;
+  return a.medium === 'partner' && typeof a.source === 'string' && UUID_LIKE.test(a.source) ? a.source : null;
+}
+
+/**
+ * Hebrew one-liner for the admin, e.g. "קמפיין: facebook (spring) · 12 דק׳ לפני הפנייה".
+ * `partnerName` turns a partner's id into its name ("לחיצה על שותף: חלונות הגליל");
+ * raw ids (a partner without a name, an offer id) are never shown.
+ */
+export function attributionLabelHe(value: unknown, partnerName?: (id: string) => string | null | undefined): string {
   const a = obj(value) as Partial<LeadAttribution>;
   if (!a.medium || !(a.medium in MEDIUM_LABELS)) return 'ישיר / לא ידוע';
-  const what = [a.source, a.campaign ? `(${a.campaign})` : null].filter(Boolean).join(' ');
+  const source = a.medium === 'partner' && a.source ? partnerName?.(a.source) ?? (UUID_LIKE.test(a.source) ? null : a.source) : a.source;
+  const campaign = a.campaign && !UUID_LIKE.test(a.campaign) ? a.campaign : null;
+  const what = [source, campaign ? `(${campaign})` : null].filter(Boolean).join(' ');
   const when = typeof a.minutes_before === 'number' ? ` · ${a.minutes_before} דק׳ לפני הפנייה` : '';
   return `${MEDIUM_LABELS[a.medium]}${what ? `: ${what}` : ''}${when}`;
 }

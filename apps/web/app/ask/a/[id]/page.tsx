@@ -6,6 +6,7 @@ import SharedAnswerView from '@/components/advisor/SharedAnswerView';
 import { answerTeaser } from '@/lib/advisor/client/share';
 import { monthYear } from '@/lib/advisor/format';
 import { loadSharedAnswer } from '@/lib/advisor/shares';
+import { isEnabled } from '@/lib/flags';
 import { wantsNumbers } from '@/lib/knowledge/moments';
 import { advisorName } from '@/lib/nav';
 import { absoluteUrl } from '@/lib/site';
@@ -57,7 +58,7 @@ export default async function SharedAnswerPage({ params }: Props) {
         <Sparkles aria-hidden="true" className="size-4" />
         {advisorName()} · תשובה ששותפה{when ? ` · ${when}` : ''}
       </p>
-      <SharedAnswerView id={share.id} payload={share.payload} intent={{ cost: wantsNumbers(share.payload.question) }} />
+      <SharedAnswerView id={share.id} payload={share.payload} intent={{ cost: wantsNumbers(share.payload.question) }} canSave={isEnabled('hub')} />
       <section aria-labelledby="own-question" className="relative isolate mt-14 overflow-hidden rounded-3xl bg-ink-950 p-6 text-white shadow-lift sm:p-10" data-floating-cta="hide">
         <span aria-hidden="true" className="bg-blueprint-dark absolute inset-0 -z-10 opacity-60" />
         <h2 id="own-question" className="text-headline-sm text-white">

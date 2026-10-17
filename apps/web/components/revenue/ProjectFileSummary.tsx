@@ -58,11 +58,11 @@ export default function ProjectFileSummary({
       </h3>
       {empty ? (
         <p className="mt-1.5 text-body-sm text-ink-600">
-          עוד אין לנו פרטים על הפרויקט. ספרו לנו בקצרה איפה אתם עומדים, והיועץ יגיע לשיחה מוכן.
+          עוד אין לנו פרטים על הפרויקט. ספרו לנו בקצרה איפה אתם עומדים, ומומחה בונים בית יגיע לשיחה מוכן.
         </p>
       ) : (
         <>
-          <p className="mt-1 text-body-sm text-ink-600">כך היועץ יגיע לשיחה כשהוא כבר מכיר את הפרויקט, בלי לשאול הכול מההתחלה.</p>
+          <p className="mt-1 text-body-sm text-ink-600">כך מומחה בונים בית יגיע לשיחה כשהוא כבר מכיר את הפרויקט, בלי לשאול הכול מההתחלה.</p>
           {facts.length > 0 && <ul className="mt-3 grid grid-cols-2 gap-2">{facts.map(({ key, ...f }) => <Fact key={key} {...f} />)}</ul>}
           {(questions > 0 || shortlist > 0) && (
             <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-700">

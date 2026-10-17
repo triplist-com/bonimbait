@@ -4,10 +4,13 @@
  * one is dropped, never fatal: a follow-up still gets an answer. Pure.
  */
 import { z } from 'zod';
+import type { ProjectStageId } from '@/lib/project-file/types';
+import { BUILD_STAGES } from '@/lib/stages';
 import { HISTORY_ANSWER_CHARS, MAX_HISTORY_TURNS, MAX_QUERY_CHARS } from './config';
 import type { AdvisorFocus, AdvisorHistoryTurn, AdvisorOrigin, AdvisorRequest } from './types';
 
 const ORIGINS = ['typed', 'followup', 'chip', 'url', 'search', 'video', 'post', 'demo'] as const satisfies readonly AdvisorOrigin[];
+const STAGE_IDS = new Set<string>(BUILD_STAGES.map((s) => s.id));
 
 const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
 const SLUG = /^[^\s/?#]{1,200}$/;
@@ -63,6 +66,7 @@ export function parseAdvisorRequest(body: unknown): AdvisorRequest | null {
   if (focus.success) out.focus = focus.data as AdvisorFocus;
 
   if (typeof b.region === 'string' && /^[a-z0-9-]{2,40}$/.test(b.region)) out.region = b.region;
+  if (typeof b.stage === 'string' && STAGE_IDS.has(b.stage)) out.stage = b.stage as ProjectStageId;
   // Development only: retrieval and the prompt, without the model call (evaluation at $0).
   if (b.dry_run === true && process.env.NODE_ENV !== 'production') out.dryRun = true;
   return out;

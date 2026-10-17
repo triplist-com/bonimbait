@@ -185,6 +185,20 @@ export type PendingCounts = {
   openRequests: number;
 };
 
+/**
+ * The hub's staff aggregates (hub_staff_aggregates() RPC, migration
+ * 20261014121200): member projects only, never a single builder's details.
+ */
+export type HubFacts = {
+  /** Member projects onboarded in the current period, and in the period before. */
+  onboarded: number;
+  prevOnboarded: number;
+  /** Live (not archived) member projects, onboarded or not. */
+  projects: number;
+  /** Onboarded projects per stage (lib/stages.ts ids, plus 'unknown'). */
+  byStage: Array<{ stage: string; projects: number }>;
+};
+
 export type CommandInputs = {
   /** ISO instant the dashboard is computed for. */
   now: string;
@@ -205,11 +219,22 @@ export type CommandInputs = {
   topQuestions: QuestionFact[];
   regionNames: Record<string, string>;
   pending: PendingCounts | null;
+  /** The hub's aggregates; null when unavailable (migration missing, not staff). */
+  hub?: HubFacts | null;
 };
 
 // ---------------------------------------------------------------------------
 // View model
 // ---------------------------------------------------------------------------
+
+/** One step of the builders' journey across the pillars, in the period. */
+export type JourneyStep = {
+  id: 'questions' | 'planner' | 'maps' | 'consult_requests' | 'consults_booked';
+  label: string;
+  /** Which pillar produces it, for the caption ("היועץ", "מתכנן התקציב"...). */
+  source: string;
+  value: Delta;
+};
 
 export type HotLead = {
   id: string;
@@ -316,6 +341,15 @@ export type CommandCenterData = {
     dailyQuestions: Point[];
   };
   leads: { total: Delta; daily: Point[] };
+  /**
+   * The builders' journey in the period, one number per pillar: questions to
+   * the advisor, planner results, personal roadmaps, consult requests and
+   * bookings, plus the hub's member projects (its staff aggregates).
+   */
+  journey: {
+    steps: JourneyStep[];
+    hub: { joined: Delta; projects: number; topStages: Array<{ stage: string; label: string; share: number }> } | null;
+  };
   hotLeads: HotLead[];
   unanswered: {
     source: 'insights' | 'questions' | 'none';

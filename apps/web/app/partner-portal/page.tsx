@@ -207,7 +207,7 @@ export default async function PartnerPortalPage({ searchParams }: { searchParams
             )}
             {view?.subscription && (
               <Link href={`/partner-portal/report/?b=${selected.id}`} className="text-primary-700 underline">
-                הדוח החודשי
+                דוח שותף
               </Link>
             )}
           </p>

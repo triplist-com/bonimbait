@@ -2,9 +2,10 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getLeadById } from '@/lib/db/leads';
-import { attributionLabelHe } from '@/lib/analytics/attribution';
+import { attributedPartnerId, attributionLabelHe } from '@/lib/analytics/attribution';
 import type { Json } from '@/lib/db/types';
 import { LEAD_TYPE_LABELS } from '@/lib/leads/constants';
+import { constructionStageLabel } from '@/lib/constants/community';
 import { saveLeadNotes, setLeadStatus } from '@/lib/admin/actions/leads';
 import { LEAD_STATUS, LEAD_STATUS_ORDER, NOTIFY_STATUS, formatDateTime } from '@/lib/admin/labels';
 import PageHeader from '@/components/admin/PageHeader';
@@ -29,11 +30,11 @@ function entries(value: Json): Array<[string, string]> {
 }
 
 /** The lead's project file and score, when it has either. */
-async function projectFilePanel(lead: Awaited<ReturnType<typeof getLeadById>>) {
+async function projectFilePanel(lead: Awaited<ReturnType<typeof getLeadById>>, businesses: Map<string, { name: string; slug: string }>) {
   if (!lead) return null;
   const p = lead.payload && typeof lead.payload === 'object' && !Array.isArray(lead.payload) ? lead.payload : {};
   if (!p.project_file && !p.project_score) return null;
-  const view = consultLeadView(lead as unknown as ConsultLeadRow, { now: new Date() });
+  const view = consultLeadView(lead as unknown as ConsultLeadRow, { now: new Date(), businesses });
   if (!view.score && isEmptyProjectFile(view.file)) return null;
   return <ProjectFilePanel lead={view} now={new Date().toISOString()} compact />;
 }
@@ -51,14 +52,17 @@ export default async function LeadPage({ params }: { params: { id: string } }) {
   const db = createClient();
   const lead = await getLeadById(db, params.id).catch(() => null);
   if (!lead) notFound();
-  const [biz, region, member, product, plan] = await Promise.all([
+  const partnerId = attributedPartnerId(lead.attribution);
+  const [biz, region, member, product, plan, partner] = await Promise.all([
     lead.business_id ? db.from('businesses').select('id, name').eq('id', lead.business_id).maybeSingle().then((r) => r.data) : null,
     lead.region_id ? db.from('regions').select('name').eq('id', lead.region_id).maybeSingle().then((r) => r.data) : null,
     lead.member_id ? db.from('profiles').select('id, email').eq('id', lead.member_id).maybeSingle().then((r) => r.data) : null,
     lead.product_id ? db.from('products').select('name').eq('id', lead.product_id).maybeSingle().then((r) => r.data) : null,
     lead.service_plan_id ? db.from('service_plans').select('name').eq('id', lead.service_plan_id).maybeSingle().then((r) => r.data) : null,
+    partnerId ? db.from('businesses').select('id, name, slug').eq('id', partnerId).maybeSingle().then((r) => r.data) : null,
   ]);
-  const filePanel = await projectFilePanel(lead);
+  const partners = new Map(partner ? [[partner.id, { name: partner.name, slug: partner.slug }]] : []);
+  const filePanel = await projectFilePanel(lead, partners);
 
   return (
     <div className="max-w-5xl">
@@ -96,7 +100,7 @@ export default async function LeadPage({ params }: { params: { id: string } }) {
                 <span className="whitespace-pre-line">{lead.message}</span>
               </Row>
               <Row label="אזור">{region?.name}</Row>
-              <Row label="שלב בנייה">{lead.construction_stage}</Row>
+              <Row label="שלב בנייה">{constructionStageLabel(lead.construction_stage) ?? lead.construction_stage}</Row>
               <Row label="עסק">{biz && <Link href={`/admin/directory/businesses/${biz.id}/`} className="text-primary hover:underline">{biz.name}</Link>}</Row>
               <Row label="מוצר / מסלול">{product?.name ?? plan?.name}</Row>
               <Row label="משתמש רשום">{member && (member.email ?? member.id)}</Row>
@@ -107,7 +111,7 @@ export default async function LeadPage({ params }: { params: { id: string } }) {
                   </a>
                 )}
               </Row>
-              <Row label="שיוך (4 שעות)">{attributionLabelHe(lead.attribution)}</Row>
+              <Row label="שיוך (4 שעות)">{attributionLabelHe(lead.attribution, (id) => partners.get(id)?.name)}</Row>
             </dl>
           </Section>
           <Section title="כל שדות הטופס">

@@ -9,7 +9,7 @@ export function AccountTabs({ current }: { current: 'hub' | 'account' }) {
     { id: 'account', href: '/account/', label: 'פרטים והזמנות', icon: UserRound },
   ] as const;
   return (
-    <nav aria-label="האזור האישי" className="mb-6">
+    <nav aria-label="הבית שלי והחשבון" className="mb-6">
       <ul className="inline-flex gap-1 rounded-2xl bg-ink-100 p-1">
         {tabs.map(({ id, href, label, icon: Icon }) => (
           <li key={id}>

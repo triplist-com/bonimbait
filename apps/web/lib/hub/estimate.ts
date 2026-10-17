@@ -2,66 +2,43 @@
  * The hub's first budget estimate. Two sources, in order:
  *   1. growth's budget planner result (`bb.planner.last`, PROGRAM.md §6), when
  *      the builder ran it;
- *   2. lib/calculator.ts, called through its exported functions only (the
- *      growth squad owns and recalibrates it; this adapter is the one place
- *      that knows its input shape).
- * Client-safe (the calculator is pure).
+ *   2. the planner engine on the project profile: growth's estimateFromProfile()
+ *      (lib/planner/engine.ts) with the owner's current price book (the admin
+ *      "מחירון מתכנן התקציב"): exact m², the 13 member regions, 2 floors, the
+ *      "סטנדרטי-טוב" finish, no extras, ±15%, ex-VAT. Server callers pass
+ *      loadPriceBook()'s book; the seeded book is the fallback.
+ * The basis stays 'calculator' (hub_budget_versions.basis): "the site's
+ * estimate", as opposed to the builder's own planner run. Client-safe.
  */
-import { calculateCost, getSqm, type CalculatorAnswers } from '@/lib/calculator';
+import { DEFAULT_PRICE_BOOK } from '@/lib/planner/defaults';
+import { estimateFromProfile } from '@/lib/planner/engine';
+import type { PriceBook } from '@/lib/planner/types';
 import type { HubDraft, HubEstimate, PlannerEstimate } from './types';
 
-/** The calculator's region multipliers know 6 areas; map the 13 member regions onto them. */
-export const CALCULATOR_REGION: Record<string, string> = {
-  golan: 'north',
-  'upper-galilee': 'north',
-  'akko-nahariya': 'north',
-  'lower-galilee': 'north',
-  'haifa-krayot': 'north',
-  'zichron-valleys': 'north',
-  hadera: 'sharon',
-  sharon: 'sharon',
-  center: 'center',
-  shfela: 'shfela',
-  jerusalem: 'jerusalem',
-  'judea-samaria': 'shfela',
-  south: 'south',
-};
-
-/** The calculator's size bucket for an exact m². */
-export function calculatorSizeKey(sizeM2: number): string {
-  if (sizeM2 <= 100) return 'up_to_100';
-  if (sizeM2 <= 150) return '100_150';
-  if (sizeM2 <= 200) return '150_200';
-  if (sizeM2 <= 250) return '200_250';
-  return '250_plus';
-}
-
 /**
- * Calculator estimate for the project: a typical two-storey block house with a
- * standard-plus finish, scaled from the size bucket's m² to the exact size.
- * Null without a size (nothing honest to say yet).
+ * The site's estimate for the project (planning + build, ex-VAT, a ±15%
+ * range). Null without a size (nothing honest to say yet).
  */
-export function estimateFromCalculator(draft: Pick<HubDraft, 'sizeM2' | 'regionSlug'>): HubEstimate | null {
+export function estimateFromCalculator(
+  draft: Pick<HubDraft, 'sizeM2' | 'regionSlug'>,
+  book: PriceBook = DEFAULT_PRICE_BOOK,
+): HubEstimate | null {
   if (!draft.sizeM2) return null;
-  const answers: CalculatorAnswers = {
-    house_size: calculatorSizeKey(draft.sizeM2),
-    floors: '2',
-    construction_method: 'blocks',
-    finishing_level: 'standard_high',
-    region: CALCULATOR_REGION[draft.regionSlug ?? ''] ?? 'shfela',
-    basement: 'no',
-    special_features: [],
-    timeline: 'normal',
-  };
-  const result = calculateCost(answers);
-  const bucketM2 = getSqm(answers.house_size);
-  const scale = bucketM2 > 0 ? draft.sizeM2 / bucketM2 : 1;
-  const round = (n: number) => Math.round((n * scale) / 10_000) * 10_000;
+  const estimate = estimateFromProfile({ sizeM2: draft.sizeM2, regionSlug: draft.regionSlug }, book);
   return {
-    totalMin: round(result.total_min),
-    totalMax: round(result.total_max),
+    totalMin: estimate.total.min,
+    totalMax: estimate.total.max,
     basis: 'calculator',
-    inputs: { ...answers, size_m2: draft.sizeM2 },
+    inputs: {
+      ...estimate.input,
+      extras: [...estimate.input.extras],
+      size_m2: draft.sizeM2,
+      perM2Min: estimate.perM2.min,
+      perM2Max: estimate.perM2.max,
+      vat: 'excluded',
+      priceBookAsOf: estimate.validAsOf,
+      estimateId: estimate.estimateId,
+    },
   };
 }
 
@@ -119,10 +96,11 @@ export function estimateFromPlanner(planner: PlannerEstimate): HubEstimate {
   };
 }
 
-/** The planner's result when there is one, else the calculator's. */
+/** The planner's result when there is one, else the site's estimate on `book`. */
 export function initialEstimate(
   draft: Pick<HubDraft, 'sizeM2' | 'regionSlug'>,
   planner: PlannerEstimate | null | undefined,
+  book: PriceBook = DEFAULT_PRICE_BOOK,
 ): HubEstimate | null {
-  return planner ? estimateFromPlanner(planner) : estimateFromCalculator(draft);
+  return planner ? estimateFromPlanner(planner) : estimateFromCalculator(draft, book);
 }

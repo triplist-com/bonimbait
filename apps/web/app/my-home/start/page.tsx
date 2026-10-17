@@ -6,6 +6,7 @@ import { isEnabled } from '@/lib/flags';
 import { hubUserDb } from '@/lib/hub/db';
 import { isMemberRegionSlug, israelToday, normalizeDraft, projectToDraft, stageFromProfile } from '@/lib/hub/onboarding';
 import { getPrimaryProject, regionForId } from '@/lib/hub/server';
+import { loadPriceBook } from '@/lib/planner/price-book';
 import type { HubDraft } from '@/lib/hub/types';
 
 export const dynamic = 'force-dynamic';
@@ -42,5 +43,6 @@ export default async function StartPage({ searchParams }: { searchParams: { edit
     }
   }
 
-  return <OnboardingFlow initialDraft={initialDraft} isMember={Boolean(user)} today={israelToday()} editing={searchParams.edit === '1'} />;
+  const { book } = await loadPriceBook();
+  return <OnboardingFlow initialDraft={initialDraft} isMember={Boolean(user)} today={israelToday()} editing={searchParams.edit === '1'} book={book} />;
 }
