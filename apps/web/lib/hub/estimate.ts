@@ -74,8 +74,39 @@ export function parsePlannerEstimate(value: unknown): PlannerEstimate | null {
   if (!Number.isFinite(min) || !Number.isFinite(max) || min <= 0 || max < min || max > 1_000_000_000) return null;
   const at = typeof v.at === 'string' && !Number.isNaN(Date.parse(v.at)) ? v.at : null;
   if (!at) return null;
-  const inputs = v.inputs && typeof v.inputs === 'object' && !Array.isArray(v.inputs) ? (v.inputs as Record<string, unknown>) : {};
-  return { totalMin: Math.round(min), totalMax: Math.round(max), at, inputs };
+  return { totalMin: Math.round(min), totalMax: Math.round(max), at, inputs: sanitizePlannerInputs(v.inputs) };
+}
+
+const PLANNER_INPUT_KEY = /^[A-Za-z][A-Za-z0-9_]{0,39}$/;
+const PLANNER_INPUTS_MAX_KEYS = 20;
+/** Encoded JSON budget for the inputs (the DB caps the version's inputs at 4 KB). */
+const PLANNER_INPUTS_MAX_BYTES = 2048;
+
+/**
+ * The planner's inputs, as sent by the browser (bb.planner.last), cut down to
+ * flat values: strings (≤ 100 chars), finite numbers, booleans, and short
+ * lists of short strings (the extras). Nested objects and anything past the
+ * size budget are dropped. They are stored on a budget version and shown in
+ * the project file.
+ */
+export function sanitizePlannerInputs(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const out: Record<string, unknown> = {};
+  const encoder = new TextEncoder();
+  let bytes = 2;
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>).slice(0, PLANNER_INPUTS_MAX_KEYS)) {
+    if (!PLANNER_INPUT_KEY.test(key)) continue;
+    let v: unknown;
+    if (typeof raw === 'string') v = raw.slice(0, 100);
+    else if ((typeof raw === 'number' && Number.isFinite(raw)) || typeof raw === 'boolean') v = raw;
+    else if (Array.isArray(raw) && raw.length <= 10 && raw.every((x) => typeof x === 'string')) v = (raw as string[]).map((x) => x.slice(0, 40));
+    else continue;
+    const size = encoder.encode(JSON.stringify({ [key]: v })).length;
+    if (bytes + size > PLANNER_INPUTS_MAX_BYTES) break;
+    out[key] = v;
+    bytes += size;
+  }
+  return out;
 }
 
 export function estimateFromPlanner(planner: PlannerEstimate): HubEstimate {

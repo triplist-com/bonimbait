@@ -169,7 +169,7 @@ export function BudgetItemList({ items }: { items: HubBudgetItemView[] }) {
             </div>
             <div className="mt-1.5 flex items-center justify-between gap-2">
               <Badge tone={item.kind === 'actual' ? 'ink' : item.status === 'accepted' ? 'success' : item.status === 'rejected' ? 'neutral' : 'brand'} size="sm">
-                {item.kind === 'actual' ? 'שולם' : `הצעה · ${STATUS_LABEL[item.status ?? 'open']}`}
+                {item.kind === 'actual' ? (item.locked ? 'שולם · מאישור תשלום' : 'שולם') : `הצעה · ${STATUS_LABEL[item.status ?? 'open']}`}
               </Badge>
               <div className="flex items-center gap-1">
                 {item.kind === 'quote' && item.status !== 'accepted' && (
@@ -181,7 +181,9 @@ export function BudgetItemList({ items }: { items: HubBudgetItemView[] }) {
                 {item.kind === 'quote' && item.status !== 'open' && (
                   <IconButton label="החזרה להצעה פתוחה" icon={<RefreshCw />} size="sm" variant="ghost" onClick={() => run(() => actions.setQuoteStatus(item.id, 'open'))} />
                 )}
-                <IconButton label="מחיקה" icon={<Trash2 />} size="sm" variant="ghost" onClick={() => run(() => actions.deleteBudgetItem(item.id), 'נמחק')} />
+                {!item.locked && (
+                  <IconButton label="מחיקה" icon={<Trash2 />} size="sm" variant="ghost" onClick={() => run(() => actions.deleteBudgetItem(item.id), 'נמחק')} />
+                )}
               </div>
             </div>
           </li>
