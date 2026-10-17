@@ -25,6 +25,7 @@ import { statsLine } from '@/lib/advisor/format';
 import type { AdvisorTurn } from '@/lib/advisor/client/useAdvisor';
 import type { AdvisorSharePayload, AdvisorSource, AdvisorVideoSource } from '@/lib/advisor/types';
 import AnswerMarkdown from './AnswerMarkdown';
+import AnswerUnavailable, { isUnavailable } from './AnswerUnavailable';
 import { FeedbackBar, ShareBar } from './AnswerActions';
 import LeadMoments from './LeadMoments';
 import MomentPlayer from './MomentPlayer';
@@ -135,6 +136,8 @@ export default function TurnView({
   const streaming = turn.status === 'answering';
   const hasAnswer = Boolean(turn.answer);
   const unanswered = Boolean(turn.refused);
+  // Budget, kill switch or too many questions: a notice, not an answer (and no "written with AI" line).
+  const unavailable = done && isUnavailable(turn.degraded);
 
   const cite = useCallback(
     (n: number) => {
@@ -224,7 +227,9 @@ export default function TurnView({
         </div>
 
         <div aria-busy={!done}>
-          {hasAnswer ? (
+          {unavailable && turn.degraded ? (
+            <AnswerUnavailable degraded={turn.degraded} message={turn.answer} />
+          ) : hasAnswer ? (
             <AnswerMarkdown markdown={turn.answer} streaming={streaming} sources={turn.sources} onCite={cite} />
           ) : turn.status === 'error' ? null : (
             <SkeletonText lines={3} />
@@ -242,7 +247,7 @@ export default function TurnView({
           </div>
         )}
 
-        {done && hasAnswer && (
+        {done && hasAnswer && !unavailable && (
           <>
             <p className="mt-5 border-t border-ink-100 pt-4 text-caption text-ink-500">{DISCLAIMER}</p>
             {(onFeedback || canShare || saveable) && (

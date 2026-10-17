@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { LoaderCircle, Search } from 'lucide-react';
 import { getSuggestions } from '@/lib/api';
 import { track } from '@/lib/analytics/track';
+import { cn } from '@/lib/cn';
 
 interface SearchBarProps {
   defaultValue?: string;
@@ -25,11 +27,14 @@ export default function SearchBar({
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  // Suggestions follow typing only: a query that arrives with the page (?q=) must not pop a list over the results.
+  const typedRef = useRef(false);
 
   const isLarge = size === 'large';
 
   // Update query when defaultValue changes (e.g. navigating back)
   useEffect(() => {
+    typedRef.current = false;
     setQuery(defaultValue);
   }, [defaultValue]);
 
@@ -37,7 +42,7 @@ export default function SearchBar({
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    if (query.trim().length < 2) {
+    if (!typedRef.current || query.trim().length < 2) {
       setSuggestions([]);
       setShowSuggestions(false);
       return;
@@ -114,32 +119,17 @@ export default function SearchBar({
     <div ref={wrapperRef} className="relative w-full">
       <form onSubmit={handleSubmit}>
         <div className="relative">
-          {/* Search icon */}
-          <div
-            className={`absolute right-0 top-0 flex items-center justify-center text-gray-400 pointer-events-none ${
-              isLarge ? 'w-14 h-14' : 'w-12 h-12'
-            }`}
-          >
-            <svg
-              className={isLarge ? 'w-6 h-6' : 'w-5 h-5'}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-          </div>
+          <Search
+            aria-hidden="true"
+            className={cn('pointer-events-none absolute top-1/2 -translate-y-1/2 text-ink-400', isLarge ? 'start-5 size-6' : 'start-4 size-5')}
+          />
 
           <input
             ref={inputRef}
-            type="text"
+            type="search"
             value={query}
             onChange={(e) => {
+              typedRef.current = true;
               setQuery(e.target.value);
               setActiveIndex(-1);
             }}
@@ -147,33 +137,32 @@ export default function SearchBar({
               if (suggestions.length > 0) setShowSuggestions(true);
             }}
             onKeyDown={handleKeyDown}
-            placeholder="חפשו נושא בבנייה... למשל: איך בוחרים קבלן שלד?"
-            className={`w-full bg-white border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all ${
-              isLarge
-                ? 'pr-14 pl-32 py-4 text-lg rounded-2xl shadow-search'
-                : 'pr-12 pl-28 py-3 text-base rounded-xl shadow-md'
-            } ${showSuggestions && suggestions.length > 0 ? 'rounded-b-none border-b-transparent' : ''}`}
-            dir="rtl"
+            placeholder="חפשו נושא, למשל: איטום גג"
+            aria-label="חיפוש בסרטונים ובמאמרים"
+            enterKeyHint="search"
+            className={cn(
+              'w-full border border-ink-200 bg-white text-ink-900 outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-ink-400',
+              'hover:border-ink-300 focus:border-primary-600 focus:ring-4 focus:ring-primary-600/15 [&::-webkit-search-cancel-button]:hidden',
+              isLarge ? 'h-16 rounded-2xl pe-32 ps-14 text-lg shadow-search' : 'h-14 rounded-2xl pe-28 ps-12 text-body shadow-card',
+              showSuggestions && suggestions.length > 0 && 'rounded-b-none border-b-transparent',
+            )}
             autoComplete="off"
           />
 
           {/* Loading spinner */}
           {isLoadingSuggestions && (
-            <div
-              className={`absolute left-28 top-1/2 -translate-y-1/2 ${
-                isLarge ? 'left-36' : 'left-28'
-              }`}
-            >
-              <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-            </div>
+            <span aria-hidden="true" className={cn('absolute top-1/2 -translate-y-1/2', isLarge ? 'end-36' : 'end-28')}>
+              <LoaderCircle className="size-5 animate-spin text-primary-600" />
+            </span>
           )}
 
           <button
             type="submit"
-            aria-label="חיפוש"
-            className={`absolute left-2 top-1/2 -translate-y-1/2 bg-primary hover:bg-primary-700 active:bg-primary-800 text-white font-medium rounded-lg transition-colors ${
-              isLarge ? 'px-6 py-2.5 text-base' : 'px-5 py-2 text-sm'
-            }`}
+            className={cn(
+              'absolute end-2 top-1/2 inline-flex -translate-y-1/2 items-center rounded-xl bg-primary-600 font-semibold text-white transition-colors hover:bg-primary-700 active:bg-primary-800',
+              'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600',
+              isLarge ? 'h-12 px-6 text-base' : 'h-10 px-5 text-[0.9375rem]',
+            )}
           >
             חיפוש
           </button>
@@ -185,7 +174,7 @@ export default function SearchBar({
         <div
           role="listbox"
           aria-label="הצעות חיפוש"
-          className="absolute z-50 w-full bg-white border border-gray-200 border-t-0 rounded-b-xl shadow-lg overflow-hidden animate-slide-down"
+          className="absolute z-50 w-full overflow-hidden rounded-b-2xl border border-t-0 border-ink-200 bg-white shadow-lift motion-safe:animate-slide-down"
         >
           {suggestions.map((suggestion, i) => (
             <button
@@ -193,28 +182,17 @@ export default function SearchBar({
               type="button"
               role="option"
               aria-selected={i === activeIndex}
-              className={`w-full text-right px-4 py-3 text-sm hover:bg-primary-50 transition-colors flex items-center gap-3 ${
-                i === activeIndex ? 'bg-primary-50 text-primary' : 'text-gray-700'
-              }`}
+              className={cn(
+                'flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-start text-sm transition-colors hover:bg-primary-50',
+                i === activeIndex ? 'bg-primary-50 text-primary-700' : 'text-ink-700',
+              )}
               onMouseEnter={() => setActiveIndex(i)}
               onClick={() => {
                 setQuery(suggestion);
                 submit(suggestion);
               }}
             >
-              <svg
-                className="w-4 h-4 text-gray-400 flex-shrink-0"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
+              <Search aria-hidden="true" className="size-4 shrink-0 text-ink-400" />
               <span>{suggestion}</span>
             </button>
           ))}
