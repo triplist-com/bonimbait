@@ -28,6 +28,31 @@ export function isAdminEmail(email: string | null | undefined): boolean {
   return getAdminEmails().includes(email.toLowerCase());
 }
 
+/** The fields of a Supabase auth user that prove an email address. */
+export type AuthUserLike = {
+  email?: string | null;
+  email_confirmed_at?: string | null;
+  identities?: Array<{ provider?: string; identity_data?: Record<string, unknown> | null }> | null;
+};
+
+/**
+ * ADMIN_EMAILS promotes an account only once its owner has proved the
+ * address: a confirmed email, or a Google identity that verified that same
+ * address. Anyone can sign up with an unclaimed admin address, so an
+ * unconfirmed session is never promoted.
+ */
+export function isProvenAdminEmail(user: AuthUserLike | null | undefined): boolean {
+  if (!user || !isAdminEmail(user.email)) return false;
+  if (user.email_confirmed_at) return true;
+  const email = user.email!.trim().toLowerCase();
+  return (user.identities ?? []).some(
+    (i) =>
+      i.provider === 'google' &&
+      i.identity_data?.email_verified === true &&
+      String(i.identity_data?.email ?? '').trim().toLowerCase() === email,
+  );
+}
+
 const NEXT_BASE = 'https://next.bonimbait.invalid';
 
 /**

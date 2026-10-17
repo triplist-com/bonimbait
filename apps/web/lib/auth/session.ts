@@ -8,7 +8,7 @@ import { createAdminClient, isServiceRoleConfigured } from '@/lib/supabase/admin
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { isConstructionStage, isRegionSlug } from '@/lib/constants/community';
 import type { ProfileRow, Role } from '@/lib/db/types';
-import { hasRole, isAdminEmail } from './roles';
+import { hasRole, isProvenAdminEmail } from './roles';
 
 export type Profile = ProfileRow;
 
@@ -46,9 +46,10 @@ function fallbackProfile(user: User): Profile {
 /**
  * The current user's profile, or null when signed out. Memoized per request.
  *
- * ADMIN_EMAILS users always get role 'admin' here; if the stored role differs
- * it is promoted in the DB (requires SUPABASE_SERVICE_ROLE_KEY so that RLS
- * also recognizes them as admin).
+ * An ADMIN_EMAILS user whose address is proven (isProvenAdminEmail: a
+ * confirmed email or a verified Google identity) is promoted to 'admin' in the
+ * DB (requires SUPABASE_SERVICE_ROLE_KEY). The stored profiles.role is the
+ * source of truth: the app never grants a role the database doesn't hold.
  */
 export const getProfile = cache(async (): Promise<Profile | null> => {
   const user = await getUser();
@@ -58,13 +59,11 @@ export const getProfile = cache(async (): Promise<Profile | null> => {
   const { data } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
   let profile: Profile | null = data;
 
-  const shouldBeAdmin = isAdminEmail(user.email);
-  if (!profile || (shouldBeAdmin && profile.role !== 'admin')) {
+  if (!profile || (isProvenAdminEmail(user) && profile.role !== 'admin')) {
     profile = (await syncProfile(user)) ?? profile;
   }
 
-  const resolved = profile ?? fallbackProfile(user);
-  return shouldBeAdmin ? { ...resolved, role: 'admin' } : resolved;
+  return profile ?? fallbackProfile(user);
 });
 
 /**
@@ -105,7 +104,7 @@ export async function syncProfile(user: User): Promise<Profile | null> {
     .from('profiles')
     .upsert({ id: user.id, email: user.email ?? null, full_name: name }, { onConflict: 'id', ignoreDuplicates: true });
 
-  if (isAdminEmail(user.email)) {
+  if (isProvenAdminEmail(user)) {
     await admin.from('profiles').update({ role: 'admin' }).eq('id', user.id).neq('role', 'admin');
   }
 
