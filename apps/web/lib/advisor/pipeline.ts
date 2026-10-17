@@ -20,9 +20,9 @@ import { matchPros } from '@/app/api/_lib/pros';
 import { trackServer } from '@/lib/analytics/server';
 import { AI_RATE_LIMITED_MESSAGE, AI_UNAVAILABLE_MESSAGE, checkAiBudget, recordAiUsage } from '@/lib/guard/aiBudget';
 import { rateLimit } from '@/lib/guard/rateLimit';
+import { isCrossSiteRequest, isJsonRequest, rateLimitKey } from '@/lib/guard/request';
 import { EXAMPLE_QUESTIONS } from '@/lib/home/questions';
 import { wantsNumbers } from '@/lib/knowledge/moments';
-import { clientIpFromHeaders, hashIp } from '@/lib/leads/spam';
 import { isDemoRequest } from '@/lib/platform/paths';
 import { getContextualOffers } from '@/lib/revenue/offers-server';
 import type { PartnerOffer } from '@/lib/revenue/types';
@@ -135,6 +135,10 @@ async function answerOffer(query: string, pros: AdvisorPros | null, ctx: Builder
 }
 
 export async function handleAdvisorStream(request: NextRequest): Promise<Response> {
+  // Another site's page could POST here as a "simple" request (text/plain,
+  // no preflight) and spend the daily AI budget for every visitor (QA).
+  if (isCrossSiteRequest(request.headers)) return json(403, { error: 'cross-site request' });
+  if (!isJsonRequest(request.headers)) return json(415, { error: 'expected application/json' });
   let body: unknown;
   try {
     body = await request.json();
@@ -153,7 +157,7 @@ export async function handleAdvisorStream(request: NextRequest): Promise<Respons
   const requested = trackServer('answer_requested', { query: req.query, ...(req.origin ? { origin: req.origin } : {}), ...turnProps }, { request });
 
   // Guards, before any work: per-visitor rate limit, then the daily AI budget.
-  const limited = await rateLimit('ai_answer', hashIp(clientIpFromHeaders(request.headers)));
+  const limited = await rateLimit('ai_answer', rateLimitKey(request.headers));
   if (!limited.ok) {
     await requested;
     return shortAnswer(AI_RATE_LIMITED_MESSAGE, 'rate_limited');
