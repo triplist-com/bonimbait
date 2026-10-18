@@ -186,7 +186,7 @@ export type RevenueDatabase = {
     };
     Views: Shared['Views'] & {
       partner_badges: {
-        Row: { business_id: string; tier_slug: string; tier_name: string; badge_label: string; rank: number };
+        Row: { business_id: string; tier_slug: string; tier_name: string; badge_label: string; rank: number; is_mock: boolean };
         Relationships: [];
       };
     };

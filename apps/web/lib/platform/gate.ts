@@ -32,6 +32,17 @@ export function isPreviewFetcher(userAgent: string | null | undefined): boolean 
 }
 
 /** Next.js metadata images (opengraph-image, twitter-image): public, so shared links show their preview. */
+/** The path as the router will match it: percent-decoded once and lower-cased. */
+export function gatePath(pathname: string): string {
+  let path = pathname;
+  try {
+    path = decodeURIComponent(pathname);
+  } catch {
+    // A malformed escape: decide on the raw path.
+  }
+  return path.toLowerCase();
+}
+
 export function isMetadataImagePath(pathname: string): boolean {
   const last = pathname.slice(pathname.lastIndexOf('/') + 1);
   return /^(opengraph-image|twitter-image)(-[\w-]+)?$/.test(last);
@@ -103,10 +114,13 @@ export async function pitchGate(
   request: NextRequest,
   code: string | undefined = process.env.PITCH_ACCESS_CODE,
 ): Promise<NextResponse | null> {
-  if (!isPlatformPath(request.nextUrl.pathname)) return null;
+  // The router also matches the decoded path ("/%70latform/" renders
+  // /platform/), so the gate decides on the decoded, lower-cased one (QA).
+  const path = gatePath(request.nextUrl.pathname);
+  if (!isPlatformPath(path)) return null;
   const expected = code?.trim();
   if (!expected) return null;
-  if (isMetadataImagePath(request.nextUrl.pathname)) return null;
+  if (isMetadataImagePath(path)) return null;
 
   const token = await tokenFor(expected);
   const hasCookie = request.cookies.get(PITCH_COOKIE)?.value === token;
