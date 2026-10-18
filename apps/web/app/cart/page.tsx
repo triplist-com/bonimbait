@@ -32,7 +32,7 @@ export default async function CartPage({ searchParams }: { searchParams: { payme
     <div className="container-page py-8 sm:py-12">
       <h1 className="text-3xl font-bold text-gray-900">סל קניות</h1>
       {notice && (
-        <p role="alert" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
+        <p role="alert" className="mt-4 rounded-xl border border-warning-200 bg-warning-50 px-4 py-3 text-warning-800">
           {notice}
         </p>
       )}
@@ -101,7 +101,7 @@ function FilledCart({ priced }: { priced: PricedCart }) {
             <form action={removeCartLine}>
               <input type="hidden" name="id" value={line.id} />
               <input type="hidden" name="kind" value={line.kind} />
-              <button type="submit" className="text-sm text-red-600 hover:underline" aria-label={`הסרת ${line.name} מהסל`}>
+              <button type="submit" className="text-sm text-danger-600 hover:underline" aria-label={`הסרת ${line.name} מהסל`}>
                 הסרה
               </button>
             </form>

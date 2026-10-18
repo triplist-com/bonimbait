@@ -8,6 +8,8 @@ import { formatPrice, listMyOrders, listMyPaidServicePlans, listOrderItems } fro
 import type { OrderStatus } from '@/lib/db/types';
 import { commerceMetadata } from '@/lib/commerce/seo';
 import { ORDER_STATUS_LABELS } from '@/lib/commerce/order-status';
+import { AccountTabs } from '@/components/hub/AccountTabs';
+import { isEnabled } from '@/lib/flags';
 import ProfileForm from './ProfileForm';
 
 export const dynamic = 'force-dynamic';
@@ -38,13 +40,14 @@ export default async function AccountPage() {
 
   return (
     <div className="container-page py-8 sm:py-12">
+      {isEnabled('hub') && <AccountTabs current="account" />}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">החשבון שלי</h1>
           <p className="mt-1 text-gray-500">שלום{profile.full_name ? ` ${profile.full_name}` : ''}, כאן מנהלים את הפרטים, ההזמנות ותוכנית הניהול.</p>
         </div>
         <form action="/auth/signout/" method="post">
-          <button type="submit" className="rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:border-red-300 hover:text-red-700">
+          <button type="submit" className="rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:border-danger-200 hover:text-danger-700">
             התנתקות
           </button>
         </form>
@@ -180,9 +183,9 @@ export default async function AccountPage() {
 function StatusBadge({ status }: { status: OrderStatus }) {
   const tone =
     status === 'paid'
-      ? 'bg-green-50 text-green-800'
+      ? 'bg-success-50 text-success-800'
       : status === 'pending'
-        ? 'bg-amber-50 text-amber-800'
+        ? 'bg-warning-50 text-warning-800'
         : 'bg-gray-100 text-gray-700';
   return <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${tone}`}>{ORDER_STATUS_LABELS[status]}</span>;
 }

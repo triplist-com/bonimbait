@@ -1,0 +1,317 @@
+{
+  "purchase": {
+    "videos": [
+      {
+        "youtubeId": "-m7Z7vYv6Mo",
+        "title": "11 שאלות ותשובות חשובות על המשכנתא שלכם",
+        "durationSeconds": 1671,
+        "thumbnailUrl": "https://i.ytimg.com/vi/-m7Z7vYv6Mo/mqdefault.jpg",
+        "kind": "video"
+      },
+      {
+        "youtubeId": "iVLltJf0Mgs",
+        "title": "פודקאסט פרק 110 - הסודות שמאוד כדאי לכם לשמוע על משכנתא לבניה!",
+        "durationSeconds": 3395,
+        "thumbnailUrl": "https://i.ytimg.com/vi/iVLltJf0Mgs/mqdefault.jpg",
+        "kind": "podcast"
+      },
+      {
+        "youtubeId": "Sf921fbWyaM",
+        "title": "פודקאסט פרק 104 - מדברים על קרקע וביסוס לבית פרטי",
+        "durationSeconds": 3334,
+        "thumbnailUrl": "https://i.ytimg.com/vi/Sf921fbWyaM/mqdefault.jpg",
+        "kind": "video"
+      }
+    ],
+    "articles": [
+      {
+        "slug": "construction-mortgage-complete-guide-grossman",
+        "title": "משכנתא לבנייה עצמית – המדריך המלא עם צחי גרוסמן | כל מה שהבנק לא מספר",
+        "excerpt": null,
+        "image": null
+      },
+      {
+        "slug": "mortgage-tips-self-building",
+        "title": "7 טיפים למשכנתא לבנייה עצמית – מה שהבנקים לא אומרים לכם",
+        "excerpt": null,
+        "image": null
+      },
+      {
+        "slug": "7-טיפים-חשובים-לקניית-מגרש-לבנייה-סיור",
+        "title": "קניית מגרש לבניה: 7 טיפים חשובים לפני הרכישה",
+        "excerpt": null,
+        "image": null
+      }
+    ]
+  },
+  "planning": {
+    "videos": [
+      {
+        "youtubeId": "Xf0ZrBqeJoU",
+        "title": "פודקאסט פרק 99 - מה ההבדל בין אדריכל למעצב פנים ומה תפקידו של האדריכל? פרק על שלב התכנון",
+        "durationSeconds": 3493,
+        "thumbnailUrl": "https://i.ytimg.com/vi/Xf0ZrBqeJoU/mqdefault.jpg",
+        "kind": "video"
+      },
+      {
+        "youtubeId": "8yEmkUw8Gm0",
+        "title": "איך מוצאים מונעים טעויות תכנון שעולות לכם כסף ?! סופרפוזיציה - חלק 2 (2021)",
+        "durationSeconds": 702,
+        "thumbnailUrl": "https://i.ytimg.com/vi/8yEmkUw8Gm0/mqdefault.jpg",
+        "kind": "video"
+      },
+      {
+        "youtubeId": "D0jd4qMfMA0",
+        "title": "מדוע חשוב כלכך לעשות אומדן תקציב בניה או שיפוץ כבר בשלב הסקיצות?! (2024)",
+        "durationSeconds": 2380,
+        "thumbnailUrl": "https://i.ytimg.com/vi/D0jd4qMfMA0/mqdefault.jpg",
+        "kind": "video"
+      }
+    ],
+    "articles": [
+      {
+        "slug": "תוכנית-חשמל-ככה-תערכו-אותה-נכון",
+        "title": "תוכנית חשמל לבית: ככה תערכו אותה נכון – מדריך שלב-שלב",
+        "excerpt": null,
+        "image": null
+      },
+      {
+        "slug": "architectural-plan",
+        "title": "תוכנית אדריכלית",
+        "excerpt": null,
+        "image": null
+      },
+      {
+        "slug": "interior-design-tips-fixing-mistakes",
+        "title": "עיצוב פנים לבית – טיפים מהשטח ותיקון טעויות תכנוניות",
+        "excerpt": null,
+        "image": null
+      }
+    ]
+  },
+  "permit": {
+    "videos": [
+      {
+        "youtubeId": "ethKoDXkxR8",
+        "title": "פודקאסט פרק 75 - קבלן מפתח או מפקח בניה? איך לבחור נכון וטיפים נוספים על דרכי תשלום לקבלנים (2023)",
+        "durationSeconds": 2968,
+        "thumbnailUrl": "https://i.ytimg.com/vi/ethKoDXkxR8/mqdefault.jpg",
+        "kind": "video"
+      },
+      {
+        "youtubeId": "TAC0dWbMPgc",
+        "title": "פודקאסט פרק 89 - מדברים בניה תחת אש עם קבלן מפתח מהצפון - טיפים לבניה !",
+        "durationSeconds": 3108,
+        "thumbnailUrl": "https://i.ytimg.com/vi/TAC0dWbMPgc/mqdefault.jpg",
+        "kind": "video"
+      },
+      {
+        "youtubeId": "y67YMXPZCKw",
+        "title": "פודקאסט פרק 112 - קבלנות מפתח, ניהול בנייה ומה קורה בדרך לבית שלכם?פודקאסט",
+        "durationSeconds": 3840,
+        "thumbnailUrl": "https://i.ytimg.com/vi/y67YMXPZCKw/mqdefault.jpg",
+        "kind": "podcast"
+      }
+    ],
+    "articles": [
+      {
+        "slug": "kblan-mafethch-ao-mefakech",
+        "title": "מתכננים לבנות או לשפץ? צפו וגלו מה כדאי קבלן מפתח או מפקח?",
+        "excerpt": null,
+        "image": null
+      },
+      {
+        "slug": "פודקאסט-פרק-29-מפקח-או-קבלן-מפתח-מה-עדיף",
+        "title": "פודקאסט #29: מפקח בניה או קבלן מפתח – מה עדיף",
+        "excerpt": null,
+        "image": null
+      },
+      {
+        "slug": "אגרות-בניה-והיטלים-בית-פרטי",
+        "title": "אגרות בניה והיטלים בית פרטי",
+        "excerpt": null,
+        "image": null
+      }
+    ]
+  },
+  "frame": {
+    "videos": [
+      {
+        "youtubeId": "Lp4u9iOwoFA",
+        "title": "כלונסאות דיפון כהכנה לבנית מרתף בבית פרטי - כמה זה עולה?!",
+        "durationSeconds": 462,
+        "thumbnailUrl": "https://i.ytimg.com/vi/Lp4u9iOwoFA/mqdefault.jpg",
+        "kind": "video"
+      },
+      {
+        "youtubeId": "NuCSt1rrGb4",
+        "title": "בטון משפר אטימות - יוצקים קירות מרתף - מה חשוב לבקש מהקבלנים ביציקות?!",
+        "durationSeconds": 741,
+        "thumbnailUrl": "https://i.ytimg.com/vi/NuCSt1rrGb4/mqdefault.jpg",
+        "kind": "video"
+      },
+      {
+        "youtubeId": "hsNB5x1W8_k",
+        "title": "שיטת  בניה מתקדמת מבודדת ICF - יום היציקה הגיע .... מה קורה ומה חשוב ביום כזה?! (2023)",
+        "durationSeconds": 509,
+        "thumbnailUrl": "https://i.ytimg.com/vi/hsNB5x1W8_k/mqdefault.jpg",
+        "kind": "video"
+      }
+    ],
+    "articles": [
+      {
+        "slug": "חברת-gsb-שיטת-icf-קלקר-בטון-בלוק-מה-זה-הצטר-2",
+        "title": "חברת GSB: שיטת ICF – קלקר/בטון/בלוק",
+        "excerpt": null,
+        "image": null
+      },
+      {
+        "slug": "u",
+        "title": "המשך בניית בלוקים ,חגורות בטון לחלונות ובלוקים",
+        "excerpt": null,
+        "image": null
+      },
+      {
+        "slug": "mamad",
+        "title": "יציקת חגורות בטון וממד",
+        "excerpt": null,
+        "image": null
+      }
+    ]
+  },
+  "infrastructure": {
+    "videos": [
+      {
+        "youtubeId": "0IfYzyLylTo",
+        "title": "פרויטק שיפוץ ובניה חריש - סיום שלד ותשתיות והכנת תשתית לגג רעפים - סיור שלב תשתיות !",
+        "durationSeconds": 489,
+        "thumbnailUrl": "https://i.ytimg.com/vi/0IfYzyLylTo/mqdefault.jpg",
+        "kind": "video"
+      },
+      {
+        "youtubeId": "qWFTUsA19ys",
+        "title": "מה זה VRF | כמה עולה מערכת VRF ?!",
+        "durationSeconds": 1275,
+        "thumbnailUrl": "https://i.ytimg.com/vi/qWFTUsA19ys/mqdefault.jpg",
+        "kind": "video"
+      },
+      {
+        "youtubeId": "9uHxBJ27WYw",
+        "title": "פרק 65 - יום איטום גג שטוח",
+        "durationSeconds": 775,
+        "thumbnailUrl": "https://i.ytimg.com/vi/9uHxBJ27WYw/mqdefault.jpg",
+        "kind": "video"
+      }
+    ],
+    "articles": [
+      {
+        "slug": "סיור-שלד-בשלב-תשתיות-ברחובות-בידוד-תרמ",
+        "title": "סיור שלד בשלב תשתיות ברחובות – בידוד תרמי, בטון חשוף ,פנלים סולאריים , איטום ועוד…",
+        "excerpt": null,
+        "image": null
+      },
+      {
+        "slug": "גגות-סולאריים-התקנת-גג-סולארי-כולל-התק",
+        "title": "גגות סולאריים: התקנת גג סולארי כולל התקנת פאנל סולארי על גג שטוח",
+        "excerpt": null,
+        "image": null
+      },
+      {
+        "slug": "my-experience-with-sealing-roofs-plumbing-quality-tests-and-preparations-for-flooring",
+        "title": "החוויה שלי עם איטום גגות, אינסטלציה, בדיקות טיב והכנות לריצוף",
+        "excerpt": null,
+        "image": null
+      }
+    ]
+  },
+  "finishing": {
+    "videos": [
+      {
+        "youtubeId": "1O8xkJrnxOo",
+        "title": "סיור גמרים בירושלים דלתות אפס חלונות מינימל  - כדאי שתצטרפו אלי !",
+        "durationSeconds": 1282,
+        "thumbnailUrl": "https://i.ytimg.com/vi/1O8xkJrnxOo/mqdefault.jpg",
+        "kind": "video"
+      },
+      {
+        "youtubeId": "Y1KJ-jhabe0",
+        "title": "פרק 66 - ניקיון לאחר סיום ריצוף והגנה על הריצוף",
+        "durationSeconds": 237,
+        "thumbnailUrl": "https://i.ytimg.com/vi/Y1KJ-jhabe0/mqdefault.jpg",
+        "kind": "video"
+      },
+      {
+        "youtubeId": "Yr9QawdVgiY",
+        "title": "סיום שלב תשתיות וטיח  - סיור ומה הלאה ומה חושב ?!",
+        "durationSeconds": 651,
+        "thumbnailUrl": "https://i.ytimg.com/vi/Yr9QawdVgiY/mqdefault.jpg",
+        "kind": "video"
+      }
+    ],
+    "articles": [
+      {
+        "slug": "continue-finishing-the-house",
+        "title": "סיום בניית הבית: צבע, אלומיניום, דלתות ומטבח",
+        "excerpt": null,
+        "image": null
+      },
+      {
+        "slug": "luxury-home-tour-zero-line-doors",
+        "title": "סיור גמרים בבית פרטי – דלתות קו אפס, חלונות מינימל ועיצוב יוקרתי",
+        "excerpt": null,
+        "image": null
+      },
+      {
+        "slug": "colored-plaster-rock-plaster-guide",
+        "title": "שליכט צבעוני וטיח סלע – המדריך המלא לחיפוי חוץ בשיטת GSB ICF",
+        "excerpt": null,
+        "image": null
+      }
+    ]
+  },
+  "moving-in": {
+    "videos": [
+      {
+        "youtubeId": "n2cXuWpAu5A",
+        "title": "סיימנו בניה בית פרטי מעץ - סיור סוף בניה ותובנות!",
+        "durationSeconds": 814,
+        "thumbnailUrl": "https://i.ytimg.com/vi/n2cXuWpAu5A/mqdefault.jpg",
+        "kind": "video"
+      },
+      {
+        "youtubeId": "qkm90PYdVo8",
+        "title": "הצצה נדירה לבית היוקרה הזה לפני האכלוס - עם תומר חן ריחאנה ורועי הראל",
+        "durationSeconds": 1849,
+        "thumbnailUrl": "https://i.ytimg.com/vi/qkm90PYdVo8/mqdefault.jpg",
+        "kind": "video"
+      },
+      {
+        "youtubeId": "BtUV1Kp75Cw",
+        "title": "סיור אתר: איך מנהלים 20 בעלי מקצוע ביום אחד בדרך למסירה?",
+        "durationSeconds": 1436,
+        "thumbnailUrl": "https://i.ytimg.com/vi/BtUV1Kp75Cw/mqdefault.jpg",
+        "kind": "video"
+      }
+    ],
+    "articles": [
+      {
+        "slug": "building-defects-inspection-guide",
+        "title": "ליקויי בניה ובדק בית – מה באמת בודקים בסיור מסירה ראשונית?",
+        "excerpt": null,
+        "image": null
+      },
+      {
+        "slug": "insurance-continuity-guide",
+        "title": "רצף ביטוחי — הפער המסוכן בין סיום הבנייה לביטוח דירה",
+        "excerpt": null,
+        "image": null
+      },
+      {
+        "slug": "build-private-house-guide",
+        "title": "תהליך בניית בית פרטי מתכנון ועד טופס 4 – המדריך המלא",
+        "excerpt": null,
+        "image": null
+      }
+    ]
+  }
+}

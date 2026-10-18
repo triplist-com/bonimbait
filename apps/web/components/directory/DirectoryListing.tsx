@@ -15,19 +15,23 @@ import {
   PAGE_SIZE,
 } from '@/lib/directory/listing';
 import { createPublicClient } from '@/lib/directory/server';
+import { loadPartnerBadges, tierRanks } from '@/lib/revenue/badges';
+import PartnerOfferSlot from '@/components/revenue/PartnerOfferSlot';
 import BusinessCard from './BusinessCard';
 import ListingFilters, { SortSelect } from './ListingFilters';
 
 /** Directory data, fetched once per request (shared by metadata and page). */
 const loadDirectoryData = cache(async () => {
   const db = createPublicClient();
-  const [entries, specialties, regions] = await Promise.all([
+  const [entries, specialties, regions, badges] = await Promise.all([
     listDirectoryEntries(db),
     listSpecialties(db),
     listRegions(db),
+    // Partner tiers (revenue squad): badges, and partners first within relevance. Off with FLAG_REVENUE.
+    loadPartnerBadges(db),
   ]);
   const stats = await getReviewStats(db, entries.map((e) => e.id));
-  return { entries, specialties, regions, stats };
+  return { entries, specialties, regions, stats, badges, tierRanks: tierRanks(badges) };
 });
 
 /** Shared data load for the listing and its metadata. */
@@ -45,7 +49,7 @@ export function listingHeading(specialty: { name: string } | null, region: { nam
 }
 
 export default async function DirectoryListing({ filters }: { filters: Filters }) {
-  const { specialties, regions, stats, result } = await loadListing(filters);
+  const { specialties, regions, stats, badges, result } = await loadListing(filters);
   // /recommended/page/99/ beyond the last page: 404 like WordPress.
   if (filters.page > result.pageCount) notFound();
 
@@ -73,9 +77,10 @@ export default async function DirectoryListing({ filters }: { filters: Filters }
 
   return (
     <div className="container-page py-8 sm:py-12">
-      <header className="mb-6 text-center">
-        <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">{heading}</h1>
-        <p className="mx-auto mt-3 max-w-2xl text-gray-600">
+      <header className="mb-8 text-center">
+        <p className="eyebrow justify-center">נבחרת המומלצים</p>
+        <h1 className="mt-3 text-display text-ink-900">{heading}</h1>
+        <p className="mx-auto mt-4 max-w-2xl text-body-lg text-ink-600">
           בעלי מקצוע וספקים שקיבלו המלצות מבונים ומשפצים בקהילה, עם דירוג וחוות דעת מאומתות.
         </p>
       </header>
@@ -113,10 +118,19 @@ export default async function DirectoryListing({ filters }: { filters: Filters }
         <ul className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {result.items.map((b) => (
             <li key={b.id}>
-              <BusinessCard business={b} specialties={specialtyById} regions={regionById} stats={stats.get(b.id)} />
+              <BusinessCard business={b} specialties={specialtyById} regions={regionById} stats={stats.get(b.id)} badge={badges.get(b.id)} />
             </li>
           ))}
         </ul>
+      )}
+
+      {/* Sponsored partner offer for the filtered specialty and region (revenue; FLAG_REVENUE). */}
+      {result.items.length > 0 && (
+        <PartnerOfferSlot
+          slot="directory"
+          context={{ topic: result.specialty?.slug ?? null, region: result.region?.slug ?? null, placement: 'directory' }}
+          className="mx-auto mt-8 max-w-3xl"
+        />
       )}
 
       {result.pageCount > 1 && (

@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { recallRuntimeVideo } from '@/lib/autopilot/registry';
 
 // ---- Types for the static JSON data ----
 
@@ -31,6 +32,15 @@ export interface VideoRecord {
   difficulty_level: string;
   has_transcript: boolean;
   segment_count: number;
+  // Added by scripts/knowledge/build_catalog.py (full-channel index), all optional:
+  /** Chapters from the YouTube description ("0:00 title" lines). */
+  chapters?: Array<{ start_time: number; title: string }>;
+  /** Seconds into the video for each key point (same order as key_points); null = no moment. */
+  key_point_times?: Array<number | null>;
+  /** Channel content type (from the channel inventory). */
+  kind?: 'video' | 'podcast' | 'live';
+  /** Where `summary` came from: an AI pass or the cleaned YouTube description. */
+  summary_source?: 'ai' | 'description';
 }
 
 export interface CategoryRecord {
@@ -191,9 +201,18 @@ export function getVideos(params: {
   return { videos, total, page, pages };
 }
 
-export function getVideo(id: string): VideoRecord | null {
+/** A video of the static AI index (videos.json) only. */
+export function getStaticVideo(id: string): VideoRecord | null {
   const data = loadData();
   return data.videos.find((v) => v.youtube_id === id || v.id === id) || null;
+}
+
+/**
+ * Static video, else a published Content Autopilot video that search just
+ * returned on this instance (lib/autopilot/registry.ts).
+ */
+export function getVideo(id: string): VideoRecord | null {
+  return getStaticVideo(id) ?? recallRuntimeVideo(id);
 }
 
 export function getCategories(): CategoryRecord[] {

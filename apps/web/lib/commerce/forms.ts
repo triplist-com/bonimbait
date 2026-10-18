@@ -3,18 +3,14 @@
  * checkout and the account profile. Pure; safe on client and server.
  */
 import type { ConstructionStage } from '@/lib/db/types';
-import { MEMBER_REGIONS, isConstructionStage } from '@/lib/constants/community';
+import { CONSTRUCTION_STAGES, MEMBER_REGIONS, isConstructionStage } from '@/lib/constants/community';
 
-/** The 7 stages offered on the live product lead form, in live order. */
-export const LEAD_STAGES: ReadonlyArray<{ value: ConstructionStage; label: string }> = [
-  { value: 'land', label: 'רכישת מגרש' },
-  { value: 'planning', label: 'תכנון' },
-  { value: 'frame', label: 'שלד' },
-  { value: 'tender', label: 'מכרז קבלנים' },
-  { value: 'finishing', label: 'גמרים' },
-  { value: 'moving_in', label: 'כניסה לבית' },
-  { value: 'renovation', label: 'שיפוץ' },
-];
+/**
+ * The stages offered on the product lead form: the same 7 options as the live
+ * form (values unchanged), named and ordered like the owner's stages
+ * (lib/stages.ts), plus "שיפוץ".
+ */
+export const LEAD_STAGES: ReadonlyArray<{ value: ConstructionStage; label: string }> = CONSTRUCTION_STAGES.filter((s) => s.value !== 'design');
 
 export { MEMBER_REGIONS };
 

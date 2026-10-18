@@ -40,6 +40,11 @@ export interface CostItem {
   context?: string;
 }
 
+export interface VideoChapter {
+  start_time: number;
+  title: string;
+}
+
 export interface VideoDetail extends Video {
   summary?: string;
   key_points?: KeyPoint[];
@@ -47,6 +52,8 @@ export interface VideoDetail extends Video {
   costs_data?: CostItem[];
   tips?: string[];
   warnings?: string[];
+  chapters?: VideoChapter[];
+  kind?: 'video' | 'podcast' | 'live';
 }
 
 // --- Category ---
@@ -108,34 +115,15 @@ export interface MatchedPro {
   city: string | null;
   logo_url: string | null;
   href: string;
+  /** Live partner tier (lib/revenue/tiers.ts PartnerBadge), shown as a badge: tiers reorder the list. */
+  badge?: { tierSlug: string; tierName: string; badgeLabel: string; rank: number } | null;
 }
 
 export interface ProsCta {
   specialty: { slug: string; name: string; href: string };
   pros: MatchedPro[];
-}
-
-export interface AnswerResponse {
-  answer: string;
-  sources: AnswerSource[];
-  confidence: 'high' | 'medium' | 'low';
-}
-
-export interface PregeneratedAnswer {
-  answer: string;
-  sources: Array<{
-    video_id?: string;
-    youtube_id?: string;
-    title?: string;
-    timestamp?: number;
-  }>;
-  key_points: string[];
-  costs_data: Array<Record<string, unknown>>;
-  tips: string[];
-  warnings: string[];
-  confidence: number;
-  query: string;
-  pregenerated: boolean;
+  /** The visitor's region when the list was narrowed to it (advisor, region-aware pros). */
+  region?: { slug: string; name: string } | null;
 }
 
 // --- Pagination ---

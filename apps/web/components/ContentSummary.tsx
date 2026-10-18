@@ -65,25 +65,25 @@ function SectionHeader({
   color?: string;
 }) {
   return (
-    <h3 className={`text-base font-bold ${color} mb-3 flex items-center gap-2`}>
+    <h2 className={`text-base font-bold ${color} mb-3 flex items-center gap-2`}>
       {icon}
       {title}
-    </h3>
+    </h2>
   );
 }
 
 function SummarySection({ text, compact }: { text: string; compact: boolean }) {
   return (
-    <div className={`${compact ? 'mb-4' : 'bg-gradient-to-br from-blue-50/60 to-indigo-50/40 border border-blue-100/80 rounded-xl p-5 mb-5'}`}>
+    <div className={`${compact ? 'mb-4' : 'bg-gradient-to-br from-primary-50/70 to-sand-50 border border-primary-100 rounded-2xl p-5 mb-5'}`}>
       {!compact && (
         <SectionHeader
           icon={
-            <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
             </svg>
           }
           title="סיכום"
-          color="text-blue-900"
+          color="text-ink-900"
         />
       )}
       <p className={`text-gray-700 leading-relaxed ${compact ? 'text-sm' : 'text-sm'} whitespace-pre-line`}>
@@ -106,7 +106,7 @@ function KeyPointsSection({
     <div className={`${compact ? 'mb-4' : 'bg-white border border-gray-200/80 rounded-xl p-5 mb-5 shadow-sm'}`}>
       <SectionHeader
         icon={
-          <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-5 h-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
           </svg>
         }
@@ -115,7 +115,7 @@ function KeyPointsSection({
       <ul className={`space-y-${compact ? '2' : '3'}`}>
         {points.map((kp, i) => (
           <li key={i} className="flex items-start gap-3">
-            <span className={`${compact ? 'w-5 h-5 text-2xs' : 'w-6 h-6 text-xs'} rounded-full bg-amber-100 text-amber-700 font-bold flex items-center justify-center flex-shrink-0 mt-0.5`}>
+            <span className={`${compact ? 'w-5 h-5 text-2xs' : 'w-6 h-6 text-xs'} rounded-full bg-primary-50 text-primary-700 font-bold flex items-center justify-center flex-shrink-0 mt-0.5`}>
               {i + 1}
             </span>
             <div className="flex-1 min-w-0">
@@ -143,12 +143,12 @@ function CostsSection({ items, compact }: { items: CostItem[]; compact: boolean 
     <div className={`${compact ? 'mb-4' : 'bg-white border border-gray-200/80 rounded-xl p-5 mb-5 shadow-sm'}`}>
       <SectionHeader
         icon={
-          <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-5 h-5 text-success-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         }
         title="עלויות"
-        color="text-emerald-900"
+        color="text-success-800"
       />
       {/* Desktop table */}
       <div className={`${compact ? '' : 'hidden sm:block'} overflow-x-auto`}>
@@ -165,7 +165,7 @@ function CostsSection({ items, compact }: { items: CostItem[]; compact: boolean 
             {items.map((item, i) => (
               <tr key={i} className={`border-b border-gray-50 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
                 <td className="py-2.5 px-3 text-gray-900 font-medium text-sm">{item.item}</td>
-                <td className="py-2.5 px-3 text-emerald-700 font-semibold text-sm">{formatPrice(item.price)}</td>
+                <td className="py-2.5 px-3 text-success-700 font-semibold text-sm">{formatPrice(item.price)}</td>
                 {!compact && <td className="py-2.5 px-3 text-gray-500 text-sm">{item.unit}</td>}
                 {!compact && <td className="py-2.5 px-3 text-gray-400 text-xs">{item.context || '—'}</td>}
               </tr>
@@ -180,7 +180,7 @@ function CostsSection({ items, compact }: { items: CostItem[]; compact: boolean 
             <div key={i} className="bg-gray-50/50 border border-gray-100 rounded-lg p-3.5">
               <div className="flex items-start justify-between mb-1.5">
                 <span className="font-medium text-gray-900 text-sm">{item.item}</span>
-                <span className="text-emerald-700 font-bold text-sm">{formatPrice(item.price)}</span>
+                <span className="text-success-700 font-bold text-sm">{formatPrice(item.price)}</span>
               </div>
               <div className="flex items-center gap-3 text-xs text-gray-400">
                 <span>{item.unit}</span>
@@ -196,20 +196,20 @@ function CostsSection({ items, compact }: { items: CostItem[]; compact: boolean 
 
 function TipsSection({ items, compact }: { items: string[]; compact: boolean }) {
   return (
-    <div className={`${compact ? 'mb-4' : 'bg-gradient-to-br from-green-50/60 to-emerald-50/40 border border-green-200/60 rounded-xl p-5 mb-5'}`}>
+    <div className={`${compact ? 'mb-4' : 'bg-gradient-to-br from-success-50/60 to-success-50/40 border border-success-200/60 rounded-xl p-5 mb-5'}`}>
       <SectionHeader
         icon={
-          <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-5 h-5 text-success-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
         }
         title="טיפים"
-        color="text-green-900"
+        color="text-success-800"
       />
       <ul className={`space-y-${compact ? '1.5' : '2.5'}`}>
         {items.map((tip, i) => (
-          <li key={i} className={`flex items-start gap-2.5 ${compact ? 'text-xs' : 'text-sm'} text-green-800`}>
-            <svg className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <li key={i} className={`flex items-start gap-2.5 ${compact ? 'text-xs' : 'text-sm'} text-success-800`}>
+            <svg className="w-4 h-4 text-success-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
             <span className="leading-relaxed">{tip}</span>
@@ -222,20 +222,20 @@ function TipsSection({ items, compact }: { items: string[]; compact: boolean }) 
 
 function WarningsSection({ items, compact }: { items: string[]; compact: boolean }) {
   return (
-    <div className={`${compact ? 'mb-4' : 'bg-gradient-to-br from-red-50/60 to-orange-50/40 border border-red-200/60 rounded-xl p-5 mb-5'}`}>
+    <div className={`${compact ? 'mb-4' : 'bg-gradient-to-br from-danger-50/70 to-warning-50/60 border border-danger-100 rounded-2xl p-5 mb-5'}`}>
       <SectionHeader
         icon={
-          <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-5 h-5 text-danger-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
           </svg>
         }
         title="אזהרות"
-        color="text-red-900"
+        color="text-danger-800"
       />
       <ul className={`space-y-${compact ? '1.5' : '2.5'}`} role="alert">
         {items.map((warning, i) => (
-          <li key={i} className={`flex items-start gap-2.5 ${compact ? 'text-xs' : 'text-sm'} text-red-800`}>
-            <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <li key={i} className={`flex items-start gap-2.5 ${compact ? 'text-xs' : 'text-sm'} text-danger-800`}>
+            <svg className="w-4 h-4 text-danger-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0 3.75h.008" />
             </svg>
             <span className="leading-relaxed">{warning}</span>

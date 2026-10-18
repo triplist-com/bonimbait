@@ -122,14 +122,14 @@ export default function StrategicPartnersPage() {
           <h1 className="text-5xl font-black leading-[0.95] sm:text-7xl">
             <span className="block">200 לידים.</span>
             <span className="block">50 סגירות.</span>
-            <span className="block text-[#ff6baa]">חודשיים.</span>
+            <span className="block text-primary-300">חודשיים.</span>
           </h1>
           <p className="mx-auto mt-8 max-w-2xl text-lg text-gray-300">
             עשרות אלפי בונים ומשפצים מגיעים אלינו כשהם מחפשים ספקים שהם יכולים לסמוך עליהם. שותפות עם בונים בית מציבה
             אתכם בתוך רגעי הבחירה שלהם.
           </p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <a href="#partner-form" className="rounded-xl bg-[#fc3565] px-6 py-3 font-semibold text-white hover:brightness-110">
+            <a href="#partner-form" className="rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white hover:bg-primary-700">
               בדקו אם הקטגוריה פנויה
             </a>
             <a href="#showcase" className="rounded-xl border border-white/30 px-6 py-3 font-semibold text-white hover:bg-white/10">
@@ -173,19 +173,19 @@ export default function StrategicPartnersPage() {
           intro="קליקים קרים לא תמיד מבשילים לפנייה איכותית. בתוך קהילה מקצועית, הלקוח פוגש אתכם בהקשר שבו כבר יש אמון."
         />
         <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2">
-          <div className="rounded-2xl border border-red-100 bg-red-50/50 p-6">
+          <div className="rounded-2xl border border-danger-100 bg-danger-50/50 p-6">
             <h3 className="text-lg font-bold text-gray-900">קמפיינים בלי הקשר קהילתי</h3>
             <ul className="mt-3 space-y-2 text-gray-700">
               {CAMPAIGNS_BAD.map((t) => (
-                <li key={t} className="flex gap-2"><span aria-hidden="true" className="text-red-500">✕</span>{t}</li>
+                <li key={t} className="flex gap-2"><span aria-hidden="true" className="text-danger-500">✕</span>{t}</li>
               ))}
             </ul>
           </div>
-          <div className="rounded-2xl border border-green-100 bg-green-50/50 p-6">
+          <div className="rounded-2xl border border-success-100 bg-success-50/50 p-6">
             <h3 className="text-lg font-bold text-gray-900">להיות ספק הבית של הקהילה</h3>
             <ul className="mt-3 space-y-2 text-gray-700">
               {COMMUNITY_GOOD.map((t) => (
-                <li key={t} className="flex gap-2"><span aria-hidden="true" className="text-green-600">✓</span>{t}</li>
+                <li key={t} className="flex gap-2"><span aria-hidden="true" className="text-success-600">✓</span>{t}</li>
               ))}
             </ul>
           </div>
@@ -273,7 +273,7 @@ export default function StrategicPartnersPage() {
         <SectionTitle title="המלצות מהקהילה" intro="שואלים, מתייעצים, בונים יחד" />
         <ul className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {COMMUNITY_QUOTES.map(([text, time]) => (
-            <li key={text} className="rounded-2xl rounded-ss-none bg-[#dcf8c6] p-4 text-gray-800 shadow-card">
+            <li key={text} className="rounded-2xl rounded-ss-none bg-whatsapp-bubble p-4 text-gray-800 shadow-card">
               <p>{text}</p>
               <p className="mt-1 text-end text-xs text-gray-500" dir="ltr">{time}</p>
             </li>
@@ -373,7 +373,7 @@ export default function StrategicPartnersPage() {
             השאירו פרטים או שלחו הודעה - הצוות שלנו יבדוק זמינות ויחזור עם תוכנית שותפות מותאמת לעסק שלכם בהקדם.
           </p>
           <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <a href={waHref} target="_blank" rel="noopener noreferrer" className="rounded-xl bg-[#25D366] px-6 py-3 font-semibold text-white hover:brightness-95">
+            <a href={waHref} target="_blank" rel="noopener noreferrer" className="rounded-xl bg-whatsapp px-6 py-3 font-semibold text-ink-950 hover:brightness-95">
               שלחו הודעה ב-WhatsApp
             </a>
             <a href="#partner-form" className="rounded-xl border border-white/30 px-6 py-3 font-semibold hover:bg-white/10">
@@ -385,7 +385,7 @@ export default function StrategicPartnersPage() {
             <a href={telHref(SITE_CONTACT.mobilePhone)} dir="ltr" className="font-bold text-white underline">
               054-430-0202
             </a>{' '}
-            <span className="text-green-400">· זמינים עכשיו</span>
+            <span className="text-success-500">· זמינים עכשיו</span>
           </p>
         </div>
       </section>

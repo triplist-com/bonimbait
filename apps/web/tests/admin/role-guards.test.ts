@@ -34,6 +34,17 @@ const ADMIN_ONLY = new Set([
   'deleteRegion',
   'setOrderStatus',
   'changeMemberRole',
+  // Command Center: the owner's expected value per lead (lib/admin/actions/command.ts).
+  'saveExpectedValues',
+  'resetExpectedValues',
+  // Bonim.Os: the manager roster and managed clients (lib/admin/actions/bonimos.ts).
+  'addBonimosManager',
+  'updateBonimosManager',
+  'removeBonimosManager',
+  'startBonimosClient',
+  'assignBonimosManager',
+  'unassignBonimosManager',
+  'endBonimosClient',
 ]);
 
 async function loadActions(): Promise<Array<[string, (...args: unknown[]) => Promise<{ ok: boolean; error?: string }>]>> {
@@ -62,11 +73,12 @@ beforeEach(() => {
 });
 
 describe('admin server actions refuse non-staff', () => {
+  // First test to import every action module: under a full parallel run that takes > 5s.
   it('discovers the action modules', async () => {
     const actions = await loadActions();
     expect(modules.length).toBeGreaterThanOrEqual(6);
     expect(actions.length).toBeGreaterThanOrEqual(30);
-  });
+  }, 30_000);
 
   it.each([
     ['signed out', null, SIGNED_OUT_MESSAGE],

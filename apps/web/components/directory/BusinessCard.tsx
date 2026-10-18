@@ -4,8 +4,13 @@ import type { BusinessReviewStatsRow, RegionRow, SpecialtyRow } from '@/lib/db/t
 import { businessHref } from '@/lib/directory/format';
 import { excerpt, htmlToText } from '@/lib/directory/html';
 import { listingHref } from '@/lib/directory/listing';
+import { buttonClasses } from '@/components/ui/Button';
+import ShortlistButton from '@/components/hub/ShortlistButton';
+import { isEnabled } from '@/lib/flags';
 import BusinessLogo from './BusinessLogo';
 import RatingBadge from './RatingBadge';
+import PartnerTierBadge from '@/components/revenue/PartnerTierBadge';
+import type { PartnerBadge } from '@/lib/revenue/tiers';
 
 const MAX_REGIONS = 4;
 
@@ -14,11 +19,14 @@ export default function BusinessCard({
   specialties,
   regions,
   stats,
+  badge,
 }: {
   business: DirectoryEntry;
   specialties: Map<string, SpecialtyRow>;
   regions: Map<string, RegionRow>;
   stats: BusinessReviewStatsRow | undefined;
+  /** Partner tier badge (revenue squad). */
+  badge?: PartnerBadge | null;
 }) {
   const href = businessHref(business.slug);
   // Primary specialty first, as on the live cards.
@@ -34,19 +42,30 @@ export default function BusinessCard({
   const about = excerpt(business.tagline || htmlToText(business.description_html), 150);
 
   return (
-    <article className="flex h-full flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-card transition hover:shadow-card-hover">
+    <article className="flex h-full flex-col rounded-3xl border border-ink-100 bg-white p-5 shadow-card transition-[box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:shadow-card-hover sm:p-6">
       <div className="flex items-start gap-4">
         <BusinessLogo name={business.name} src={business.logo_url || business.cover_image_url} />
         <div className="min-w-0 flex-1">
-          <h2 className="text-lg font-bold text-gray-900">
-            <Link href={href} className="hover:text-primary">
+          <h2 className="text-title text-ink-900">
+            <Link href={href} className="hover:text-primary-700">
               {business.name}
             </Link>
           </h2>
-          <div className="mt-1">
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
             <RatingBadge percent={stats?.rating_percent} count={stats?.review_count ?? 0} />
+            <PartnerTierBadge badge={badge} />
           </div>
         </div>
+        {isEnabled('hub') && (
+          <ShortlistButton
+            businessId={business.id}
+            slug={business.slug}
+            name={business.name}
+            specialty={specialtyRows[0]?.name}
+            source="business_card"
+            compact
+          />
+        )}
       </div>
 
       {specialtyRows.length > 0 && (
@@ -55,7 +74,7 @@ export default function BusinessCard({
             <li key={s.id}>
               <Link
                 href={listingHref({ specialty: s.slug })}
-                className="inline-block rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700 hover:bg-primary-100"
+                className="inline-flex min-h-6 items-center rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700 hover:bg-primary-100"
               >
                 {s.name}
               </Link>
@@ -85,10 +104,7 @@ export default function BusinessCard({
         </p>
       )}
 
-      <Link
-        href={href}
-        className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
-      >
+      <Link href={href} className={buttonClasses({ variant: 'outline', size: 'md', fullWidth: true, className: 'mt-5' })}>
         לעמוד העסקי
       </Link>
     </article>

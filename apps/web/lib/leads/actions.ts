@@ -12,6 +12,8 @@
  *   _business_id / _product_id / _service_plan_id   uuid links (optional)
  *   _ctx_<key>        small context values stored in payload (e.g. _ctx_product_name)
  *   _utm              JSON of utm_* / gclid / fbclid captured client-side
+ *   _project_file     JSON of the visitor's project file (lib/project-file/collect.ts),
+ *                     sanitized and scored server-side (lib/revenue/lead-pipeline.ts)
  *   company_website   honeypot; cf-turnstile-response: Turnstile token
  *
  * For `whatsapp_join` it also reveals the chosen group's invite link, read
@@ -28,6 +30,7 @@ import { isLeadType } from './schemas';
 import { clientIpFromHeaders } from './spam';
 import { HONEYPOT_FIELD, TURNSTILE_FIELD } from './constants';
 import type { LeadFormState } from './types';
+import { parseProjectFileField } from '@/lib/project-file/sanitize';
 
 /** Only same-site paths ("/x/", not "//evil" or "https://..."). */
 function safeInternalPath(value: FormDataEntryValue | null): string | null {
@@ -86,6 +89,7 @@ export async function submitLeadAction(_prev: LeadFormState, formData: FormData)
     memberId,
     ip: clientIpFromHeaders(headers()),
     spam: { honeypot: formData.get(HONEYPOT_FIELD), turnstileToken: formData.get(TURNSTILE_FIELD) },
+    projectFile: parseProjectFileField(formData.get('_project_file')),
   });
 
   if (!result.ok) {

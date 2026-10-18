@@ -30,6 +30,8 @@ const lead = (over: Partial<LeadRow> = {}): LeadRow => ({
   notify_error: null,
   notified_at: null,
   ip_hash: 'secret-hash',
+  ref: 'BB-26-000123',
+  attribution: null,
   created_at: '2026-09-28T10:00:00Z',
   updated_at: '2026-09-28T10:00:00Z',
   ...over,

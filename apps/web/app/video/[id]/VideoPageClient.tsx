@@ -1,30 +1,56 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import VideoPlayer from '@/components/VideoPlayer';
 import VideoGrid from '@/components/VideoGrid';
 import ContentSummary from '@/components/ContentSummary';
-import StructuredData from '@/components/StructuredData';
 import { VideoGridSkeleton } from '@/components/Skeleton';
 import { getVideoDetail, getRelatedVideos } from '@/lib/api';
-import { formatTimestamp, thumbnailUrl as getThumbUrl } from '@/lib/types';
+import { formatTimestamp } from '@/lib/types';
 import type { VideoDetail as VideoDetailType, Video } from '@/lib/types';
+import AskAbout from '@/components/advisor/AskAbout';
 
-function VideoContent() {
+interface InitialData {
+  initialVideo?: VideoDetailType | null;
+  initialRelated?: Video[];
+  /** Hub slot: the "שמירה" button, rendered by the server page when the hub is on. */
+  saveSlot?: ReactNode;
+  /** Sponsored partner offer rendered by the server page (revenue squad); shown after the summary. */
+  partnerSlot?: ReactNode;
+}
+
+function VideoContent({ initialVideo, initialRelated, saveSlot, partnerSlot }: InitialData) {
   const params = useParams();
-  const searchParams = useSearchParams();
   const id = params.id as string;
-  const startTime = parseInt(searchParams.get('t') || '0', 10);
+  const hasInitial = Boolean(initialVideo);
 
-  const [video, setVideo] = useState<VideoDetailType | null>(null);
-  const [related, setRelated] = useState<Video[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [video, setVideo] = useState<VideoDetailType | null>(initialVideo ?? null);
+  const [related, setRelated] = useState<Video[]>(initialRelated ?? []);
+  const [isLoading, setIsLoading] = useState(!hasInitial);
   const [openTranscript, setOpenTranscript] = useState(false);
-  const [playerTime, setPlayerTime] = useState(startTime);
+  const [playerTime, setPlayerTime] = useState(0);
+  const [playRequested, setPlayRequested] = useState(false);
+  const playerRef = useRef<HTMLDivElement>(null);
+  // Jump to a moment (chapter / key point): play from it and bring the player into view.
+  const seek = (seconds: number) => {
+    setPlayerTime(seconds);
+    setPlayRequested(true);
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    playerRef.current?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+  };
+
+  // Deep link (?t=157, from an AI answer): read after mount, not via
+  // useSearchParams, so the statically rendered page keeps its server HTML.
+  useEffect(() => {
+    const t = parseInt(new URLSearchParams(window.location.search).get('t') || '0', 10);
+    if (t > 0) setPlayerTime(t);
+  }, [id]);
 
   useEffect(() => {
+    // Server-rendered data: nothing to fetch.
+    if (hasInitial) return;
     let cancelled = false;
     setIsLoading(true);
 
@@ -40,7 +66,7 @@ function VideoContent() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, hasInitial]);
 
   if (isLoading) {
     return (
@@ -68,25 +94,9 @@ function VideoContent() {
     );
   }
 
-  const thumb = video.thumbnail_url || getThumbUrl(video.youtube_id);
-
   return (
-    <div className="container-page">
-      {/* VideoObject structured data */}
-      <StructuredData
-        data={{
-          '@context': 'https://schema.org',
-          '@type': 'VideoObject',
-          name: video.title,
-          description: video.summary || `סרטון בנושא ${video.category_name}`,
-          thumbnailUrl: thumb,
-          uploadDate: video.published_at,
-          duration: `PT${Math.floor(video.duration_seconds / 60)}M${video.duration_seconds % 60}S`,
-          embedUrl: `https://www.youtube.com/embed/${video.youtube_id}`,
-          contentUrl: `https://www.youtube.com/watch?v=${video.youtube_id}`,
-        }}
-      />
-
+    <div className="container-page max-w-5xl">
+      {/* VideoObject + key moments are rendered by the server page (lib/seo/video-pages.ts). */}
       <section className="pt-8 pb-4">
         {/* Breadcrumbs */}
         <nav aria-label="מיקום בניווט" className="flex items-center gap-2 text-sm text-gray-500 mb-6">
@@ -105,16 +115,20 @@ function VideoContent() {
         </nav>
 
         {/* Video Player */}
-        <VideoPlayer
-          youtubeId={video.youtube_id}
-          title={video.title}
-          startTime={playerTime}
-        />
+        <div ref={playerRef}>
+          <VideoPlayer
+            youtubeId={video.youtube_id}
+            title={video.title}
+            startTime={playerTime}
+            playing={playRequested}
+            poster={video.thumbnail_url}
+          />
+        </div>
 
         {/* Video Info */}
         <div className="mt-6 mb-8">
           <div className="flex items-start justify-between gap-4 mb-3">
-            <h1 className="text-2xl font-bold text-gray-900">{video.title}</h1>
+            <h1 className="text-headline-sm text-ink-900">{video.title}</h1>
             <Link
               href={`/category/${video.category_slug}/`}
               className="inline-block text-sm bg-primary-50 text-primary-700 font-medium px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-primary-100 transition-colors flex-shrink-0"
@@ -139,6 +153,7 @@ function VideoContent() {
               </>
             )}
           </div>
+          {saveSlot && <div className="mt-4">{saveSlot}</div>}
         </div>
 
         {/* Content Summary — AI summary, key points, costs, tips, warnings */}
@@ -149,12 +164,41 @@ function VideoContent() {
           tips={video.tips}
           warnings={video.warnings}
           variant="full"
-          onTimestampClick={(seconds) => setPlayerTime(seconds)}
+          onTimestampClick={seek}
         />
+
+        {/* Chapters from the YouTube description */}
+        {video.chapters && video.chapters.length > 0 && (
+          <section
+            aria-labelledby="chapters-heading"
+            className="bg-white border border-ink-100 rounded-2xl p-5 mb-5 shadow-card"
+          >
+            <h2 id="chapters-heading" className="text-title-sm text-ink-900 mb-3">
+              פרקים בסרטון
+            </h2>
+            <ol className="space-y-1 max-h-96 overflow-y-auto">
+              {video.chapters.map((ch) => (
+                <li key={ch.start_time}>
+                  <button
+                    type="button"
+                    onClick={() => seek(ch.start_time)}
+                    className="w-full flex items-start gap-3 py-2 px-3 rounded-xl hover:bg-primary-50 focus-visible:bg-primary-50 transition-colors text-start"
+                    aria-label={`דלגו לדקה ${formatTimestamp(ch.start_time)}: ${ch.title}`}
+                  >
+                    <span dir="ltr" className="text-xs text-primary-700 font-mono font-medium mt-0.5 flex-shrink-0">
+                      {formatTimestamp(ch.start_time)}
+                    </span>
+                    <span className="text-sm text-ink-800 leading-relaxed">{ch.title}</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
 
         {/* Transcript Accordion */}
         {video.segments && video.segments.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-8">
+          <div className="bg-white border border-ink-100 rounded-2xl shadow-card overflow-hidden mb-8">
             <button
               onClick={() => setOpenTranscript(!openTranscript)}
               className="w-full flex items-center justify-between p-6 hover:bg-gray-50 transition-colors"
@@ -180,7 +224,7 @@ function VideoContent() {
                 {video.segments.map((seg) => (
                   <button
                     key={seg.id}
-                    onClick={() => setPlayerTime(seg.start_time)}
+                    onClick={() => seek(seg.start_time)}
                     className="w-full flex items-start gap-3 py-2 px-3 rounded-lg hover:bg-primary-50 transition-colors text-right group"
                     aria-label={`דלג לדקה ${formatTimestamp(seg.start_time)}: ${seg.text.substring(0, 50)}`}
                   >
@@ -196,6 +240,15 @@ function VideoContent() {
             )}
           </div>
         )}
+
+        {/* Ask the advisor about this video (components/advisor/AskAbout.tsx) */}
+        <AskAbout
+          kind="video"
+          id={video.youtube_id}
+          questions={video.costs_data && video.costs_data.length > 0 ? ['כמה זה עולה לפי הסרטון?', 'מה הנקודות הכי חשובות בסרטון?'] : undefined}
+          className="mb-10"
+        />
+        {partnerSlot && <div className="mb-8">{partnerSlot}</div>}
       </section>
 
       {/* Related Videos */}
@@ -208,7 +261,7 @@ function VideoContent() {
   );
 }
 
-export default function VideoPageClient() {
+export default function VideoPageClient(props: InitialData) {
   return (
     <Suspense
       fallback={
@@ -220,7 +273,7 @@ export default function VideoPageClient() {
         </div>
       }
     >
-      <VideoContent />
+      <VideoContent {...props} />
     </Suspense>
   );
 }

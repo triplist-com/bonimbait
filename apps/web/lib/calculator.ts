@@ -1,7 +1,23 @@
 // ============================================================
-// Construction cost calculator — mirrors the backend wizard logic
-// Used for SSG pre-calculated scenario pages
+// Construction cost calculator: the STABLE legacy API.
+//
+// Kept for existing callers (the homepage example, the style guide, the hub
+// squad's budget tab): calculateCost(answers) still returns
+// { total_min, total_max, breakdown }. The numbers now come from the budget
+// planner engine and the owner's 2026 price book (lib/planner/*):
+//   - breakdown = the owner's stages with a share of planning + build
+//     (תכנון, היתר/מכרז, שלד, תשתיות, גמרים), phase = the stage id;
+//   - totals are ex-VAT, planning + build, ±15%.
+// New code should use lib/planner/engine.ts (estimateBudget / estimateFromProfile).
 // ============================================================
+
+import { BUILD_STAGES } from '@/lib/stages';
+import { DEFAULT_PRICE_BOOK } from '@/lib/planner/defaults';
+import { estimateBudget } from '@/lib/planner/engine';
+import type { ExtraId, FinishLevelId, Floors, PlannerEstimate, PlannerInput, PriceBook } from '@/lib/planner/types';
+
+export { estimateBudget, estimateFromProfile } from '@/lib/planner/engine';
+export type { PlannerEstimate, PlannerInput, PriceBook } from '@/lib/planner/types';
 
 export interface CalculatorAnswers {
   house_size: string;
@@ -15,6 +31,7 @@ export interface CalculatorAnswers {
 }
 
 export interface BreakdownItem {
+  /** The stage id (lib/stages.ts), e.g. 'frame'. */
   phase: string;
   label: string;
   min: number;
@@ -28,10 +45,7 @@ export interface CalculatorResult {
   breakdown: BreakdownItem[];
 }
 
-// Base cost per sqm in NIS
-const BASE_COST_PER_SQM = 7000;
-
-// Size ranges in sqm (midpoint used for calculation)
+// Size buckets (midpoint used for calculation)
 const SIZE_MAP: Record<string, number> = {
   up_to_100: 90,
   '100_150': 125,
@@ -40,119 +54,67 @@ const SIZE_MAP: Record<string, number> = {
   '250_plus': 280,
 };
 
-// Floor multipliers
-const FLOOR_MULTIPLIER: Record<string, number> = {
-  '1': 1.0,
-  '1.5': 1.08,
-  '2': 1.12,
-  '2_basement': 1.2,
+const FLOORS_MAP: Record<string, Floors> = { '1': 1, '1.5': 2, '2': 2, '2_basement': 2, '3': 3 };
+
+// The legacy "standard" and "standard_high" both mean the owner's standard-to-good anchor.
+const FINISH_MAP: Record<string, FinishLevelId> = {
+  basic: 'basic',
+  standard: 'standard',
+  standard_high: 'standard',
+  high: 'high',
+  luxury: 'luxury',
 };
 
-// Construction method multipliers
-const CONSTRUCTION_MULTIPLIER: Record<string, number> = {
-  blocks: 1.0,
-  concrete: 1.15,
-  precast: 1.1,
-  steel: 1.08,
+// Legacy coarse regions -> regions.slug (north had no single slug; lower Galilee stands in).
+const REGION_MAP: Record<string, string> = {
+  center: 'center',
+  sharon: 'sharon',
+  shfela: 'shfela',
+  north: 'lower-galilee',
+  south: 'south',
+  jerusalem: 'jerusalem',
 };
 
-// Finishing level multipliers
-const FINISHING_MULTIPLIER: Record<string, number> = {
-  standard: 1.0,
-  standard_high: 1.15,
-  high: 1.35,
-  luxury: 1.7,
-};
+// Legacy special features with a sourced price in the price book (others are dropped).
+const FEATURE_MAP: Record<string, ExtraId> = { pool: 'pool', basement: 'basement', vrf: 'vrf', smart_home: 'smart_home', slope: 'slope' };
 
-// Region multipliers
-const REGION_MULTIPLIER: Record<string, number> = {
-  center: 1.1,
-  sharon: 1.08,
-  shfela: 1.0,
-  north: 0.92,
-  south: 0.88,
-  jerusalem: 1.15,
-};
+/** Legacy wizard answers -> planner input (construction method and timeline are not priced). */
+export function plannerInputFromAnswers(answers: Partial<CalculatorAnswers>): PlannerInput {
+  const extras = new Set<ExtraId>();
+  if (answers.basement === 'yes' || answers.floors === '2_basement') extras.add('basement');
+  for (const f of answers.special_features ?? []) if (FEATURE_MAP[f]) extras.add(FEATURE_MAP[f]);
+  return {
+    sizeM2: getSqm(answers.house_size ?? ''),
+    floors: FLOORS_MAP[answers.floors ?? ''] ?? 2,
+    regionSlug: REGION_MAP[answers.region ?? ''] ?? answers.region ?? 'center',
+    finishLevel: FINISH_MAP[answers.finishing_level ?? ''] ?? 'standard',
+    extras: Array.from(extras),
+  };
+}
 
-// Timeline multipliers
-const TIMELINE_MULTIPLIER: Record<string, number> = {
-  urgent: 1.15,
-  normal: 1.0,
-  flexible: 0.95,
-};
-
-// Add-on costs in NIS
-const ADDON_COSTS: Record<string, number> = {
-  pool: 150_000,
-  elevator: 200_000,
-  underground_parking: 180_000,
-  large_balcony: 50_000,
-  solar: 60_000,
-};
-
-// Basement cost (flat)
-const BASEMENT_COST = 250_000;
-
-// Phase breakdown percentages
-const PHASES: { phase: string; label: string; percentage: number }[] = [
-  { phase: 'foundation_structure', label: 'יסודות ושלד', percentage: 35 },
-  { phase: 'interior_finishing', label: 'גמר פנים', percentage: 25 },
-  { phase: 'electrical_plumbing', label: 'חשמל ואינסטלציה', percentage: 12 },
-  { phase: 'roofing', label: 'גג', percentage: 8 },
-  { phase: 'tiling', label: 'ריצוף', percentage: 8 },
-  { phase: 'windows_doors', label: 'חלונות ודלתות', percentage: 7 },
-  { phase: 'exterior', label: 'פיתוח חוץ', percentage: 5 },
-];
+/** The legacy result shape from a planner estimate (stages with a share only). */
+export function toCalculatorResult(estimate: PlannerEstimate): CalculatorResult {
+  const label = (id: string) => BUILD_STAGES.find((s) => s.id === id)?.label ?? id;
+  return {
+    total_min: estimate.total.min,
+    total_max: estimate.total.max,
+    breakdown: estimate.stages
+      .filter((s) => s.included && s.sharePct > 0)
+      .map((s) => ({ phase: s.id, label: label(s.id), min: s.min, max: s.max, percentage: s.sharePct })),
+  };
+}
 
 /**
- * Calculate construction cost estimate from wizard answers.
- * Returns a result with total range and phase breakdown.
+ * Calculate a construction cost estimate from wizard answers.
+ * Returns a result with total range and stage breakdown.
  */
-export function calculateCost(answers: CalculatorAnswers): CalculatorResult {
-  const sqm = SIZE_MAP[answers.house_size] ?? 150;
-  const baseCost = sqm * BASE_COST_PER_SQM;
-
-  // Apply multipliers
-  const multiplied =
-    baseCost *
-    (FLOOR_MULTIPLIER[answers.floors] ?? 1.0) *
-    (CONSTRUCTION_MULTIPLIER[answers.construction_method] ?? 1.0) *
-    (FINISHING_MULTIPLIER[answers.finishing_level] ?? 1.0) *
-    (REGION_MULTIPLIER[answers.region] ?? 1.0) *
-    (TIMELINE_MULTIPLIER[answers.timeline] ?? 1.0);
-
-  // Add-ons
-  let addons = 0;
-  if (answers.basement === 'yes') {
-    addons += BASEMENT_COST;
-  }
-  if (answers.special_features && answers.special_features.length > 0) {
-    for (const feature of answers.special_features) {
-      addons += ADDON_COSTS[feature] ?? 0;
-    }
-  }
-
-  const total = multiplied + addons;
-
-  // Ranges: +/- 15%
-  const total_min = Math.round(total * 0.85);
-  const total_max = Math.round(total * 1.15);
-
-  // Phase breakdown
-  const breakdown: BreakdownItem[] = PHASES.map((p) => ({
-    phase: p.phase,
-    label: p.label,
-    percentage: p.percentage,
-    min: Math.round((total_min * p.percentage) / 100),
-    max: Math.round((total_max * p.percentage) / 100),
-  }));
-
-  return { total_min, total_max, breakdown };
+export function calculateCost(answers: CalculatorAnswers, book: PriceBook = DEFAULT_PRICE_BOOK): CalculatorResult {
+  return toCalculatorResult(estimateBudget(plannerInputFromAnswers(answers), book));
 }
 
 /** Format NIS amount with LTR mark for correct RTL rendering */
 export function formatNIS(amount: number): string {
-  return `\u200E${amount.toLocaleString('he-IL')} \u20AA`;
+  return `${String.fromCharCode(0x200e)}${amount.toLocaleString('he-IL')} ₪`;
 }
 
 /** Get the sqm value for a size key */

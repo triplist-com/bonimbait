@@ -60,7 +60,7 @@ export default async function WhatsappJoinPage() {
                   key={g.slug}
                   className="flex items-center gap-2 rounded-xl border border-gray-100 bg-white px-4 py-2.5 text-gray-800"
                 >
-                  <span className="h-2 w-2 shrink-0 rounded-full bg-[#25D366]" aria-hidden="true" />
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-whatsapp" aria-hidden="true" />
                   {g.name}
                 </li>
               ))}
@@ -127,7 +127,7 @@ export default async function WhatsappJoinPage() {
         </p>
         <a
           href="#join-form"
-          className="mt-5 inline-block rounded-xl bg-[#25D366] px-8 py-3 font-semibold text-white shadow-md hover:brightness-95"
+          className="mt-5 inline-block rounded-xl bg-whatsapp px-8 py-3 font-semibold text-ink-950 shadow-md hover:brightness-95"
         >
           להצטרפות לקבוצה
         </a>

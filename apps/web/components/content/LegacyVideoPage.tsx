@@ -1,61 +1,67 @@
 import Link from 'next/link';
+import { ArrowLeft, Sparkles } from 'lucide-react';
 import StructuredData from '@/components/StructuredData';
+import { YouTubeFacade } from '@/components/ui/YouTubeFacade';
+import { Badge } from '@/components/ui/Badge';
 import type { VideoPageRow } from '@/lib/db/types';
 import { getCategoryMap } from '@/lib/content/queries';
 import { htmlToText, prepareContentHtml } from '@/lib/content/sanitize';
 import { canonicalPath, formatHebrewDate } from '@/lib/content/seo';
-import { findIndexedYoutubeId, legacyCategories, loadVideoPagesForYoutubeIds, videoThumb } from '@/lib/content/videos';
+import { findAiPageYoutubeId, legacyCategories, loadVideoPagesForYoutubeIds, videoThumb } from '@/lib/content/videos';
 import { absoluteUrl } from '@/lib/site';
 import ArticleBody from './ArticleBody';
 import Breadcrumbs from './Breadcrumbs';
 import ConsultationCTA from '@/components/leads/ConsultationCTA';
+import PartnerOfferSlot from '@/components/revenue/PartnerOfferSlot';
+import SaveButton from '@/components/hub/SaveButton';
+import { isEnabled } from '@/lib/flags';
 import VideoPageCard from './VideoPageCard';
+import DeepLinkFacade from '@/components/video/DeepLinkFacade';
+import { getStaticVideo } from '@/app/api/_lib/data';
+import { legacyVideoJsonLd } from '@/lib/seo/video-pages';
 
-function YouTubeEmbed({ id, title }: { id: string; title: string }) {
-  return (
-    <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-gray-900 shadow-card">
-      <iframe
-        src={`https://www.youtube-nocookie.com/embed/${id}?rel=0`}
-        title={title}
-        loading="lazy"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        allowFullScreen
-        className="absolute inset-0 w-full h-full border-0"
-      />
-    </div>
-  );
+/** The static index record of a YouTube id, or null (index unavailable). */
+function staticRecord(youtubeId: string) {
+  try {
+    return getStaticVideo(youtubeId);
+  } catch {
+    return null;
+  }
 }
 
 /** Legacy WordPress /video/<hebrew-slug>/ page (videos and podcast episodes). */
 export default async function LegacyVideoPage({ page }: { page: VideoPageRow }) {
   const path = `/video/${page.legacy_slug}/`;
   const { html, jsonLd } = prepareContentHtml(page.body_html);
-  const indexedId = findIndexedYoutubeId(page.youtube_ids ?? []);
+  const indexedId = await findAiPageYoutubeId(page.youtube_ids ?? []);
   const [more, categoryMap] = await Promise.all([
     loadVideoPagesForYoutubeIds(page.related_youtube_ids ?? [], page.id, 6),
     getCategoryMap(),
   ]);
   const postCategorySlugs = new Set(Array.from(categoryMap.values()).map((c) => c.slug.normalize('NFC')));
-  const cats = legacyCategories(page.legacy_categories);
+  const kindLabel = page.kind === 'podcast' ? 'פודקאסט' : 'וידאו';
+  // The WordPress categories include the kind itself ("וידאו", "פודקאסט"): the kind badge already says it.
+  const cats = legacyCategories(page.legacy_categories).filter((c) => c.name !== 'וידאו' && c.name !== 'פודקאסט');
   const thumb = videoThumb(page);
   const description = page.seo_description || htmlToText(page.excerpt || page.body_html, 200) || page.title;
-  const kindLabel = page.kind === 'podcast' ? 'פודקאסט' : 'וידאו';
+  const firstVideo = page.youtube_ids?.[0];
 
   return (
     <div className="pb-16">
-      <StructuredData
-        data={{
-          '@context': 'https://schema.org',
-          '@type': 'VideoObject',
-          name: page.title,
-          description,
-          thumbnailUrl: thumb ? [thumb] : undefined,
-          uploadDate: page.published_at ?? page.created_at,
-          embedUrl: page.youtube_ids?.[0] ? `https://www.youtube.com/embed/${page.youtube_ids[0]}` : undefined,
-          url: absoluteUrl(canonicalPath(page, path)),
-          inLanguage: 'he-IL',
-        }}
-      />
+      {firstVideo && (
+        <StructuredData
+          data={legacyVideoJsonLd({
+            youtubeId: firstVideo,
+            title: page.title,
+            description,
+            thumbnailUrl: thumb,
+            uploadDate: page.published_at ?? page.created_at,
+            pageUrl: absoluteUrl(path),
+            canonicalUrl: absoluteUrl(canonicalPath(page, path)),
+            record: staticRecord(firstVideo),
+          })}
+        />
+      )}
       {jsonLd.map((node, i) => (
         <StructuredData key={i} data={node} />
       ))}
@@ -71,7 +77,7 @@ export default async function LegacyVideoPage({ page }: { page: VideoPageRow }) 
 
         <header className="mt-6 mb-6">
           <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className="text-xs font-semibold text-white bg-secondary px-2.5 py-1 rounded-full">{kindLabel}</span>
+            <Badge tone="ink">{kindLabel}</Badge>
             {cats.map((c) =>
               postCategorySlugs.has(c.slug.normalize('NFC')) ? (
                 <Link
@@ -88,18 +94,29 @@ export default async function LegacyVideoPage({ page }: { page: VideoPageRow }) 
               ),
             )}
           </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">{page.title}</h1>
-          <p className="mt-3 text-sm text-gray-500 flex flex-wrap gap-x-4">
+          <h1 className="text-headline text-ink-900">{page.title}</h1>
+          <p className="mt-3 text-sm text-ink-500 flex flex-wrap gap-x-4">
             {page.author_name && <span>{page.author_name}</span>}
             {page.published_at && <time dateTime={page.published_at}>{formatHebrewDate(page.published_at)}</time>}
           </p>
+          {isEnabled('hub') && <SaveButton kind="video_page" refId={page.legacy_slug} title={page.title} className="mt-4" />}
         </header>
 
         <div className="space-y-6">
           {(page.youtube_ids ?? []).length > 0 ? (
-            page.youtube_ids.map((id, i) => (
-              <YouTubeEmbed key={id} id={id} title={i === 0 ? page.title : `${page.title} (${i + 1})`} />
-            ))
+            page.youtube_ids.map((id, i) => {
+              // The first player honours ?t= (key-moment and SeekToAction links point here).
+              const Facade = i === 0 ? DeepLinkFacade : YouTubeFacade;
+              return (
+                <Facade
+                  key={id}
+                  youtubeId={id}
+                  title={i === 0 ? page.title : `${page.title} (${i + 1})`}
+                  poster={i === 0 ? page.featured_image : null}
+                  priority={i === 0}
+                />
+              );
+            })
           ) : thumb ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={thumb} alt={page.title} className="w-full rounded-2xl shadow-card" />
@@ -109,21 +126,23 @@ export default async function LegacyVideoPage({ page }: { page: VideoPageRow }) 
         {indexedId && (
           <Link
             href={`/video/${indexedId}/`}
-            className="mt-6 flex items-center gap-4 rounded-2xl gradient-border p-5 hover:shadow-glow transition-shadow"
+            className="group mt-6 flex items-center gap-4 rounded-2xl gradient-border p-5 transition-shadow hover:shadow-card-hover"
           >
-            <span className="flex-shrink-0 w-11 h-11 rounded-xl bg-primary-50 text-primary flex items-center justify-center" aria-hidden="true">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-              </svg>
+            <span className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center" aria-hidden="true">
+              <Sparkles className="size-6" />
             </span>
-            <span>
-              <span className="block font-bold text-gray-900">סיכום AI עם חותמות זמן</span>
-              <span className="block text-sm text-gray-500">נקודות מפתח, עלויות וקפיצה ישירה לרגע הרלוונטי בסרטון</span>
+            <span className="flex-1">
+              <span className="block font-bold text-ink-900">סיכום הסרטון, עם חותמות זמן</span>
+              <span className="block text-sm text-ink-600">נקודות מפתח, עלויות וקפיצה ישירה לרגע הרלוונטי בסרטון</span>
             </span>
+            <ArrowLeft aria-hidden="true" className="size-5 shrink-0 text-ink-400 transition-transform group-hover:-translate-x-1 ltr:rotate-180" />
           </Link>
         )}
 
         {html.trim() && <ArticleBody html={html} className="mt-10 max-w-3xl" />}
+
+        {/* Sponsored partner offer for this video's topic (revenue; FLAG_REVENUE). */}
+        <PartnerOfferSlot slot="video-page" context={{ topic: page.title, placement: 'video' }} className="mt-12 max-w-3xl" />
 
         <div className="mt-12">
           <ConsultationCTA variant="card" source="video-page" />
@@ -131,7 +150,7 @@ export default async function LegacyVideoPage({ page }: { page: VideoPageRow }) 
 
         {more.length > 0 && (
           <section className="mt-14" aria-labelledby="more-videos">
-            <h2 id="more-videos" className="text-2xl font-bold text-gray-900 mb-6">
+            <h2 id="more-videos" className="text-headline-sm text-ink-900 mb-6">
               סרטונים נוספים
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

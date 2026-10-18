@@ -18,14 +18,13 @@ function providerName(): PaymentProviderName {
 
 /**
  * The mock provider marks orders paid without charging anyone, so it is refused
- * on a Vercel production deployment unless PAYMENT_ALLOW_MOCK_IN_PRODUCTION=true.
+ * on every Vercel deployment (production, and previews, which may share the
+ * production database) unless PAYMENT_ALLOW_MOCK_IN_PRODUCTION=true. Local
+ * development and the test suites keep it.
  */
 function mockBlocked(name: PaymentProviderName): boolean {
-  return (
-    name === 'mock' &&
-    process.env.VERCEL_ENV === 'production' &&
-    process.env.PAYMENT_ALLOW_MOCK_IN_PRODUCTION !== 'true'
-  );
+  const onVercel = Boolean(process.env.VERCEL) || Boolean(process.env.VERCEL_ENV);
+  return name === 'mock' && onVercel && process.env.PAYMENT_ALLOW_MOCK_IN_PRODUCTION !== 'true';
 }
 
 /** Whether the site may offer online purchase (buy buttons, add to cart, checkout). */

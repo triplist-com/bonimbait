@@ -1,5 +1,8 @@
 import Link from 'next/link';
+import { Clock3 } from 'lucide-react';
 import StructuredData from '@/components/StructuredData';
+import { ChipLink } from '@/components/ui/Chip';
+import { SmartImage } from '@/components/ui/SmartImage';
 import type { PostRow } from '@/lib/db/types';
 import { getAuthorById, getCategoriesForPost, listRelatedPosts } from '@/lib/db/posts';
 import { getPublicDb, safeQuery } from '@/lib/content/db';
@@ -11,6 +14,11 @@ import ArticleBody from './ArticleBody';
 import Breadcrumbs from './Breadcrumbs';
 import CommunityCTA from './CommunityCTA';
 import ConsultationCTA from '@/components/leads/ConsultationCTA';
+import AskAbout from '@/components/advisor/AskAbout';
+import PartnerOfferSlot from '@/components/revenue/PartnerOfferSlot';
+import { stageForCategory } from '@/lib/stages';
+import SaveButton from '@/components/hub/SaveButton';
+import { isEnabled } from '@/lib/flags';
 import { PostGrid } from './PostCard';
 import { TocInline, TocSidebar } from './TableOfContents';
 
@@ -67,65 +75,72 @@ export default async function PostArticle({ post }: { post: PostRow }) {
         <StructuredData key={i} data={node} />
       ))}
 
-      <header className="bg-gradient-to-b from-primary-50/60 to-transparent pt-6 sm:pt-10 pb-8">
+      <header className="relative isolate overflow-hidden bg-sand-50 pb-10 pt-6 sm:pb-12 sm:pt-8">
+        <div aria-hidden="true" className="bg-blueprint mask-fade-b absolute inset-0 -z-10" />
         <div className="container-page max-w-5xl">
           <Breadcrumbs crumbs={crumbs} />
           {categories.length > 0 && (
-            <ul className="flex flex-wrap gap-2 mt-6" aria-label="קטגוריות">
+            <ul className="mt-6 flex flex-wrap gap-2" aria-label="קטגוריות">
               {categories.map((c) => (
                 <li key={c.id}>
-                  <Link
-                    href={`/category/${c.slug}/`}
-                    className="inline-block text-xs font-semibold text-primary bg-white border border-primary-100 px-3 py-1 rounded-full hover:bg-primary-50 transition-colors"
-                  >
+                  <ChipLink href={`/category/${c.slug}/`} size="sm" prefetch={false}>
                     {c.name}
-                  </Link>
+                  </ChipLink>
                 </li>
               ))}
             </ul>
           )}
-          <h1 className="mt-4 text-3xl sm:text-4xl lg:text-[2.75rem] font-bold text-gray-900 leading-tight">
+          <h1 className="mt-5 text-[2rem] font-extrabold leading-[1.2] tracking-[-0.02em] text-ink-900 sm:text-[2.625rem] sm:leading-[1.15]">
             {post.title}
           </h1>
-          <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500">
+          <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-600">
             {author && (
-              <Link href={`/author/${author.slug}/`} className="flex items-center gap-2 hover:text-primary transition-colors">
+              <Link href={`/author/${author.slug}/`} className="flex items-center gap-2.5 transition-colors hover:text-primary-700">
                 {author.avatar_url && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={author.avatar_url} alt="" width={28} height={28} className="w-7 h-7 rounded-full" loading="lazy" />
+                  <img src={author.avatar_url} alt="" width={32} height={32} className="size-8 rounded-full ring-2 ring-white" loading="lazy" />
                 )}
-                <span className="font-medium text-gray-700">{author.name}</span>
+                <span className="font-semibold text-ink-900">{author.name}</span>
               </Link>
             )}
-            {post.published_at && (
-              <time dateTime={post.published_at}>{formatHebrewDate(post.published_at)}</time>
-            )}
-            <span>{minutes} דקות קריאה</span>
+            {post.published_at && <time dateTime={post.published_at}>{formatHebrewDate(post.published_at)}</time>}
+            <span className="inline-flex items-center gap-1.5">
+              <Clock3 aria-hidden="true" className="size-4 text-ink-400" />
+              <span className="num">{minutes}</span> דקות קריאה
+            </span>
+            {isEnabled('hub') && <SaveButton kind="post" refId={post.slug} title={post.title} />}
           </div>
         </div>
       </header>
 
       <div className="container-page max-w-5xl">
         {post.featured_image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={post.featured_image}
-            alt={post.featured_image_alt || post.title}
-            className="w-full max-h-[30rem] object-cover rounded-3xl shadow-card mb-10"
-            loading="eager"
-            decoding="async"
-          />
+          <div className="relative -mt-2 mb-10 aspect-[16/9] overflow-hidden rounded-3xl bg-sand-100 shadow-card sm:mt-6 sm:aspect-[2/1]">
+            <SmartImage
+              src={post.featured_image}
+              alt={post.featured_image_alt || ''}
+              priority
+              sizes="(min-width: 1024px) 64rem, 100vw"
+            />
+          </div>
         )}
 
         <div className={toc.length >= 4 ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_16rem] lg:gap-10' : ''}>
           <div className="min-w-0 max-w-3xl">
             <TocInline items={toc} />
             <ArticleBody html={html} />
+            <AskAbout kind="post" id={post.slug} className="mt-12" />
+            {/* Sponsored partner offer for the article's topic and stage (revenue; FLAG_REVENUE). */}
+            <PartnerOfferSlot
+              slot="article"
+              context={{ topic: post.title, stage: primary ? stageForCategory(primary.slug)?.id : null, placement: 'article' }}
+              className="mt-12"
+            />
             <div className="mt-12">
               <ConsultationCTA variant="card" source="post-footer" />
             </div>
             {author?.bio_html && (
-              <section aria-label="על הכותב" className="mt-10 flex gap-4 rounded-2xl bg-white border border-gray-100 p-6">
+              <section aria-label="על הכותב" className="mt-10 flex gap-4 rounded-3xl border border-ink-100 bg-white p-6 shadow-card">
                 {author.avatar_url && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={author.avatar_url} alt="" width={56} height={56} className="w-14 h-14 rounded-full flex-shrink-0" loading="lazy" />
@@ -155,14 +170,14 @@ export default async function PostArticle({ post }: { post: PostRow }) {
         {related.length > 0 && primary && (
           <section className="mt-14" aria-labelledby="related-heading">
             <div className="flex items-center justify-between mb-6">
-              <h2 id="related-heading" className="text-2xl font-bold text-gray-900">
+              <h2 id="related-heading" className="text-headline-sm text-ink-900">
                 עוד ב{primary.name}
               </h2>
-              <Link href={`/category/${primary.slug}/`} className="text-sm font-medium text-primary hover:text-primary-700">
+              <Link href={`/category/${primary.slug}/`} className="text-sm font-semibold text-ink-900 hover:text-primary-700">
                 לכל המדריכים
               </Link>
             </div>
-            <PostGrid posts={related.map((r) => ({ ...r, categoryName: primary.name }))} />
+            <PostGrid posts={related.map((r) => ({ ...r, categoryName: primary.name, categorySlug: primary.slug }))} />
           </section>
         )}
       </div>

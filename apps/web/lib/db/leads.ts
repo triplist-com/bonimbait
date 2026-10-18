@@ -42,6 +42,8 @@ export type NewLead = {
   whatsappGroupId?: string | null;
   memberId?: string | null;
   ipHash?: string | null;
+  /** Trusted path only (the DB ignores it from untrusted writers). */
+  attribution?: Json | null;
 };
 
 function toInsert(lead: NewLead): TablesInsert<'leads'> {
@@ -62,6 +64,8 @@ function toInsert(lead: NewLead): TablesInsert<'leads'> {
     whatsapp_group_id: lead.whatsappGroupId ?? null,
     member_id: lead.memberId ?? null,
     ip_hash: lead.ipHash ?? null,
+    // Only sent when known, so direct-traffic leads never depend on the column.
+    ...(lead.attribution != null ? { attribution: lead.attribution } : {}),
   };
 }
 
@@ -69,6 +73,7 @@ function toInsert(lead: NewLead): TablesInsert<'leads'> {
 export async function createLead(db: DbClient, lead: NewLead): Promise<void> {
   const row = toInsert(lead);
   delete row.ip_hash; // reserved for the trusted path
+  delete row.attribution;
   check(await db.from('leads').insert(row));
 }
 
@@ -176,6 +181,12 @@ export type LeadListFilter = {
   to?: string;
   /** Free-text match on name, email or phone. */
   q?: string;
+  /** Lead score at least this (leads.score, revenue squad); unscored leads drop out. */
+  minScore?: number;
+  /** Only consultations with a booked meeting (leads.booked_at). */
+  booked?: boolean;
+  /** 'newest' (default) or 'score' (highest first, then newest). */
+  sort?: 'newest' | 'score';
 };
 
 function endOfDay(value: string): string {
@@ -187,11 +198,12 @@ export async function listLeads(db: DbClient, opts: LeadListFilter = {}): Promis
   const page = opts.page ?? 1;
   const pageSize = opts.pageSize ?? 50;
   const { from, to } = pageRange(page, pageSize);
-  let query = db
-    .from('leads')
-    .select('*', { count: 'exact' })
-    .order('created_at', { ascending: false })
-    .range(from, to);
+  let query = db.from('leads').select('*', { count: 'exact' });
+  // score / booked_at are revenue columns (migration 20261014122000), outside the shared row type.
+  if (opts.sort === 'score') query = query.order('score', { ascending: false, nullsFirst: false });
+  query = query.order('created_at', { ascending: false }).range(from, to);
+  if (opts.minScore != null && Number.isFinite(opts.minScore)) query = query.gte('score', opts.minScore);
+  if (opts.booked) query = query.not('booked_at', 'is', null);
   if (opts.status) query = Array.isArray(opts.status) ? query.in('status', opts.status) : query.eq('status', opts.status);
   if (opts.type) query = Array.isArray(opts.type) ? query.in('type', opts.type) : query.eq('type', opts.type);
   if (opts.businessId) query = query.eq('business_id', opts.businessId);
@@ -201,7 +213,7 @@ export async function listLeads(db: DbClient, opts: LeadListFilter = {}): Promis
   if (opts.q) {
     // Strip PostgREST filter syntax characters before building the or() filter.
     const term = opts.q.replace(/[,()*%\\]/g, ' ').trim();
-    if (term) query = query.or(`full_name.ilike.*${term}*,email.ilike.*${term}*,phone.ilike.*${term}*`);
+    if (term) query = query.or(`full_name.ilike.*${term}*,email.ilike.*${term}*,phone.ilike.*${term}*,ref.ilike.*${term}*`);
   }
   const result = await query;
   return { items: unwrap(result), total: result.count ?? 0, page, pageSize };

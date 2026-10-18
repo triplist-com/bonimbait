@@ -19,6 +19,13 @@ import { htmlToEditableText } from '@/lib/directory/html';
 import { REVIEW_SCORE_LABELS } from '@/lib/db/reviews';
 import type { BusinessRow, LeadRow, ReviewRow } from '@/lib/db/types';
 import { ContactsForm, DetailsForm, MediaForm, TaxonomyForm } from '@/components/directory/PortalEditor';
+import PortalDashboard from '@/components/revenue/portal/PortalDashboard';
+import PartnerTierBadge from '@/components/revenue/PartnerTierBadge';
+import { isEnabled } from '@/lib/flags';
+import { onlinePaymentsEnabled } from '@/lib/payments';
+import { reportDealAction, upgradeTierAction } from '@/lib/revenue/actions/portal';
+import { revenueUserDb } from '@/lib/revenue/db';
+import { loadPortalView } from '@/lib/revenue/portal-server';
 
 const LOGIN_URL = '/login/?next=%2Fpartner-portal%2F';
 
@@ -143,8 +150,10 @@ function ReviewsList({ reviews }: { reviews: ReviewRow[] }) {
 /**
  * Business self-service portal. Signed-out visitors are sent to
  * /login/?next=/partner-portal/ (the live site 302s to wp-login.php).
+ * With FLAG_REVENUE the portal leads with the business's results
+ * (components/revenue/portal/PortalDashboard.tsx), then the profile editor.
  */
-export default async function PartnerPortalPage({ searchParams }: { searchParams: { b?: string } }) {
+export default async function PartnerPortalPage({ searchParams }: { searchParams: { b?: string; upgraded?: string; checkout?: string } }) {
   const profile = await getProfile();
   if (!profile) redirect(LOGIN_URL);
 
@@ -160,33 +169,47 @@ export default async function PartnerPortalPage({ searchParams }: { searchParams
 
   const selected = owned.find((b) => b.id === searchParams.b) ?? owned[0];
   const canEdit = hasRole(profile.role, 'pro') && selected.status !== 'suspended';
+  const revenue = isEnabled('revenue') && canEdit;
 
   const [detail, contacts, specialties, regions, leads, reviewsRes] = await Promise.all([
     getBusinessById(db, selected.id),
     getBusinessContacts(db, selected.id),
     listSpecialties(db),
     listRegions(db),
-    listLeads(db, { businessId: selected.id, pageSize: 50 }),
+    revenue ? null : listLeads(db, { businessId: selected.id, pageSize: 50 }),
     db.from('reviews').select('*').eq('business_id', selected.id).order('created_at', { ascending: false }),
   ]);
   const reviews = reviewsRes.data ?? [];
   const phoneDigits = (v: string | null | undefined) => (v ? normalizeIsraeliPhone(v) ?? v : '');
+  const view =
+    revenue && detail
+      ? await loadPortalView(
+          revenueUserDb(),
+          { ...detail, gallery: detail.gallery as unknown, specialties: detail.specialties, regions: detail.regions },
+          contacts ? { phone: contacts.phone, whatsapp: contacts.whatsapp, lead_email: contacts.lead_email } : null,
+        )
+      : null;
 
   return (
     <div className="container-page space-y-6 py-10">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm text-gray-500">ניהול העסק</p>
-          <h1 className="text-3xl font-bold text-gray-900">{selected.name}</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            סטטוס: <span className="font-semibold">{STATUS_LABEL[selected.status]}</span>
+          <p className="eyebrow">ניהול העסק</p>
+          <h1 className="mt-1 text-headline text-ink-900">{selected.name}</h1>
+          <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-600">
+            <span>
+              סטטוס: <span className="font-semibold">{STATUS_LABEL[selected.status]}</span>
+            </span>
+            {view?.business.badge && <PartnerTierBadge badge={view.business.badge} />}
             {selected.status === 'published' && (
-              <>
-                {' · '}
-                <Link href={businessHref(selected.slug)} className="text-primary underline">
-                  לצפייה בעמוד העסק
-                </Link>
-              </>
+              <Link href={businessHref(selected.slug)} className="text-primary-700 underline">
+                לצפייה בעמוד העסק
+              </Link>
+            )}
+            {view?.subscription && (
+              <Link href={`/partner-portal/report/?b=${selected.id}`} className="text-primary-700 underline">
+                דוח שותף
+              </Link>
             )}
           </p>
         </div>
@@ -207,48 +230,76 @@ export default async function PartnerPortalPage({ searchParams }: { searchParams
       </header>
 
       {!canEdit && (
-        <p className="rounded-2xl bg-amber-50 p-4 text-amber-800">
+        <p className="rounded-2xl bg-warning-50 p-4 text-warning-800">
           {selected.status === 'suspended'
             ? 'העסק מושהה. לפרטים צרו קשר עם צוות בונים בית.'
             : 'הפרופיל ממתין לאישור צוות בונים בית. לאחר האישור תוכלו לערוך את הפרטים, להעלות תמונות ולראות פניות.'}
         </p>
       )}
 
-      {canEdit && detail && (
-        <div className="grid gap-6 xl:grid-cols-2">
-          <DetailsForm
-            businessId={selected.id}
-            defaults={{
-              tagline: selected.tagline ?? '',
-              about: htmlToEditableText(selected.description_html),
-              city: selected.city ?? '',
-              website: selected.website ?? '',
-            }}
-          />
-          <ContactsForm
-            businessId={selected.id}
-            leadRouting={selected.lead_routing}
-            defaults={{
-              phone: phoneDigits(contacts?.phone),
-              whatsapp: phoneDigits(contacts?.whatsapp),
-              email: contacts?.email ?? '',
-              leadEmail: contacts?.lead_email ?? '',
-              otherPhones: (contacts?.other_phones ?? []).join(', '),
-            }}
-          />
-          <TaxonomyForm
-            businessId={selected.id}
-            specialties={specialties.map((s) => ({ id: s.id, name: s.name }))}
-            regions={regions.map((r) => ({ id: r.id, name: r.name }))}
-            selectedSpecialties={detail.specialties.map((s) => s.id)}
-            selectedRegions={detail.regions.map((r) => r.id)}
-            primarySpecialtyId={selected.primary_specialty_id}
-          />
-          <MediaForm businessId={selected.id} initialGallery={parseGallery(selected.gallery)} initialLogo={selected.logo_url} />
-        </div>
+      {view && (
+        <PortalDashboard
+          view={view}
+          // Without online payments (no provider, or mock on production) the
+          // tiers offer a conversation instead of a checkout that can't happen.
+          upgradeAction={onlinePaymentsEnabled() ? upgradeTierAction : undefined}
+          upgradeContactHref="/strategic-partners/"
+          dealAction={reportDealAction}
+          reportHref={view.subscription ? `/partner-portal/report/?b=${selected.id}` : null}
+          notice={searchParams.upgraded === '1' ? 'upgraded' : searchParams.checkout === 'failed' ? 'checkout_failed' : null}
+        />
       )}
 
-      {canEdit && (
+      {canEdit && detail && (
+        <section aria-labelledby="edit-title" className="space-y-4">
+          {view && (
+            <h2 id="edit-title" className="text-headline-sm text-ink-900">
+              עריכת הפרופיל
+            </h2>
+          )}
+          <div className="grid gap-6 xl:grid-cols-2">
+            <div id="details" className="scroll-mt-24">
+              <DetailsForm
+                businessId={selected.id}
+                defaults={{
+                  tagline: selected.tagline ?? '',
+                  about: htmlToEditableText(selected.description_html),
+                  city: selected.city ?? '',
+                  website: selected.website ?? '',
+                }}
+              />
+            </div>
+            <div id="contacts" className="scroll-mt-24">
+              <ContactsForm
+                businessId={selected.id}
+                leadRouting={selected.lead_routing}
+                defaults={{
+                  phone: phoneDigits(contacts?.phone),
+                  whatsapp: phoneDigits(contacts?.whatsapp),
+                  email: contacts?.email ?? '',
+                  leadEmail: contacts?.lead_email ?? '',
+                  otherPhones: (contacts?.other_phones ?? []).join(', '),
+                }}
+              />
+            </div>
+            <div id="taxonomy" className="scroll-mt-24">
+              <TaxonomyForm
+                businessId={selected.id}
+                specialties={specialties.map((s) => ({ id: s.id, name: s.name }))}
+                regions={regions.map((r) => ({ id: r.id, name: r.name }))}
+                selectedSpecialties={detail.specialties.map((s) => s.id)}
+                selectedRegions={detail.regions.map((r) => r.id)}
+                primarySpecialtyId={selected.primary_specialty_id}
+              />
+            </div>
+            <div id="media" className="scroll-mt-24">
+              <MediaForm businessId={selected.id} initialGallery={parseGallery(selected.gallery)} initialLogo={selected.logo_url} />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {canEdit && !view && leads && (
         <div className="grid gap-6 xl:grid-cols-2">
           <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-card sm:p-6">
             <h2 className="mb-4 text-lg font-bold text-gray-900">פניות</h2>

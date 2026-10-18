@@ -127,7 +127,7 @@ export default function ContentForm({
             />
           </FormField>
           {slugChanged && wasPublished && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <div className="rounded-lg border border-warning-200 bg-warning-50 p-3 text-sm text-warning-800">
               <p className="mb-2">
                 שיניתם את הכתובת של תוכן שכבר פורסם. גוגל ומבקרים עדיין מגיעים לכתובת הקודמת (
                 <span dir="ltr">

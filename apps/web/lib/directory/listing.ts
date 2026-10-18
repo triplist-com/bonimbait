@@ -13,6 +13,7 @@
  */
 import type { DirectoryEntry } from '@/lib/db/businesses';
 import type { BusinessReviewStatsRow, RegionRow, SpecialtyRow } from '@/lib/db/types';
+import { orderWithinRelevance } from '@/lib/revenue/tiers';
 import { htmlToText } from './html';
 
 export const PAGE_SIZE = 12; // live: 12 per page
@@ -98,6 +99,12 @@ export function applyListing(
     specialties: SpecialtyRow[];
     regions: RegionRow[];
     stats: Map<string, BusinessReviewStatsRow>;
+    /**
+     * Partner tier rank per business (revenue squad, lib/revenue/tiers.ts):
+     * partners come first within each relevance bucket in the default order,
+     * and break ties in the rating / review-count sorts.
+     */
+    tierRanks?: ReadonlyMap<string, number>;
   },
 ): ListingResult {
   const specialty = filters.specialty ? ctx.specialties.find((s) => s.slug === filters.specialty) ?? null : null;
@@ -131,12 +138,20 @@ export function applyListing(
   const byRating = (a: DirectoryEntry, b: DirectoryEntry) =>
     (stat(b)?.rating_percent ?? -1) - (stat(a)?.rating_percent ?? -1);
   const byCount = (a: DirectoryEntry, b: DirectoryEntry) => (stat(b)?.review_count ?? 0) - (stat(a)?.review_count ?? 0);
+  const tierOf = (b: DirectoryEntry) => ctx.tierRanks?.get(b.id) ?? 0;
+  const byTier = (a: DirectoryEntry, b: DirectoryEntry) => tierOf(b) - tierOf(a);
+  // A free-text search ranks name matches above description/specialty matches.
+  const nameTerms = filters.q ? normalizeForSearch(filters.q).split(' ').filter(Boolean) : [];
+  const relevance = nameTerms.length
+    ? (b: DirectoryEntry) => (nameTerms.every((t) => normalizeForSearch(b.name).includes(t)) ? 0 : 1)
+    : undefined;
 
-  const sorted = [...items].sort((a, b) => {
-    if (filters.sort === 'rating') return byRating(a, b) || byCount(a, b) || liveOrder(a, b);
-    if (filters.sort === 'comments') return byCount(a, b) || byRating(a, b) || liveOrder(a, b);
-    return liveOrder(a, b);
-  });
+  const sorted =
+    filters.sort === 'rating'
+      ? [...items].sort((a, b) => byRating(a, b) || byCount(a, b) || byTier(a, b) || liveOrder(a, b))
+      : filters.sort === 'comments'
+        ? [...items].sort((a, b) => byCount(a, b) || byRating(a, b) || byTier(a, b) || liveOrder(a, b))
+        : orderWithinRelevance(items, { relevance, tierRank: tierOf, tiebreak: liveOrder });
 
   const total = sorted.length;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));

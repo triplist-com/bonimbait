@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { listPublishedRuntimeVideos } from '@/lib/autopilot/videos';
 import { SCENARIOS } from '@/lib/calculator-scenarios';
 import { absoluteUrl } from '@/lib/site';
 import { getPublicDb, safeQuery } from '@/lib/content/db';
@@ -6,6 +7,7 @@ import { listSlugs } from '@/lib/content/queries';
 import { listAuthors, listPostCategories, listPublishedPostSlugs } from '@/lib/db/posts';
 import { listPublishedPageSlugs } from '@/lib/db/pages';
 import { listVideoPageSlugs } from '@/lib/db/videos';
+import { isTitleOnlyVideo } from '@/lib/seo/video-pages';
 
 /**
  * One sitemap for every public URL (~1,450 entries, far below the 50,000
@@ -88,11 +90,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const { getCategories, getVideos } = await import('./api/_lib/data');
     for (const c of getCategories()) indexed.push(entry(`/category/${c.slug}/`, 0.6, 'weekly', now));
-    for (const v of getVideos({ limit: 5000 }).videos) {
-      indexed.push(entry(`/video/${v.youtube_id}/`, 0.5, 'monthly', v.published_at || null));
+    // getVideos caps a page at 100 videos; the catalog has ~950, so walk every page.
+    for (let page = 1, pages = 1; page <= pages; page++) {
+      const result = getVideos({ page, limit: 100 });
+      pages = result.pages;
+      for (const v of result.videos) {
+        // Title-only catalog entries (no transcript) are noindex pages: reachable, not listed.
+        if (isTitleOnlyVideo(v)) continue;
+        indexed.push(entry(`/video/${v.youtube_id}/`, 0.5, 'monthly', v.published_at || null));
+      }
     }
   } catch {
     // Static index unavailable: skip.
+  }
+  // Videos published at runtime by Content Autopilot (empty if the store is unavailable).
+  for (const v of await listPublishedRuntimeVideos()) {
+    indexed.push(entry(`/video/${v.youtube_id}/`, 0.5, 'monthly', v.updated_at || v.published_at));
   }
 
   const db = getPublicDb();

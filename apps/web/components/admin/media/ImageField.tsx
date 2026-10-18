@@ -24,7 +24,7 @@ export default function ImageField({
           בחירה
         </button>
         {url && (
-          <button type="button" onClick={() => setUrl('')} className="shrink-0 rounded-lg border border-gray-300 px-3 text-sm text-red-700 hover:bg-red-50">
+          <button type="button" onClick={() => setUrl('')} className="shrink-0 rounded-lg border border-gray-300 px-3 text-sm text-danger-700 hover:bg-danger-50">
             הסרה
           </button>
         )}

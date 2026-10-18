@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="איור: יציקת רצפה">
+  <defs>
+    <linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FBF8F3"/><stop offset="1" stop-color="#EFE7DA"/></linearGradient>
+    <linearGradient id="c" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#958D87"/><stop offset="1" stop-color="#776F6A"/></linearGradient>
+    <pattern id="m" width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="skewX(-28)"><path d="M0 0 H22 M0 0 V22" stroke="#51412F" stroke-width="2.5" fill="none"/></pattern>
+  </defs>
+  <rect width="800" height="600" fill="url(#s)"/>
+  <path d="M0 290 Q160 250 320 282 T640 268 T800 286 V430 H0Z" fill="#EBE1D1"/>
+  <rect y="420" width="800" height="180" fill="#C8B08E"/>
+  <path d="M130 372 L690 372 L770 470 L50 470Z" fill="#E4DFDA"/>
+  <path d="M130 372 L690 372 L770 470 L50 470Z" fill="url(#m)" opacity=".55"/>
+  <path d="M130 372 L430 372 L470 470 L50 470Z" fill="url(#c)"/>
+  <path d="M150 392 Q260 384 390 396 M110 424 Q240 414 400 430 M80 452 Q230 444 420 458" stroke="#CFC8C2" stroke-width="3" fill="none" opacity=".7"/>
+  <path d="M50 470 L770 470 L770 500 L50 500Z" fill="#DDCDB4"/>
+  <path d="M50 470 L770 470" stroke="#AE916B" stroke-width="3"/>
+  <g stroke="#AE916B" stroke-width="2" opacity=".7"><path d="M170 470 V500 M330 470 V500 M490 470 V500 M650 470 V500"/></g>
+  <g transform="translate(640 90)">
+    <path d="M150 150 L20 -10 L2 4 L130 164Z" fill="#46403D"/>
+    <path d="M20 -10 L-200 70 L-194 88 L10 10Z" fill="#46403D"/>
+    <path d="M-110 38 L-100 66" stroke="#E61559" stroke-width="10"/>
+    <circle cx="14" cy="-2" r="12" fill="#322D2C"/>
+    <circle cx="-196" cy="80" r="9" fill="#322D2C"/>
+    <path d="M-196 86 C-206 140 -220 190 -232 268" stroke="#322D2C" stroke-width="16" fill="none" stroke-linecap="round"/>
+  </g>
+  <path d="M392 360 q16 -10 34 0 q-8 18 -34 0z" fill="#776F6A"/>
+  <g fill="#958D87"><circle cx="378" cy="382" r="6"/><circle cx="440" cy="384" r="5"/><circle cx="410" cy="392" r="8"/></g>
+</svg>

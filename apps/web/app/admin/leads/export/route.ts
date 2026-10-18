@@ -3,6 +3,7 @@ import { checkRole } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { listLeads } from '@/lib/db/leads';
 import { LEAD_TYPE_LABELS } from '@/lib/leads/constants';
+import { constructionStageLabel } from '@/lib/constants/community';
 import { LEAD_STATUS, NOTIFY_STATUS } from '@/lib/admin/labels';
 import { leadFilterFromQuery } from '@/lib/admin/lead-filters';
 import { toCsv } from '@/lib/admin/csv';
@@ -25,6 +26,9 @@ export async function GET(request: NextRequest) {
     to: sp.get('to') ?? undefined,
     business: sp.get('business') ?? undefined,
     q: sp.get('q') ?? undefined,
+    min_score: sp.get('min_score') ?? undefined,
+    booked: sp.get('booked') ?? undefined,
+    sort: sp.get('sort') ?? undefined,
   });
 
   const db = createClient();
@@ -38,19 +42,23 @@ export async function GET(request: NextRequest) {
   const biz = new Map((businesses ?? []).map((b) => [b.id, b.name]));
 
   const csv = toCsv(
-    ['תאריך', 'סוג', 'סטטוס', 'שם', 'טלפון', 'מייל', 'הודעה', 'עסק', 'עמוד מקור', 'שלב בנייה', 'שדות נוספים', 'התראה', 'הועבר אל', 'הערות', 'מזהה'],
-    rows.map((l) => [
+    ['מספר ליד', 'תאריך', 'סוג', 'סטטוס', 'ציון', 'פגישה נקבעה', 'שם', 'טלפון', 'מייל', 'הודעה', 'עסק', 'עמוד מקור', 'שלב בנייה', 'שדות נוספים', 'שיוך (4 שעות)', 'התראה', 'הועבר אל', 'הערות', 'מזהה'],
+    (rows as Array<LeadRow & { score?: number | null; booked_at?: string | null }>).map((l) => [
+      l.ref,
       new Date(l.created_at).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' }),
       LEAD_TYPE_LABELS[l.type],
       LEAD_STATUS[l.status]?.label ?? l.status,
+      l.score ?? '',
+      l.booked_at ? new Date(l.booked_at).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' }) : '',
       l.full_name,
       l.phone,
       l.email,
       l.message,
       l.business_id ? biz.get(l.business_id) ?? l.business_id : '',
       l.source_url,
-      l.construction_stage,
+      constructionStageLabel(l.construction_stage) ?? l.construction_stage,
       l.payload,
+      l.attribution,
       NOTIFY_STATUS[l.notify_status]?.label ?? l.notify_status,
       l.forwarded_to,
       l.notes,

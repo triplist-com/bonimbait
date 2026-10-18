@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { searchRuntimeSegments } from '@/lib/autopilot/fusion';
 
 /** A transcript segment of a video (search-index.*). */
 export interface SegmentHit {
@@ -34,7 +35,7 @@ interface Index {
   matrix: Float32Array; // length = N * DIM, videos first, then posts
   norms: Float32Array; // L2 norm per row
   dim: number;
-  normText: string[]; // sofit-normalized text per row, for keyword search
+  normText: string[]; // normalizeForMatch() text per row, for keyword search
 }
 
 let _index: Index | null = null;
@@ -89,7 +90,7 @@ function loadIndex(): Index {
     for (let i = r * dim, end = i + dim; i < end; i++) n += matrix[i] * matrix[i];
     norms[r] = Math.sqrt(n) || 1;
   }
-  const normText = meta.map((m) => m.text.replace(/[ךםןףץ]/g, (c) => SOFIT_MAP[c] || c));
+  const normText = meta.map((m) => normalizeForMatch(m.text));
   _index = { meta, matrix, norms, dim, normText };
   return _index;
 }
@@ -129,22 +130,46 @@ const HEBREW_STOPWORDS = new Set([
 
 const SOFIT_MAP: Record<string, string> = { 'ך': 'כ', 'ם': 'מ', 'ן': 'נ', 'ף': 'פ', 'ץ': 'צ' };
 
-function normalizeHebrewToken(tok: string): string {
-  // Only sofit normalization — prefix-stripping a single Hebrew letter
-  // is too aggressive (eats real content letters like the כ in כיריים).
-  return tok.replace(/[ךםןףץ]/g, (c) => SOFIT_MAP[c] || c);
+/**
+ * Keyword normalisation, applied the same way to query terms and to row text
+ * at match time (never by shortening a query token):
+ * - final letters to regular ones (ם -> מ);
+ * - gershayim / geresh to ASCII quotes, so תב״ע and תב"ע are one spelling;
+ * - runs of ו or י collapsed, so ktiv male and haser meet ("בנייה" ~ "בניה").
+ */
+export function normalizeForMatch(text: string): string {
+  return text
+    .replace(/[ךםןףץ]/g, (c) => SOFIT_MAP[c] || c)
+    .replace(/״/g, '"')
+    .replace(/׳/g, "'")
+    .replace(/ו{2,}/g, 'ו')
+    .replace(/י{2,}/g, 'י');
 }
 
-function extractContentTerms(query: string): string[] {
-  // Keep Hebrew (U+0590-U+05FF), Latin letters, and whitespace; drop punctuation/digits.
-  const cleaned = query.replace(/[^֐-׿a-zA-Z\s]/g, ' ');
+/** Units and currency acronyms: they name no topic, and transcripts spell them out ("מטר"). */
+const UNIT_ACRONYMS = new Set(['מ"ר', 'מ"ק', 'מ"א', 'ס"מ', 'מ"מ', 'ק"ג', 'ק"מ', 'ש"ח', 'ש"ע', 'מע"מ']);
+
+/**
+ * Content terms of a query. Hebrew prefixes are never stripped from a token
+ * (the documented gotcha: it eats real letters, like the כ of כיריים); a
+ * quote between two Hebrew letters is part of the word, so acronyms such as
+ * תב"ע and תמ"א stay whole. Exported for tests.
+ */
+export function extractContentTerms(query: string): string[] {
+  const cleaned = query
+    .replace(/״/g, '"')
+    .replace(/׳/g, "'")
+    // A quote that isn't between two Hebrew letters is punctuation.
+    .replace(/(?<![֐-׿])["']|["'](?![֐-׿])/g, ' ')
+    // Keep Hebrew (U+0590-U+05FF), Latin letters, in-word quotes and whitespace; drop the rest.
+    .replace(/[^֐-׿a-zA-Z\s"']/g, ' ');
   const raw = cleaned.split(/\s+/).filter(Boolean);
   const out: string[] = [];
   for (const r of raw) {
     if (HEBREW_STOPWORDS.has(r)) continue;
-    const n = normalizeHebrewToken(r);
-    if (n.length < 2) continue;
-    if (HEBREW_STOPWORDS.has(n)) continue;
+    const n = normalizeForMatch(r);
+    if (n.replace(/["']/g, '').length < 2) continue;
+    if (HEBREW_STOPWORDS.has(n) || UNIT_ACRONYMS.has(n)) continue;
     out.push(n);
   }
   return out;
@@ -185,18 +210,28 @@ function computeIdfWeights(allNormText: string[], terms: string[]): number[] {
  * Hybrid search over video segments and post chunks: Reciprocal Rank Fusion of
  * cosine similarity and IDF-weighted keyword overlap. Only rows of the given
  * kinds are ranked (IDF is computed over those rows too).
+ *
+ * `opts.queryVector`: the query's text-embedding-3-small vector when the
+ * caller already has it (the Command Center's content-gap engine), so the
+ * same ranking runs without a second embedding call.
  */
 export async function semanticSearch(
   query: string,
   topK: number = 30,
   kinds: readonly HitKind[] = ['video', 'post'],
+  opts: { queryVector?: ArrayLike<number> } = {},
 ): Promise<SearchHit[]> {
   const idx = loadIndex();
-  const qvec = await embedQuery(query);
+  const qvec = opts.queryVector ? Float32Array.from(opts.queryVector) : await embedQuery(query);
   let qn = 0;
   for (let i = 0; i < qvec.length; i++) qn += qvec[i] * qvec[i];
   qn = Math.sqrt(qn) || 1;
   for (let i = 0; i < qvec.length; i++) qvec[i] /= qn;
+
+  // Content Autopilot: published runtime videos (pgvector), queried while the
+  // static rows are scored and fused into the same RRF below. Fail-open (~800 ms
+  // cap, [] when unconfigured or down); YouTube ids with static segments win.
+  const runtimeP = kinds.includes('video') ? searchRuntimeSegments(qvec, { staticMeta: idx.meta }) : Promise.resolve([]);
 
   const { matrix, norms, meta, dim, normText } = idx;
   const rows: number[] = [];
@@ -214,18 +249,31 @@ export async function semanticSearch(
     cosScores[r] = { i, s: cos[i] };
     kwScores[r] = { i, s: weightedKeywordScore(normText[i], terms, idf) };
   }
+  // Runtime rows join the same rankings as virtual rows N..N+R-1 (same IDF weights).
+  const runtime = await runtimeP;
+  const N = meta.length;
+  runtime.forEach((h, j) => {
+    rows.push(N + j);
+    cosScores.push({ i: N + j, s: h.cos });
+    kwScores.push({ i: N + j, s: weightedKeywordScore(normalizeForMatch(h.text), terms, idf) });
+  });
   const cosRank = cosScores.sort((a, b) => b.s - a.s);
-  const kwRank = kwScores.sort((a, b) => b.s - a.s);
+  // Many rows tie on keyword overlap; break ties by cosine, not by row order
+  // (row order is alphabetical by YouTube id, which favoured arbitrary videos).
+  const cosAt = (i: number) => (i < N ? cos[i] : runtime[i - N].cos);
+  const kwRank = kwScores.sort((a, b) => b.s - a.s || cosAt(b.i) - cosAt(a.i));
   const K = 60;
   const KW_WEIGHT = 1.5; // keyword signal is highly diagnostic for niche Hebrew queries
-  const rrf = new Float64Array(meta.length);
+  const rrf = new Float64Array(N + runtime.length);
   for (let r = 0; r < cosRank.length; r++) rrf[cosRank[r].i] += 1 / (K + r + 1);
   for (let r = 0; r < kwRank.length; r++) {
     if (kwRank[r].s > 0) rrf[kwRank[r].i] += KW_WEIGHT / (K + r + 1);
   }
 
   const merged = rows.slice().sort((a, b) => rrf[b] - rrf[a]);
-  return merged.slice(0, topK).map((i) => ({ ...meta[i], score: rrf[i], cos: cos[i] }) as SearchHit);
+  return merged
+    .slice(0, topK)
+    .map((i) => (i < N ? { ...meta[i], score: rrf[i], cos: cos[i] } : { ...runtime[i - N], score: rrf[i] }) as SearchHit);
 }
 
 /** Video segments only (the /api/search result list). */
