@@ -46,12 +46,12 @@ export default function RedirectTester({ path, expected, test }: { path: string;
         {pending ? 'בודק…' : 'בדיקה'}
       </button>
       {verdict && (
-        <span dir="ltr" className={`text-xs ${verdict.ok ? 'text-emerald-700' : 'text-red-700'}`}>
+        <span dir="ltr" className={`text-xs ${verdict.ok ? 'text-success-700' : 'text-danger-700'}`}>
           {verdict.ok ? '✓ ' : '✗ '}
           {verdict.text}
         </span>
       )}
-      {err && <span className="text-xs text-red-700">{err}</span>}
+      {err && <span className="text-xs text-danger-700">{err}</span>}
     </span>
   );
 }

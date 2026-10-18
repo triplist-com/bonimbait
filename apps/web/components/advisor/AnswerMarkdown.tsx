@@ -50,7 +50,9 @@ function CitationChips({ ns, sources, onCite }: { ns: number[]; sources?: Adviso
             aria-label={label}
             title={source?.title}
             className={cn(
-              'num inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-primary-200 bg-primary-50 px-1.5',
+              // Small chip, phone-sized hit area: the ::after box reaches 40px tall without moving the text.
+              'num relative inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-primary-200 bg-primary-50 px-1.5',
+              "after:absolute after:-inset-y-2.5 after:inset-x-0 after:content-['']",
               'text-[0.6875rem] font-bold leading-none text-primary-700 transition-colors',
               'hover:border-primary-600 hover:bg-primary-600 hover:text-white',
               'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600',

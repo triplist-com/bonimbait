@@ -62,7 +62,7 @@ export default function ProductForm({
             </FormField>
           </div>
           {p && effectiveSlug !== p.slug && p.status === 'published' && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm">
+            <div className="rounded-lg border border-warning-200 bg-warning-50 p-3 text-sm">
               <Checkbox name="create_redirect" defaultChecked label="ליצור הפניה 301 מהכתובת הקודמת" />
             </div>
           )}
@@ -101,7 +101,7 @@ export default function ProductForm({
               <div className="flex gap-2">
                 <TextInput name={`detail_title_${s.key}`} defaultValue={s.title} placeholder="כותרת המקטע" aria-label="כותרת המקטע" />
                 <button type="button" disabled={i === 0} className="px-2 text-gray-500 disabled:opacity-30" onClick={() => setSections((arr) => { const n = [...arr]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; return n; })} aria-label="למעלה">▲</button>
-                <button type="button" className="text-sm text-red-700" onClick={() => setSections((arr) => arr.filter((x) => x.key !== s.key))}>
+                <button type="button" className="text-sm text-danger-700" onClick={() => setSections((arr) => arr.filter((x) => x.key !== s.key))}>
                   הסרה
                 </button>
               </div>

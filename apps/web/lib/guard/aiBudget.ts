@@ -24,7 +24,7 @@ export const DEFAULT_AI_DAILY_BUDGET_USD = 3;
 
 /** Shown instead of an AI answer when AI is over budget or switched off. */
 export const AI_UNAVAILABLE_MESSAGE =
-  'התשובות החכמות לא זמינות כרגע. בינתיים ריכזנו בשבילכם את הסרטונים והמאמרים שהכי מתאימים לשאלה. נסו לשאול שוב מאוחר יותר.';
+  'התשובה הכתובה לא זמינה כרגע. בינתיים ריכזנו לכם את הרגעים בסרטונים ואת המאמרים שהכי מתאימים לשאלה. נסו לשאול שוב בעוד כמה דקות.';
 /** Shown when one visitor asks too much too fast (lib/guard/rateLimit.ts). */
 export const AI_RATE_LIMITED_MESSAGE = 'שאלתם הרבה שאלות בזמן קצר. נסו שוב בעוד כמה דקות.';
 

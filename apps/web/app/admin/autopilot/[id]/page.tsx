@@ -104,7 +104,7 @@ export default async function AutopilotSourcePage({ params }: { params: { id: st
           <SourceActions id={src.id} status={src.status} updatedAt={src.updated_at} title={src.title} showTranscriptLink={false} />
         </div>
         {src.error && (status === 'failed' || status === 'needs_transcript' || src.status === 'transcribed') && (
-          <p role="status" className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <p role="status" className="mt-4 rounded-lg bg-warning-50 px-3 py-2 text-sm text-warning-800">
             {src.error.replace(/\s*\[[a-z_]+\]$/, '')}
           </p>
         )}

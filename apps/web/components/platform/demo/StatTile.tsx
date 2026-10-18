@@ -10,7 +10,7 @@ type Props = {
 
 /** KPI tile: label · value · signed delta vs a named period (arrow + color, never color alone). */
 export default function StatTile({ label, value, delta, deltaLabel = 'לעומת 28 הימים הקודמים', hint }: Props) {
-  const tone = delta == null || delta === 0 ? 'text-gray-600' : delta > 0 ? 'text-green-700' : 'text-red-700';
+  const tone = delta == null || delta === 0 ? 'text-gray-600' : delta > 0 ? 'text-success-700' : 'text-danger-700';
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-5">
       <p className="text-sm text-gray-500">{label}</p>

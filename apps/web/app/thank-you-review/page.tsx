@@ -19,7 +19,7 @@ export default function ThankYouReviewPage({ searchParams }: { searchParams: { b
   return (
     <div className="container-page py-16 text-center sm:py-24">
       <div className="mx-auto max-w-xl rounded-2xl border border-gray-100 bg-white p-8 shadow-card">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-2xl text-emerald-600" aria-hidden="true">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-success-50 text-2xl text-success-600" aria-hidden="true">
           ✓
         </div>
         <h1 className="text-3xl font-bold text-gray-900">תודה על חוות דעתך!</h1>

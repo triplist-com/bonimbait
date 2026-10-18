@@ -30,7 +30,7 @@ export default async function PreviewPage({ params }: { params: { kind: string; 
 
   return (
     <div className="-m-5 lg:-m-8">
-      <div className="sticky top-0 z-20 bg-amber-100 px-4 py-2 text-center text-sm font-medium text-amber-900">
+      <div className="sticky top-0 z-20 bg-warning-100 px-4 py-2 text-center text-sm font-medium text-warning-800">
         תצוגה מקדימה של הגרסה השמורה. ייתכן שהתוכן עדיין לא מפורסם.
       </div>
       <div className="bg-white">{content}</div>

@@ -193,7 +193,7 @@ export default async function TourPage() {
           <nav aria-label="תחנות הסיור" className="mt-9">
             <ol className="flex h-12 gap-0.5 overflow-hidden rounded-xl">
               {beats.map((beat, i) => (
-                <li key={beat.id} style={{ flexGrow: beat.to - beat.from, flexBasis: 0 }} className="min-w-0">
+                <li key={beat.id} style={{ flexGrow: beat.to - beat.from, flexBasis: 0 }} className="min-w-7">
                   <a
                     href={`#beat-${beat.id}`}
                     title={`${i + 1}. ${beat.title}`}

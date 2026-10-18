@@ -139,7 +139,7 @@ export default function Header() {
                   type="button"
                   onClick={() => setAskOpen(true)}
                   aria-haspopup="dialog"
-                  className="inline-flex h-10 items-center gap-1.5 rounded-full bg-ink-900 px-4 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-ink-800 lg:hidden"
+                  className="inline-flex h-11 items-center gap-1.5 rounded-full bg-ink-900 px-4 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-ink-800 active:bg-ink-950 lg:hidden"
                 >
                   <Sparkles aria-hidden="true" className="size-4 text-primary-400" />
                   {AI_ENTRY.shortLabel}

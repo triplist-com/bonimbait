@@ -3,10 +3,10 @@ import type { StatusInfo, Tone } from '@/lib/admin/labels';
 const TONES: Record<Tone, string> = {
   gray: 'bg-gray-100 text-gray-700 ring-gray-200',
   blue: 'bg-primary-50 text-primary-700 ring-primary-100',
-  green: 'bg-emerald-50 text-emerald-700 ring-emerald-100',
-  amber: 'bg-amber-50 text-amber-800 ring-amber-100',
-  red: 'bg-red-50 text-red-700 ring-red-100',
-  purple: 'bg-purple-50 text-purple-700 ring-purple-100',
+  green: 'bg-success-50 text-success-700 ring-success-100',
+  amber: 'bg-warning-50 text-warning-800 ring-warning-100',
+  red: 'bg-danger-50 text-danger-700 ring-danger-100',
+  purple: 'bg-info-50 text-info-700 ring-info-100',
 };
 
 /** Colored status pill. Pass a map entry from lib/admin/labels. */

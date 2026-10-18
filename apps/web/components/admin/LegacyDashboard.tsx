@@ -52,8 +52,8 @@ export default async function LegacyDashboard() {
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Card label="לידים חדשים" value={totalNew} href="/admin/leads/?status=new" tone={totalNew ? 'text-primary' : undefined} />
-        <Card label="ביקורות ממתינות" value={pendingReviews} href="/admin/directory/reviews/" tone={pendingReviews ? 'text-amber-600' : undefined} />
-        <Card label="בקשות ניהול / הצטרפות" value={openRequests.count ?? 0} href="/admin/directory/requests/" tone={openRequests.count ? 'text-amber-600' : undefined} />
+        <Card label="ביקורות ממתינות" value={pendingReviews} href="/admin/directory/reviews/" tone={pendingReviews ? 'text-warning-600' : undefined} />
+        <Card label="בקשות ניהול / הצטרפות" value={openRequests.count ?? 0} href="/admin/directory/requests/" tone={openRequests.count ? 'text-warning-600' : undefined} />
         <Card label="עסקים ממתינים לאישור" value={pendingBusinesses} href="/admin/directory/businesses/?status=pending" />
       </section>
 

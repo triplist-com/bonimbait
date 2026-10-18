@@ -6,7 +6,7 @@ export default function ThankYouProductPage() {
   return (
     <div className="container-page py-16 sm:py-24">
       <section className="mx-auto max-w-xl rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-card sm:p-10">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-600">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success-100 text-success-600">
           <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>

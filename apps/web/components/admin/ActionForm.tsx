@@ -65,7 +65,7 @@ export default function ActionForm({
       {/* Fixed toast: long edit forms put the submit button far from the form's end. */}
       <div aria-live="polite" className="pointer-events-none fixed bottom-4 end-4 z-50 max-w-md empty:hidden [&>p]:pointer-events-auto [&>p]:shadow-lg">
         {result && !result.ok && (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger-700">
             {result.error}
             {fieldErrors && Object.keys(fieldErrors).length > 0 && (
               <span className="block text-xs">{Object.values(fieldErrors).join(' · ')}</span>
@@ -73,7 +73,7 @@ export default function ActionForm({
           </p>
         )}
         {result && result.ok && (
-          <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{result.message ?? successMessage}</p>
+          <p className="rounded-lg bg-success-50 px-3 py-2 text-sm text-success-700">{result.message ?? successMessage}</p>
         )}
       </div>
     </form>

@@ -173,19 +173,19 @@ export default function StrategicPartnersPage() {
           intro="קליקים קרים לא תמיד מבשילים לפנייה איכותית. בתוך קהילה מקצועית, הלקוח פוגש אתכם בהקשר שבו כבר יש אמון."
         />
         <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2">
-          <div className="rounded-2xl border border-red-100 bg-red-50/50 p-6">
+          <div className="rounded-2xl border border-danger-100 bg-danger-50/50 p-6">
             <h3 className="text-lg font-bold text-gray-900">קמפיינים בלי הקשר קהילתי</h3>
             <ul className="mt-3 space-y-2 text-gray-700">
               {CAMPAIGNS_BAD.map((t) => (
-                <li key={t} className="flex gap-2"><span aria-hidden="true" className="text-red-500">✕</span>{t}</li>
+                <li key={t} className="flex gap-2"><span aria-hidden="true" className="text-danger-500">✕</span>{t}</li>
               ))}
             </ul>
           </div>
-          <div className="rounded-2xl border border-green-100 bg-green-50/50 p-6">
+          <div className="rounded-2xl border border-success-100 bg-success-50/50 p-6">
             <h3 className="text-lg font-bold text-gray-900">להיות ספק הבית של הקהילה</h3>
             <ul className="mt-3 space-y-2 text-gray-700">
               {COMMUNITY_GOOD.map((t) => (
-                <li key={t} className="flex gap-2"><span aria-hidden="true" className="text-green-600">✓</span>{t}</li>
+                <li key={t} className="flex gap-2"><span aria-hidden="true" className="text-success-600">✓</span>{t}</li>
               ))}
             </ul>
           </div>
@@ -385,7 +385,7 @@ export default function StrategicPartnersPage() {
             <a href={telHref(SITE_CONTACT.mobilePhone)} dir="ltr" className="font-bold text-white underline">
               054-430-0202
             </a>{' '}
-            <span className="text-green-400">· זמינים עכשיו</span>
+            <span className="text-success-500">· זמינים עכשיו</span>
           </p>
         </div>
       </section>

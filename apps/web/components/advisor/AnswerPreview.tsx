@@ -17,6 +17,7 @@ import { clock, statsLine } from '@/lib/advisor/format';
 import { useAdvisor } from '@/lib/advisor/client/useAdvisor';
 import type { AdvisorVideoSource } from '@/lib/advisor/types';
 import AnswerMarkdown from './AnswerMarkdown';
+import AnswerUnavailable, { isUnavailable } from './AnswerUnavailable';
 
 export default function AnswerPreview({ query }: { query: string }) {
   const { turns, ask, threadId } = useAdvisor();
@@ -49,7 +50,9 @@ export default function AnswerPreview({ query }: { query: string }) {
       </div>
 
       <div className="relative mt-3 max-h-[14rem] overflow-hidden" aria-busy={!done}>
-        {turn?.answer ? (
+        {done && turn?.degraded && isUnavailable(turn.degraded) ? (
+          <AnswerUnavailable degraded={turn.degraded} message={turn.answer} />
+        ) : turn?.answer ? (
           <AnswerMarkdown
             markdown={turn.answer}
             streaming={turn.status === 'answering'}
@@ -63,7 +66,9 @@ export default function AnswerPreview({ query }: { query: string }) {
         ) : (
           <SkeletonText lines={3} />
         )}
-        {turn?.answer && <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent" />}
+        {turn?.answer && !(done && isUnavailable(turn.degraded)) && (
+          <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent" />
+        )}
       </div>
 
       {moments.length > 0 && (

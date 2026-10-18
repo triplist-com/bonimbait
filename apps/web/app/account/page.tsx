@@ -47,7 +47,7 @@ export default async function AccountPage() {
           <p className="mt-1 text-gray-500">שלום{profile.full_name ? ` ${profile.full_name}` : ''}, כאן מנהלים את הפרטים, ההזמנות ותוכנית הניהול.</p>
         </div>
         <form action="/auth/signout/" method="post">
-          <button type="submit" className="rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:border-red-300 hover:text-red-700">
+          <button type="submit" className="rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:border-danger-200 hover:text-danger-700">
             התנתקות
           </button>
         </form>
@@ -183,7 +183,7 @@ export default async function AccountPage() {
 function StatusBadge({ status }: { status: OrderStatus }) {
   const tone =
     status === 'paid'
-      ? 'bg-green-50 text-green-800'
+      ? 'bg-success-50 text-success-800'
       : status === 'pending'
         ? 'bg-warning-50 text-warning-800'
         : 'bg-gray-100 text-gray-700';

@@ -11,7 +11,7 @@ const IDLE: JoinState = { status: 'idle' };
 
 function Err({ state, name }: { state: JoinState; name: string }) {
   const msg = state.status === 'error' ? state.fieldErrors?.[name] : undefined;
-  return msg ? <span className="mt-1 block text-xs text-red-600">{msg}</span> : null;
+  return msg ? <span className="mt-1 block text-xs text-danger-600">{msg}</span> : null;
 }
 
 function Submit() {
@@ -34,7 +34,7 @@ export default function JoinProForm({
 
   if (state.status === 'sent') {
     return (
-      <div role="status" className="rounded-xl bg-emerald-50 p-5 text-emerald-800">
+      <div role="status" className="rounded-xl bg-success-50 p-5 text-success-800">
         <p className="text-lg font-semibold">תודה! הפרטים התקבלו.</p>
         <p className="mt-1">נציג מטעמנו ייצור עמכם קשר בהקדם לבירור צרכים.</p>
         {state.draftCreated && (
@@ -102,7 +102,7 @@ export default function JoinProForm({
         <textarea name="about" rows={4} maxLength={3000} className={input} />
       </label>
       {state.status === 'error' && !state.fieldErrors && (
-        <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+        <p role="alert" className="rounded-xl bg-danger-50 p-3 text-sm text-danger-700">
           {state.message}
         </p>
       )}

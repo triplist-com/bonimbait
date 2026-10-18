@@ -101,7 +101,7 @@ function FilledCart({ priced }: { priced: PricedCart }) {
             <form action={removeCartLine}>
               <input type="hidden" name="id" value={line.id} />
               <input type="hidden" name="kind" value={line.kind} />
-              <button type="submit" className="text-sm text-red-600 hover:underline" aria-label={`הסרת ${line.name} מהסל`}>
+              <button type="submit" className="text-sm text-danger-600 hover:underline" aria-label={`הסרת ${line.name} מהסל`}>
                 הסרה
               </button>
             </form>

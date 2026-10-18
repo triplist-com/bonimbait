@@ -79,7 +79,7 @@ export default function VideoCard({ video, snippet, matchingSegmentTime, segment
                 </span>
               )}
               {(video.tips_count ?? 0) > 0 && (
-                <span className="text-2xs bg-green-50 text-green-700 font-medium px-1.5 py-0.5 rounded-full">
+                <span className="text-2xs bg-success-50 text-success-700 font-medium px-1.5 py-0.5 rounded-full">
                   {video.tips_count} טיפים
                 </span>
               )}

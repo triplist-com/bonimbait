@@ -51,7 +51,7 @@ export default function LeadStatusButtons({
           </button>
         ))}
       </div>
-      {error && <p className="mt-2 text-sm text-red-700">{error}</p>}
+      {error && <p className="mt-2 text-sm text-danger-700">{error}</p>}
     </div>
   );
 }

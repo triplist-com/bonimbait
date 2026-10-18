@@ -33,7 +33,7 @@ function ScoreBar({ label, value }: { label: string; value: number | null }) {
         <span className="font-bold text-gray-900">{formatScore(value)}</span>
       </div>
       <div className="mt-1 h-2 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
-        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
+        <div className="h-full rounded-full bg-success-500" style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
@@ -50,10 +50,10 @@ export function ScoreSummary({ stats }: { stats: BusinessReviewStatsRow | null }
   }
   return (
     <div className="grid gap-6 rounded-2xl border border-gray-100 bg-white p-5 shadow-card md:grid-cols-[auto_1fr]">
-      <div className="flex flex-col items-center justify-center rounded-xl bg-emerald-50 px-6 py-4 text-center">
-        <span className="text-sm text-emerald-800">ציון משוקלל</span>
-        <span className="text-4xl font-extrabold text-emerald-700">{stats.rating_percent}%</span>
-        <span className="text-sm text-emerald-800">{reviewCountLabel(stats.review_count)}</span>
+      <div className="flex flex-col items-center justify-center rounded-xl bg-success-50 px-6 py-4 text-center">
+        <span className="text-sm text-success-800">ציון משוקלל</span>
+        <span className="text-4xl font-extrabold text-success-700">{stats.rating_percent}%</span>
+        <span className="text-sm text-success-800">{reviewCountLabel(stats.review_count)}</span>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         {SCORE_KEYS.map((key) => (
@@ -77,7 +77,7 @@ function ReviewCard({ review }: { review: PublicReview }) {
           <p className="font-semibold text-gray-900">{review.author_name?.trim() || 'לקוח/ה של בונים בית'}</p>
           <p className="text-xs text-gray-500">{formatHebrewDate(review.published_at ?? review.created_at)}</p>
         </div>
-        <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-sm font-bold text-emerald-700">
+        <span className="rounded-full bg-success-50 px-2.5 py-0.5 text-sm font-bold text-success-700">
           {formatScore(review.rating)}/10
         </span>
       </header>

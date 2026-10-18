@@ -105,7 +105,7 @@ async function VideoHubContent() {
                 href={YOUTUBE_CHANNEL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 transition-colors"
+                className="inline-flex items-center justify-center rounded-xl bg-danger-600 hover:bg-danger-700 text-white font-semibold px-6 py-3 transition-colors"
               >
                 הצטרפו גם אתם
               </a>

@@ -11,7 +11,7 @@ const SCORES = Object.entries(REVIEW_SCORE_LABELS) as Array<[keyof typeof REVIEW
 
 function Err({ state, name }: { state: ReviewFormState; name: string }) {
   const msg = state.status === 'error' ? state.fieldErrors?.[name] : undefined;
-  return msg ? <span className="mt-1 block text-xs text-red-600">{msg}</span> : null;
+  return msg ? <span className="mt-1 block text-xs text-danger-600">{msg}</span> : null;
 }
 
 function Submit() {
@@ -78,7 +78,7 @@ export default function ReviewForm({ slug, defaultName }: { slug: string; defaul
       </label>
       <Err state={state} name="confirm" />
       {state.status === 'error' && !state.fieldErrors && (
-        <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+        <p role="alert" className="rounded-xl bg-danger-50 p-3 text-sm text-danger-700">
           {state.message}
         </p>
       )}
