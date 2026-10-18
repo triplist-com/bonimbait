@@ -17,7 +17,7 @@ export default function RatingBadge({
   return (
     <span className="inline-flex items-center gap-2" aria-label={`ציון ${percent ?? 0}% מתוך ${reviewCountLabel(count)}`}>
       <span
-        className={`rounded-full bg-emerald-50 font-bold text-emerald-700 ${big ? 'px-3 py-1 text-lg' : 'px-2 py-0.5 text-sm'}`}
+        className={`rounded-full bg-success-50 font-bold text-success-700 ${big ? 'px-3 py-1 text-lg' : 'px-2 py-0.5 text-sm'}`}
       >
         {percent ?? 0}%
       </span>

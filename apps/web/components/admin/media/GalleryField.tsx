@@ -69,7 +69,7 @@ export default function GalleryField({ name, defaultValue }: { name: string; def
                 aria-label="שם האלבום"
                 className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm"
               />
-              <button type="button" className="text-sm text-red-700" onClick={() => setGroups((prev) => prev.filter((_, k) => k !== gi))}>
+              <button type="button" className="text-sm text-danger-700" onClick={() => setGroups((prev) => prev.filter((_, k) => k !== gi))}>
                 מחיקת אלבום
               </button>
             </div>
@@ -99,7 +99,7 @@ export default function GalleryField({ name, defaultValue }: { name: string; def
                         ←
                       </button>
                     </span>
-                    <button type="button" onClick={() => update(gi, (x) => ({ ...x, images: x.images.filter((_, k) => k !== i) }))} className="text-red-700 hover:underline">
+                    <button type="button" onClick={() => update(gi, (x) => ({ ...x, images: x.images.filter((_, k) => k !== i) }))} className="text-danger-700 hover:underline">
                       הסרה
                     </button>
                   </div>

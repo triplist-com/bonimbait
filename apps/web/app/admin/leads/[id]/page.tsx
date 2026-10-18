@@ -167,7 +167,7 @@ export default async function LeadPage({ params }: { params: { id: string } }) {
               ))}
               {lead.notify_error && (
                 <Row label="שגיאה">
-                  <span className="text-red-700">{lead.notify_error}</span>
+                  <span className="text-danger-700">{lead.notify_error}</span>
                 </Row>
               )}
             </dl>

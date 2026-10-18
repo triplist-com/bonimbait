@@ -52,7 +52,7 @@ export default function AskAbout({ kind, id, questions, className }: AskAboutPro
           maxLength={300}
           enterKeyHint="search"
           placeholder={`למשל: ${chips[0]}`}
-          className="h-12 min-w-0 flex-1 rounded-xl border border-ink-200 bg-white px-4 text-body text-ink-900 shadow-xs outline-none transition-[border-color,box-shadow] placeholder:text-ink-400 focus:border-primary-600 focus:ring-4 focus:ring-primary-600/15"
+          className="h-12 min-w-0 rounded-xl border border-ink-200 bg-white px-4 text-body text-ink-900 shadow-xs outline-none transition-[border-color,box-shadow] placeholder:text-ink-400 focus:border-primary-600 focus:ring-4 focus:ring-primary-600/15 sm:flex-1"
         />
         <button type="submit" className={buttonClasses({ size: 'lg' })}>
           שאלו

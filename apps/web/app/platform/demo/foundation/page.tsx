@@ -94,7 +94,7 @@ export default function FoundationDemoPage() {
                         נשאלה <bdi>{formatNumberHe(q.asks)}</bdi> פעמים · {q.topic}
                       </span>
                       {!q.answered && (
-                        <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800">פער תוכן: כדאי סרטון</span>
+                        <span className="rounded-full bg-warning-50 px-2 py-0.5 font-medium text-warning-800">פער תוכן: כדאי סרטון</span>
                       )}
                     </p>
                   </div>

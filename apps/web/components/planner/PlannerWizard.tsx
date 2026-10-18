@@ -128,7 +128,7 @@ function StepHeader({ step, total, onStep, answered }: { step: number; total: nu
                 disabled={!reachable || current}
                 onClick={() => onStep(i)}
                 aria-current={current ? 'step' : undefined}
-                className="group flex w-full flex-col items-stretch gap-1.5 rounded-md text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:cursor-default"
+                className="group relative flex w-full flex-col items-stretch gap-1.5 rounded-md text-start after:absolute after:-inset-y-2 after:inset-x-0 after:content-[''] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:cursor-default"
               >
                 <span className={cn('h-1.5 rounded-full transition-colors', current || done || i < step ? 'bg-primary-600' : 'bg-ink-200')} />
                 <span className={cn('flex items-center gap-1 text-xs font-medium', current ? 'text-ink-900' : 'text-ink-500', reachable && !current && 'group-hover:text-primary-700')}>

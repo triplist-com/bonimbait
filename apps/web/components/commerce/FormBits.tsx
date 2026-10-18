@@ -8,7 +8,7 @@ export function FieldError({ errors, name }: { errors: FieldErrors; name: string
   const message = errors[name];
   if (!message) return null;
   return (
-    <p id={`${name}-error`} role="alert" className="mt-1 text-sm text-red-600">
+    <p id={`${name}-error`} role="alert" className="mt-1 text-sm text-danger-600">
       {message}
     </p>
   );
@@ -38,7 +38,7 @@ export function TextField({
     <div>
       <label htmlFor={id} className={labelClass}>
         {label}
-        {required && <span className="text-red-600"> *</span>}
+        {required && <span className="text-danger-600"> *</span>}
       </label>
       <input
         id={id}
@@ -79,7 +79,7 @@ export function SelectField({
     <div>
       <label htmlFor={id} className={labelClass}>
         {label}
-        {required && <span className="text-red-600"> *</span>}
+        {required && <span className="text-danger-600"> *</span>}
       </label>
       <select
         id={id}
@@ -122,7 +122,7 @@ export function SubmitButton({ children, className }: { children: React.ReactNod
 export function FormMessage({ message }: { message: string | null }) {
   if (!message) return null;
   return (
-    <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+    <p role="alert" className="rounded-xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-700">
       {message}
     </p>
   );

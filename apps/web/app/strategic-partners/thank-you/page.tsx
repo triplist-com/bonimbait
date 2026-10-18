@@ -21,7 +21,7 @@ export default function StrategicPartnersThankYouPage() {
   return (
     <div className="container-page py-16 sm:py-24">
       <section className="mx-auto max-w-2xl text-center">
-        <p className="inline-block rounded-full bg-green-100 px-4 py-1 text-sm font-semibold text-green-700">
+        <p className="inline-block rounded-full bg-success-100 px-4 py-1 text-sm font-semibold text-success-700">
           הפרטים נשלחו בהצלחה
         </p>
         <h1 className="mt-4 text-3xl font-bold text-gray-900 sm:text-4xl">תודה, קיבלנו את הפנייה שלכם.</h1>

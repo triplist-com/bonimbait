@@ -82,8 +82,8 @@ export default function SourceActions({
 
   if (actions.length === 0) {
     return (
-      <p className="inline-flex items-center gap-2 text-sm text-purple-700" aria-live="polite">
-        <span className="h-2 w-2 animate-pulse rounded-full bg-purple-500 motion-reduce:animate-none" aria-hidden="true" />
+      <p className="inline-flex items-center gap-2 text-sm text-info-700" aria-live="polite">
+        <span className="h-2 w-2 animate-pulse rounded-full bg-info-500 motion-reduce:animate-none" aria-hidden="true" />
         בעיבוד…
       </p>
     );
@@ -152,7 +152,7 @@ export default function SourceActions({
           }
         })}
       </div>
-      <p aria-live="polite" className={`max-w-xs text-xs empty:hidden ${message?.ok === false ? 'text-red-700' : 'text-emerald-700'}`}>
+      <p aria-live="polite" className={`max-w-xs text-xs empty:hidden ${message?.ok === false ? 'text-danger-700' : 'text-success-700'}`}>
         {message?.text ?? ''}
       </p>
     </div>

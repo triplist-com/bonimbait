@@ -112,12 +112,12 @@ export default async function AutopilotQueuePage({ searchParams }: { searchParam
       ) : (
         <>
           <section className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="סיכום התור">
-            <SummaryCard label="מוכנים לפרסום" value={counts.indexed ?? 0} href="/admin/autopilot/?status=indexed" tone="text-amber-600" />
+            <SummaryCard label="מוכנים לפרסום" value={counts.indexed ?? 0} href="/admin/autopilot/?status=indexed" tone="text-warning-600" />
             <SummaryCard
               label="דורשים טיפול"
               value={(counts.needs_transcript ?? 0) + (counts.failed ?? 0)}
               href={`/admin/autopilot/?status=${(counts.needs_transcript ?? 0) > 0 ? 'needs_transcript' : 'failed'}`}
-              tone="text-red-600"
+              tone="text-danger-600"
             />
             <SummaryCard label="חדשים בתור" value={(counts.detected ?? 0) + (counts.transcribed ?? 0)} href="/admin/autopilot/?status=detected" tone="text-primary" />
             <SummaryCard label="פורסמו באתר" value={counts.published ?? 0} href="/admin/autopilot/?status=published" />

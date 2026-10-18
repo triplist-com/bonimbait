@@ -55,7 +55,7 @@ export default async function RequestsPage({ searchParams }: { searchParams: Rec
         ))}
       </nav>
       {!isAdmin && show === 'open' && (
-        <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">אתם מחוברים כעורכי תוכן: אפשר לצפות בבקשות, אבל אישור או דחייה דורשים הרשאת מנהל.</p>
+        <p className="mb-4 rounded-lg bg-warning-50 px-3 py-2 text-sm text-warning-800">אתם מחוברים כעורכי תוכן: אפשר לצפות בבקשות, אבל אישור או דחייה דורשים הרשאת מנהל.</p>
       )}
       {result.items.length === 0 && <p className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">אין בקשות.</p>}
       <ul className="space-y-4">
@@ -81,7 +81,7 @@ export default async function RequestsPage({ searchParams }: { searchParams: Rec
                         <span dir="ltr">{m.email}</span> ({ROLE_LABELS[m.role]})
                       </>
                     ) : (
-                      <span className="text-red-700">לא מחובר / לא קיים</span>
+                      <span className="text-danger-700">לא מחובר / לא קיים</span>
                     )}
                   </p>
                   <p>
@@ -92,10 +92,10 @@ export default async function RequestsPage({ searchParams }: { searchParams: Rec
                           {b.name}
                         </Link>{' '}
                         <StatusBadge info={BUSINESS_STATUS[b.status]} />
-                        {b.owner_member_id && b.owner_member_id !== l.member_id && <span className="ms-2 text-red-700">לעסק כבר יש בעלים אחר</span>}
+                        {b.owner_member_id && b.owner_member_id !== l.member_id && <span className="ms-2 text-danger-700">לעסק כבר יש בעלים אחר</span>}
                       </>
                     ) : (
-                      <span className="text-red-700">אין עסק מקושר</span>
+                      <span className="text-danger-700">אין עסק מקושר</span>
                     )}
                   </p>
                   {l.message && <p className="whitespace-pre-line text-gray-700">{l.message}</p>}
@@ -115,7 +115,7 @@ export default async function RequestsPage({ searchParams }: { searchParams: Rec
                   <div className="flex gap-2">
                     <ConfirmDialog
                       trigger="אישור"
-                      triggerClassName="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+                      triggerClassName="rounded-lg bg-success-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-success-700"
                       title="לאשר את הבקשה?"
                       body={`${m?.email ?? 'המשתמש'} יוגדר כבעלים של "${b?.name ?? ''}", יקבל תפקיד "בעל מקצוע", והעסק יפורסם.`}
                       confirmLabel="אישור"

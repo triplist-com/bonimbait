@@ -57,7 +57,7 @@ export default function CheckChannelButton({ size = 'md' }: { size?: 'md' | 'lg'
         </svg>
         {busy ? 'בודק את הערוץ…' : 'בדיקת הערוץ עכשיו'}
       </button>
-      <p aria-live="polite" className={`text-sm empty:hidden ${message?.ok === false ? 'text-red-700' : 'text-emerald-700'}`}>
+      <p aria-live="polite" className={`text-sm empty:hidden ${message?.ok === false ? 'text-danger-700' : 'text-success-700'}`}>
         {message?.text ?? ''}
       </p>
     </div>

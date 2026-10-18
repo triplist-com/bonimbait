@@ -11,6 +11,7 @@ import {
 } from '@/app/business/[slug]/actions';
 import { CONSTRUCTION_STAGES, REGIONS } from '@/lib/constants/community';
 import { telHref } from '@/lib/directory/format';
+import { buttonClasses } from '@/components/ui/Button';
 import ProjectFileField from '@/components/revenue/ProjectFileField';
 
 const input =
@@ -34,7 +35,7 @@ function SubmitButton({ children }: { children: React.ReactNode }) {
 
 function FieldError({ state, name }: { state: LeadFormState; name: string }) {
   const msg = state.status === 'error' ? state.fieldErrors?.[name] : undefined;
-  return msg ? <span className="mt-1 block text-xs text-red-600">{msg}</span> : null;
+  return msg ? <span className="mt-1 block text-xs text-danger-600">{msg}</span> : null;
 }
 
 /** Hidden honeypot + business id, shared by both forms. */
@@ -123,7 +124,7 @@ function Revealed({ state, businessName }: { state: Extract<LeadFormState, { sta
 }
 
 /**
- * Lead-gated contact: the "הצג טלפון" button opens a popup (name, email,
+ * Lead-gated contact: the "הצגת הטלפון" button opens a popup (name, email,
  * mobile, terms). Only after the server records the lead does it return the
  * phone + WhatsApp link. The number is never in the page HTML.
  */
@@ -171,15 +172,12 @@ export function ShowPhoneButton({
       <button
         type="button"
         onClick={open}
-        className={
-          className ??
-          'inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 py-3 font-semibold text-white transition hover:bg-rose-700'
-        }
+        className={className ?? buttonClasses({ size: 'lg' })}
       >
         <svg aria-hidden="true" viewBox="0 0 40 40" className="h-4 w-4 fill-current">
           <path d="M10 25.9c.7-.4 1.6-.4 2.3 0l3.6 2.1c.8.5 1.8.4 2.5-.2 1.3-1 3.3-2.6 5.1-4.4 1.8-1.8 3.4-3.8 4.4-5.1.6-.7.6-1.7.2-2.5l-2.1-3.6c-.4-.7-.4-1.6 0-2.3l5.2-8.9c.5-.9 1.5-1.3 2.5-1 .9.2 2.2.8 3.5 2.1 4 4 6.2 10.8-9 25.9s-21.9 13-25.9 9c-1.3-1.3-1.8-2.5-2.1-3.5-.2-1 .2-2 1-2.5 2.1-1.2 6.7-3.9 8.8-5.1z" />
         </svg>
-        הצג טלפון
+        הצגת הטלפון
       </button>
       <dialog
         ref={dialogRef}
@@ -219,7 +217,7 @@ export function ShowPhoneButton({
               </label>
               <FieldError state={state} name="terms" />
               {state.status === 'error' && !state.fieldErrors && (
-                <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+                <p role="alert" className="rounded-xl bg-danger-50 p-3 text-sm text-danger-700">
                   {state.message}
                 </p>
               )}
@@ -241,7 +239,7 @@ export function ContactBusinessForm({ businessId, businessName }: { businessId: 
   const [state, formAction] = useFormState(contactBusinessAction, IDLE);
   if (state.status === 'contact_sent') {
     return (
-      <p role="status" className="rounded-xl bg-emerald-50 p-4 text-emerald-800">
+      <p role="status" className="rounded-xl bg-success-50 p-4 text-success-800">
         תודה! הפנייה שלכם ל{businessName} התקבלה ותטופל בהקדם.
       </p>
     );
@@ -279,7 +277,7 @@ export function ContactBusinessForm({ businessId, businessName }: { businessId: 
         <FieldError state={state} name="construction_stage" />
       </label>
       {state.status === 'error' && !state.fieldErrors && (
-        <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+        <p role="alert" className="rounded-xl bg-danger-50 p-3 text-sm text-danger-700">
           {state.message}
         </p>
       )}

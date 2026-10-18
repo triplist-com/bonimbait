@@ -4,7 +4,7 @@ import { absoluteUrl } from '@/lib/site';
 export const metadata: Metadata = {
   title: 'חיפוש',
   description:
-    'חפשו בין מאות סרטוני בנייה פרטית וקבלו תשובות מבוססות AI. חיפוש לפי נושא, קטגוריה ומילות מפתח.',
+    'חפשו בסרטונים, בפרקי הפודקאסט ובמאמרים של בונים בית, וקבלו תשובה מהשטח עם הרגע המדויק בסרטון.',
   alternates: {
     canonical: absoluteUrl('/search'),
   },
