@@ -2,47 +2,45 @@
 
 ## Overview
 
-bonimbait.com is registered on GoDaddy and deployed to Vercel. The DNS records below point the domain to Vercel's edge network.
+bonimbait.com is registered on GoDaddy (nameservers `ns47` / `ns48.domaincontrol.com`) and served by the
+Render web service `bonimbait-web` (project Bonimbait). Until 2026-11-08 it was served by Vercel.
 
-## Required DNS Records (GoDaddy)
+## DNS Records (GoDaddy)
 
-| Type  | Name | Value                    | TTL  |
-|-------|------|--------------------------|------|
-| CNAME | @    | cname.vercel-dns.com     | 600  |
-| CNAME | www  | cname.vercel-dns.com     | 600  |
+| Type  | Name | Value                         | TTL         |
+|-------|------|-------------------------------|-------------|
+| A     | @    | `216.24.57.1`                 | 600 seconds |
+| CNAME | www  | `bonimbait-web.onrender.com`  | 1 hour      |
 
-> **Note**: GoDaddy may require an A record for the apex domain (`@`) instead of a CNAME. In that case, use Vercel's A record IP: `76.76.21.21`.
+`216.24.57.1` is Render's address for apex domains (a CNAME isn't allowed on `@`). Don't add AAAA records:
+Render doesn't serve the apex over IPv6. Leave the NS, SOA, `_domainconnect` and `_dmarc` records alone.
 
-| Type | Name | Value        | TTL  |
-|------|------|--------------|------|
-| A    | @    | 76.76.21.21  | 600  |
+## On Render
 
-## Setup Steps
+The service has both custom domains: `bonimbait.com`, and `www.bonimbait.com`, which redirects (301) to
+`bonimbait.com` with its path. After a DNS change, Render verifies the domains and issues the
+certificates itself (Google Trust Services, renewed automatically). The first certificate took about
+5 minutes after the records propagated.
 
-1. Log into GoDaddy DNS management for bonimbait.com
-2. Delete any existing A or CNAME records for `@` and `www`
-3. Add the records listed above
-4. In Vercel dashboard: **Settings > Domains > Add Domain** and enter `bonimbait.com`
-5. Also add `www.bonimbait.com` and set it to redirect to `bonimbait.com`
-6. Wait for DNS propagation (usually 5-30 minutes, up to 48 hours)
-
-## SSL Verification
-
-Vercel automatically provisions and renews SSL certificates via Let's Encrypt.
-
-To verify SSL is working:
+## Verify
 
 ```bash
-# Check certificate
-curl -vI https://bonimbait.com 2>&1 | grep -E "SSL|subject|issuer|expire"
+# Records, at GoDaddy and at a public resolver
+dig +short @ns47.domaincontrol.com bonimbait.com A
+dig +short @8.8.8.8 www.bonimbait.com CNAME
 
-# Verify redirect from www
-curl -I https://www.bonimbait.com
-# Should return 308 redirect to https://bonimbait.com
+# Certificate
+echo | openssl s_client -connect bonimbait.com:443 -servername bonimbait.com 2>/dev/null | openssl x509 -noout -subject -issuer -enddate
+
+# The site, and the www redirect (301 to https://bonimbait.com/...)
+curl -sI https://bonimbait.com/ | head -1
+curl -sI https://www.bonimbait.com/ask/ | grep -iE '^(HTTP|location)'
 ```
 
 ## Troubleshooting
 
-- **SSL not provisioning**: Ensure DNS records are correct and propagated. Check Vercel domain settings for errors.
-- **DNS not resolving**: Use `dig bonimbait.com` or `nslookup bonimbait.com` to verify records.
-- **Propagation delays**: Use https://dnschecker.org to check global propagation status.
+- **TLS handshake failure on a new domain**: the certificate isn't issued yet. Check that the records
+  above are published (`dig` at `ns47.domaincontrol.com`), then wait a few minutes.
+- **www still shows the old host**: the old CNAME is cached for its TTL (1 hour). Check GoDaddy's own
+  nameserver first; if that's right, it's just the cache.
+- **Propagation**: https://dnschecker.org shows global status.

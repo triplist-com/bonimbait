@@ -1,6 +1,6 @@
 # Environment Variables
 
-## Vercel (Frontend - apps/web)
+## Web app (apps/web: Render service `bonimbait-web`)
 
 | Variable | Required | Description |
 |----------|----------|-------------|
@@ -17,7 +17,7 @@
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `CRON_SECRET` | Yes (for the cron) | Bearer secret for `/api/cron/youtube-watch`; Vercel Cron sends it automatically |
+| `CRON_SECRET` | Yes (for the cron) | Bearer secret for `/api/cron/youtube-watch`; the Render cron job `bonimbait-youtube-watch` sends it, so set the same value on both services |
 | `YOUTUBE_CHANNEL_ID` | No | Channel to watch (default: the בונים בית channel) |
 | `PODCAST_RSS_URL` | No | Podcast RSS feed to watch too |
 | `AUTOPILOT_AUTO_PROCESS` | No | `true`: the cron also processes new videos (never publishes). Default `false` |
@@ -61,6 +61,7 @@ APP_VERSION=dev
 ## Notes
 
 - Never commit `.env` files to version control.
-- On Vercel, set environment variables in **Settings > Environment Variables**.
-- On Render, set environment variables in the service's **Environment** tab.
+- On Render, set environment variables in the service's **Environment** tab. A change redeploys the service.
+- Render sets `RENDER=true` itself; `lib/deploy.ts` uses it to refuse mock payments on the hosted site.
+- The site ran on Vercel until 2026-11-08 (**Settings > Environment Variables** there).
 - `NEXT_PUBLIC_` prefixed variables are exposed to the browser; do not use this prefix for secrets.

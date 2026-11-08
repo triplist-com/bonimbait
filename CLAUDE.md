@@ -16,7 +16,7 @@ Hebrew RTL knowledge base website (bonimbait.com) that aggregates ~900 YouTube v
 - **Database**: PostgreSQL (Supabase) for structured data, pgvector for embeddings
 - **Search**: pgvector semantic search + PostgreSQL full-text search (Hebrew)
 - **AI/NLP**: Claude API for summarization, OpenAI Whisper for transcription, text-embedding-3-small for embeddings
-- **Infrastructure**: Vercel (frontend), Railway/Fly.io (Python API), Supabase (DB)
+- **Infrastructure**: Render (the Next.js app: web service `bonimbait-web` + cron `bonimbait-youtube-watch`, project Bonimbait; on Vercel until 2026-11-08), Supabase (DB). The Python API is legacy and suspended; see `docs/deployment.md`
 - **CDN/Storage**: Supabase Storage for thumbnails/assets
 
 ### Data Pipeline
