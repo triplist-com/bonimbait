@@ -28,6 +28,7 @@
     "react-dom": "^18",
     "sanitize-html": "^2.17.7",
     "server-only": "^0.0.1",
+    "sharp": "0.33.5",
     "zod": "^4.6.5"
   },
   "devDependencies": {

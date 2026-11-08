@@ -1,7 +1,7 @@
 /**
  * A partner tier "paid" with the mock provider never features a business on
  * production (lib/revenue/badges.ts countsPublicly; partner_badges.is_mock).
- * Mock payments themselves are refused on every Vercel deployment
+ * Mock payments themselves are refused on every hosted deployment
  * (tests/commerce/production-guard.test.ts).
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -18,6 +18,12 @@ describe('countsPublicly', () => {
     expect(countsPublicly({ is_mock: true }, { VERCEL_ENV: 'preview' })).toBe(true);
     expect(countsPublicly({ is_mock: true }, {})).toBe(true);
     expect(countsPublicly({}, { VERCEL_ENV: 'production' })).toBe(true);
+  });
+
+  it('treats a Render service as production, except pull-request previews', () => {
+    expect(countsPublicly({ is_mock: true }, { RENDER: 'true' })).toBe(false);
+    expect(countsPublicly({ is_mock: true }, { RENDER: 'true', IS_PULL_REQUEST: 'true' })).toBe(true);
+    expect(countsPublicly({ is_mock: false }, { RENDER: 'true' })).toBe(true);
   });
 });
 
