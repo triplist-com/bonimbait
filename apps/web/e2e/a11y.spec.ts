@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { startAdvisorMock, type AdvisorMock } from './helpers/advisor-mock';
+import { installAdvisorMock } from './helpers/advisor-mock';
 import { storageStatePath } from './helpers/state';
 
 const PAGES: Array<{ name: string; path: string; member?: boolean }> = [
@@ -85,13 +85,8 @@ async function tabTo(page: Page, matches: (el: { tag: string; text: string; labe
 test.describe('keyboard only', () => {
   test.skip(({ isMobile }) => isMobile, 'keyboard flows run on desktop');
 
-  let mock: AdvisorMock;
   test.beforeEach(async ({ page }) => {
-    mock = await startAdvisorMock({ chunkDelayMs: 5 });
-    await page.route('**/api/answer/stream', (route) => route.continue({ url: mock.url }));
-  });
-  test.afterEach(async () => {
-    await mock?.close();
+    await installAdvisorMock(page, { chunkDelayMs: 5 });
   });
 
   test('skip link, then the ask box, then an answer and a follow-up', async ({ page }) => {

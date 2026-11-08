@@ -8,15 +8,19 @@
  * signs it (the local stack's secret), so "שתפו בוואטסאפ" stores a real
  * /ask/a/<id>/ snapshot through the real POST /api/advisor/share.
  *
- * Usage:
- *   const mock = await startAdvisorMock();
- *   await page.route('**\/api/answer/stream', (r) => r.continue({ url: mock.url }));
+ * It runs inside the page: an init script swaps `fetch` for that one endpoint
+ * and streams the frames Node builds (exposeFunction). Rerouting the request
+ * to a local mock server with route.continue({ url }) gets blocked by Chromium
+ * on the app's pages (net::ERR_BLOCKED_BY_CLIENT), and route.fulfill can't
+ * stream, which would hide the "still streaming" state the specs check.
+ *
+ * Usage (before the first navigation):
+ *   const mock = await installAdvisorMock(page);
  *   ...
- *   await mock.close();
+ *   expect(mock.questions).toEqual([...]);
  */
 import { createHmac } from 'node:crypto';
-import { createServer, type IncomingMessage, type Server } from 'node:http';
-import type { AddressInfo } from 'node:net';
+import type { Page } from '@playwright/test';
 import recording from '../../lib/demo/fixtures/advisor-recording.json';
 import { shareSecret } from './env';
 
@@ -34,10 +38,8 @@ function stableStringify(value: unknown): string {
 }
 
 export interface AdvisorMock {
-  url: string;
   /** Questions received, in order. */
   questions: string[];
-  close: () => Promise<void>;
 }
 
 export interface AdvisorMockOptions {
@@ -67,40 +69,47 @@ function frame(evt: unknown): string {
   return `data: ${JSON.stringify(evt)}\n\n`;
 }
 
-async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
-  const chunks: Buffer[] = [];
-  for await (const c of req) chunks.push(c as Buffer);
-  try {
-    return JSON.parse(Buffer.concat(chunks).toString('utf8')) as Record<string, unknown>;
-  } catch {
-    return {};
-  }
+/** One answer as the page streams it: each frame after its delay (ms). */
+interface StreamPlan {
+  frames: string[];
+  delays: number[];
 }
 
-export async function startAdvisorMock(opts: AdvisorMockOptions = {}): Promise<AdvisorMock> {
+const BRIDGE = '__e2eAdvisorAnswer';
+
+/**
+ * Serve POST /api/answer/stream from the recording on this page (and every
+ * later navigation of it). Install it before the first goto.
+ */
+export async function installAdvisorMock(page: Page, opts: AdvisorMockOptions = {}): Promise<AdvisorMock> {
   const rec = recording as Rec;
   const sourcesDelay = opts.sourcesDelayMs ?? 250;
   const chunkDelay = opts.chunkDelayMs ?? 20;
   const questions: string[] = [];
   const secret = shareSecret();
 
-  const server: Server = createServer(async (req, res) => {
-    const body = await readJson(req);
+  await page.exposeFunction(BRIDGE, (rawBody: string): StreamPlan => {
+    let body: Record<string, unknown> = {};
+    try {
+      body = JSON.parse(rawBody) as Record<string, unknown>;
+    } catch {
+      // Not JSON: answer the recorded question.
+    }
     const question = typeof body.query === 'string' && body.query.trim() ? body.query.trim() : rec.question;
     questions.push(question);
-    res.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', connection: 'keep-alive' });
-    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-    await wait(sourcesDelay);
-    res.write(frame({ type: 'sources', sources: rec.sources, stats: rec.stats, confidence: rec.confidence, query: question, rewritten: false }));
-    for (const c of rec.chunks) {
-      await wait(chunkDelay);
-      res.write(frame({ type: 'chunk', content: c.text }));
-    }
+    const frames: string[] = [];
+    const delays: number[] = [];
+    const push = (evt: unknown, delay: number) => {
+      frames.push(frame(evt));
+      delays.push(delay);
+    };
+    push({ type: 'sources', sources: rec.sources, stats: rec.stats, confidence: rec.confidence, query: question, rewritten: false }, sourcesDelay);
+    for (const c of rec.chunks) push({ type: 'chunk', content: c.text }, chunkDelay);
     const payload = { v: 1 as const, question, answer: rec.answer, sources: rec.sources, followups: rec.followups, at: new Date().toISOString() };
     const signature = createHmac('sha256', secret).update(`${CONTEXT}\n${stableStringify(payload)}`).digest('base64url');
-    res.write(
-      frame({
+    push(
+      {
         type: 'done',
         sources: rec.sources,
         followups: rec.followups,
@@ -109,15 +118,39 @@ export async function startAdvisorMock(opts: AdvisorMockOptions = {}): Promise<A
         pros: rec.pros,
         intent: rec.intent,
         share: { payload, signature },
-      }),
+      },
+      0,
     );
-    res.end();
+    return { frames, delays };
   });
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const { port } = server.address() as AddressInfo;
-  return {
-    url: `http://127.0.0.1:${port}/api/answer/stream`,
-    questions,
-    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
-  };
+
+  await page.addInitScript((bridge: string) => {
+    const w = window as unknown as Record<string, unknown> & { fetch: typeof fetch };
+    const realFetch = w.fetch.bind(window);
+    w.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      if (new URL(url, location.href).pathname !== '/api/answer/stream') return realFetch(input, init);
+      const signal = init?.signal ?? undefined;
+      if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
+      const rawBody = typeof init?.body === 'string' ? init.body : '';
+      const plan = (await (w[bridge] as (b: string) => Promise<StreamPlan>)(rawBody)) as StreamPlan;
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          for (let i = 0; i < plan.frames.length; i++) {
+            await new Promise((r) => setTimeout(r, plan.delays[i]));
+            if (signal?.aborted) {
+              controller.error(new DOMException('The operation was aborted.', 'AbortError'));
+              return;
+            }
+            controller.enqueue(encoder.encode(plan.frames[i]));
+          }
+          controller.close();
+        },
+      });
+      return new Response(stream, { status: 200, headers: { 'content-type': 'text/event-stream; charset=utf-8' } });
+    };
+  }, BRIDGE);
+
+  return { questions };
 }

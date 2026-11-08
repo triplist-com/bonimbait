@@ -82,7 +82,8 @@ test('planner → result → booking with the project file → booked → consul
     await expect(staff.getByRole('heading', { name: 'תור הייעוצים' })).toBeVisible();
     await expect(staff.getByText(ref).first()).toBeVisible();
     await expect(staff.getByRole('img', { name: new RegExp(`^ציון ${lead!.score} מתוך 100`) }).first()).toBeVisible();
-    await expect(staff.getByText(name).first()).toBeVisible();
+    // On a phone the open lead's file replaces the (hidden) list, so match the visible copy.
+    await expect(staff.getByText(name).locator('visible=true').first()).toBeVisible();
   } finally {
     await staff.context().close();
   }

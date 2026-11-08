@@ -8,7 +8,7 @@
  * one real answer through the whole pipeline (desktop only, about $0.02).
  */
 import { expect, expectNoSideScroll, press, test } from './fixtures';
-import { recordedFirstMoment, recordedFollowups, recordedQuestion, startAdvisorMock, type AdvisorMock } from './helpers/advisor-mock';
+import { recordedFirstMoment, recordedFollowups, recordedQuestion, installAdvisorMock, type AdvisorMock } from './helpers/advisor-mock';
 import { serviceDb } from './helpers/env';
 
 const LIVE = process.env.E2E_LIVE_AI === '1';
@@ -22,12 +22,7 @@ test.describe('advisor: the headline question, end to end', () => {
   let mock: AdvisorMock;
 
   test.beforeEach(async ({ page }) => {
-    mock = await startAdvisorMock();
-    await page.route('**/api/answer/stream', (route) => route.continue({ url: mock.url }));
-  });
-
-  test.afterEach(async () => {
-    await mock?.close();
+    mock = await installAdvisorMock(page);
   });
 
   test('home → ask → sources first → answer → moment → save → share → follow-up', async ({ page, context }) => {
@@ -68,7 +63,6 @@ test.describe('advisor: the headline question, end to end', () => {
     await expect(turn.getByRole('button', { name: 'נשמר בבית שלי' })).toBeVisible();
 
     // "שתפו בוואטסאפ": a wa.me link with the snapshot URL, and the snapshot is stored for real.
-    const shared = page.waitForResponse((r) => r.url().includes('/api/advisor/share') && r.request().method() === 'POST');
     const popupPromise = context.waitForEvent('page');
     await press(page, turn.getByRole('button', { name: 'שתפו בוואטסאפ' }));
     const popup = await popupPromise;
@@ -78,8 +72,12 @@ test.describe('advisor: the headline question, end to end', () => {
     const text = wa.searchParams.get('text') ?? '';
     const shareId = /\/ask\/a\/([A-Za-z0-9]{16})\//.exec(text)?.[1];
     expect(shareId, `share link in "${text}"`).toBeTruthy();
-    expect((await shared).status()).toBeLessThan(300);
     await popup.close();
+    // The snapshot is POSTed with `keepalive`, which Chromium doesn't report as a
+    // page response, so wait for the stored row instead.
+    await expect
+      .poll(async () => (await serviceDb().from('advisor_shares').select('id').eq('id', shareId!).maybeSingle()).data?.id ?? null, { timeout: 15_000 })
+      .toBe(shareId);
 
     const snapshot = await context.newPage();
     const res = await snapshot.goto(`/ask/a/${shareId}/`);

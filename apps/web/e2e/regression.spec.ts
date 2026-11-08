@@ -56,7 +56,7 @@ async function revealPhone(page: Page, slug: string, tag: string) {
   await expect(page.locator('h1')).toHaveCount(1);
   // The business's number is never in the page before the form (the header's own office phone is).
   await expect(page.locator('main a[href^="tel:"]')).toHaveCount(0);
-  await press(page, page.getByRole('button', { name: 'הצג טלפון' }).first());
+  await press(page, page.getByRole('button', { name: 'הצגת הטלפון' }).first());
   const dialog = page.locator('dialog[open]');
   await expect(dialog).toBeVisible();
   await dialog.locator('input[name="full_name"]').fill(`${E2E_NAME} טלפון`);
