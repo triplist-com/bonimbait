@@ -74,7 +74,7 @@ function Ladder({ plans }: { plans: PlanPoint[] }) {
             className={`flex flex-col justify-start rounded-t-2xl rounded-b-md p-3 ${heights[i] ?? 'h-60'} ${tones[i] ?? tones[tones.length - 1]}`}
           >
             <span className="text-sm font-bold leading-tight">{step.name}</span>
-            <span className="mt-1 text-[0.8125rem] font-semibold opacity-90">{step.price}</span>
+            <span className="mt-1 text-[0.8125rem] font-semibold">{step.price}</span>
           </li>
         ))}
       </ol>

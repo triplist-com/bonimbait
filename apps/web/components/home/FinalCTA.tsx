@@ -35,14 +35,14 @@ export default function FinalCTA() {
             <h2 id="final-title" className="text-headline text-white">
               מתחילים לבנות? בואו נדבר.
             </h2>
-            <p className="mt-4 text-body-lg text-white/85">
+            <p className="mt-4 text-body-lg text-white">
               פגישת ייעוץ תקציב ראשונה, ללא עלות וללא התחייבות. נבין יחד איפה אתם עומדים ומה הצעד הבא.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <ConsultationCTA source="home-final" label="קביעת פגישת ייעוץ" buttonVariant="inverse" size="xl" />
               <WhatsAppChatButton className="h-14 rounded-2xl px-6" />
             </div>
-            <p className="mt-6 text-sm text-white/80">
+            <p className="mt-6 text-sm text-white">
               או{' '}
               <Link href={aiHref()} className="inline-flex items-center gap-1 font-bold text-white underline decoration-white/40 underline-offset-4 hover:decoration-white">
                 <Sparkles aria-hidden="true" className="size-4" />

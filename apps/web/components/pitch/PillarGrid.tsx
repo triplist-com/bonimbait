@@ -20,7 +20,7 @@ function PillarCard({ pillar, index, advisorIsDefault }: { pillar: ResolvedPilla
           <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-primary-50 text-primary-700 ring-1 ring-inset ring-primary-100">
             <PillarIcon name={pillar.icon} className="size-6" />
           </span>
-          <span className="num text-sm font-bold text-ink-300" aria-hidden="true">
+          <span className="num text-sm font-bold text-ink-500" aria-hidden="true">
             {String(index + 1).padStart(2, '0')}
           </span>
         </div>
