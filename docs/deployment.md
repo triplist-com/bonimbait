@@ -160,6 +160,10 @@ runs triplist.pro. Both services were created through the Render API, not the `r
 Production follows `main`: merge a PR and Render builds and deploys it (about 4–5 minutes). To roll
 back, redeploy an earlier deploy from the service's **Events** page.
 
+GitHub Actions (`.github/workflows/ci.yml`) checks every PR and push to `main`: lint, unit tests and the
+build of `apps/web`. It doesn't deploy anything. Run the Playwright E2E suite locally, since it needs
+the local Supabase stack.
+
 Memory: the server holds the search indexes (`apps/web/data/*-index.*`) in memory, about 230–370 MB in
 use. If it nears the 512 MB limit, move the service to Standard.
 
