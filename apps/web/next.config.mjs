@@ -7,8 +7,18 @@ const nextConfig = {
   trailingSlash: true,
   skipTrailingSlashRedirect: true,
   images: {
-    // AVIF first (smaller than WebP for photos); browsers without it get WebP.
-    formats: ["image/avif", "image/webp"],
+    // Next optimizes images inside the web service itself (Render, 512 MB), so
+    // memory per encode matters:
+    // - WebP only. AVIF needs about twice the memory and 8x the time: a cold
+    //   burst of the home page's images peaked at 771 MB as AVIF vs 377 MB as
+    //   WebP, and the AVIF bursts got the Render instance OOM-killed.
+    // - Optimized images are kept 7 days. The default is 60 s, which re-encodes
+    //   images whose source sends no long max-age (our /public files) every minute.
+    // - No 2048/3840 variants: the most expensive encodes, and wider than any
+    //   image on the site needs.
+    formats: ["image/webp"],
+    minimumCacheTTL: 604800,
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     remotePatterns: [
       {
         protocol: "https",
