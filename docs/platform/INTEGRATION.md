@@ -216,6 +216,9 @@ select count(*) from command_question_stats(now() - interval '30 days', now(), n
 
 ### 4.2 Environment (Vercel project `bonimbait`, Production)
 
+> Since 2026-11-08 production runs on Render (web service `bonimbait-web`), and the variables live
+> there. See `docs/deployment.md`, section 3. The Vercel steps below are kept as the launch record.
+
 **Required** (most are already set for parity; check them):
 
 | Variable | Why |
@@ -255,7 +258,7 @@ select count(*) from command_question_stats(now() - interval '30 days', now(), n
 | `SITE_NOINDEX` | `true` on bonimbait.com until cutover |
 
 **Payments.** The pro portal's tier upsell runs through the site's `PaymentProvider`. A mock checkout on
-a Vercel production deployment needs `PAYMENT_PROVIDER=mock` **and**
+a hosted production deployment (Vercel, and now Render) needs `PAYMENT_PROVIDER=mock` **and**
 `PAYMENT_ALLOW_MOCK_IN_PRODUCTION=true`. The provider is global, so that also puts the benefits shop on
 mock. Decide this per environment; it's fine on the noindex preview, not after cutover.
 
@@ -267,8 +270,9 @@ period.
 
 ### 4.4 Cron
 
-`vercel.json` runs `GET /api/cron/youtube-watch` daily at 06:00 UTC (09:00 Israel), which is the Hobby
-plan limit. On Pro, `0 */6 * * *` works. It needs `CRON_SECRET` and is skipped while
+The Render cron job `bonimbait-youtube-watch` calls `GET /api/cron/youtube-watch` daily at 06:00 UTC
+(09:00 Israel). It ran from `vercel.json` until 2026-11-08. A more frequent schedule is a one-line change
+on the cron job. It needs `CRON_SECRET` and is skipped while
 `FLAG_AUTOPILOT=false`.
 
 ### 4.5 Post-deploy smoke (phone first, about $0.04 of AI)

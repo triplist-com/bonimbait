@@ -4,11 +4,13 @@
 
 The Bonimbait stack consists of three main components:
 
-| Component | Technology | Hosting (Primary) | Hosting (Legacy) |
-|-----------|-----------|-------------------|------------------|
-| Frontend  | Next.js 14 | Render | Vercel |
-| API       | Python FastAPI | Render (Docker) | Fly.io / Railway |
-| Database  | PostgreSQL + pgvector | Render PostgreSQL | Supabase |
+| Component | Technology | Hosting | Before |
+|-----------|-----------|---------|--------|
+| Web app (pages, search, AI answers, admin) | Next.js 14 | Render: web service `bonimbait-web` + cron `bonimbait-youtube-watch` | Vercel, until 2026-11-08 |
+| Database and media | PostgreSQL + pgvector, Storage | Supabase (Frankfurt) | |
+| API (legacy, suspended) | Python FastAPI | Render (Docker), `bonimbait-api` | Fly.io / Railway |
+
+Search and AI answers run inside the Next.js app; the FastAPI service is not used.
 
 ---
 
@@ -137,50 +139,61 @@ railway variables set ENV=production
 
 ---
 
-## 3. Frontend Deployment (Vercel)
+## 3. Web App Deployment (Render)
 
-### Option A: Connect GitHub (Recommended)
+The app runs in the Render project **Bonimbait** (environment *Production*), in the workspace that also
+runs triplist.pro. Both services were created through the Render API, not the `render.yaml` Blueprint
+(see the note at the top of `render.yaml`).
 
-1. Go to [Vercel Dashboard](https://vercel.com/dashboard).
-2. Import the repository.
-3. Set root directory to `apps/web`.
-4. Vercel auto-detects Next.js.
-5. Set environment variables:
-   - `NEXT_PUBLIC_API_URL` = `https://bonimbait-api.fly.dev`
-   - `NEXT_PUBLIC_SITE_URL` = `https://bonimbait.com`
-   - `NEXT_PUBLIC_GA_ID` = `G-XXXXXXX` (if applicable)
+### Web service `bonimbait-web`
 
-### Option B: CLI Deploy
+| Setting | Value |
+|---|---|
+| Repo / branch | `triplist-com/bonimbait`, `main`, auto-deploy on every push |
+| Root directory | `apps/web` |
+| Runtime / plan / region | Node (`NODE_VERSION=22`), Starter (512 MB), Frankfurt |
+| Build command | `npm ci --include=dev && npm run build` |
+| Start command | `npm run start -- -p $PORT` |
+| Health check | `/api/health` |
+| URL | https://bonimbait-web.onrender.com, and the custom domains in section 4 |
+
+Production follows `main`: merge a PR and Render builds and deploys it (about 4–5 minutes). To roll
+back, redeploy an earlier deploy from the service's **Events** page.
+
+Memory: the server holds the search indexes (`apps/web/data/*-index.*`) in memory, about 230–370 MB in
+use. If it nears the 512 MB limit, move the service to Standard.
+
+### Environment
+
+The service's **Environment** tab holds the production variables (`docs/ENV_VARS.md` lists them). When
+the site moved from Vercel, five signing secrets were regenerated and now exist only on Render:
+`ADVISOR_SHARE_SECRET`, `CRON_SECRET`, `LEAD_IP_SALT`, `REDIRECT_REFRESH_SECRET` and
+`REVENUE_TOKEN_SECRET`. (Vercel never returns values marked "sensitive".)
+
+Render sets `RENDER=true` itself. `lib/deploy.ts` reads it, so mock payments are refused on Render, as
+they were on Vercel, unless `PAYMENT_ALLOW_MOCK_IN_PRODUCTION=true`. On Render the client IP is
+taken from `True-Client-IP` / `CF-Connecting-IP`.
+
+### Cron job `bonimbait-youtube-watch`
+
+Daily at 06:00 UTC (09:00 Israel). It has no build; it calls the web service with the shared secret:
 
 ```bash
-cd apps/web
-vercel --prod
+curl -fsS --max-time 120 -H "Authorization: Bearer $CRON_SECRET" https://bonimbait-web.onrender.com/api/cron/youtube-watch
 ```
 
-### Custom Domain
-
-In Vercel project settings, add `bonimbait.com` as a custom domain.
+`CRON_SECRET` must match on both services. If you change it on one, change it on the other.
 
 ---
 
 ## 4. DNS Configuration (GoDaddy)
 
-### Option A: Point Records to Vercel
+| Type  | Name | Value                        | TTL  |
+|-------|------|------------------------------|------|
+| A     | @    | 216.24.57.1                  | 600  |
+| CNAME | www  | bonimbait-web.onrender.com   | 3600 |
 
-Log into GoDaddy DNS management for `bonimbait.com` and set:
-
-| Type  | Name | Value                  | TTL  |
-|-------|------|------------------------|------|
-| A     | @    | 76.76.21.21            | 600  |
-| CNAME | www  | cname.vercel-dns.com   | 3600 |
-
-### Option B: Transfer Nameservers to Vercel
-
-1. In Vercel, add the domain and select "Use Vercel Nameservers".
-2. Copy the nameserver values provided by Vercel.
-3. In GoDaddy, go to **Domain Settings > Nameservers > Change** and enter the Vercel nameservers.
-
-DNS propagation may take up to 48 hours (usually under 1 hour).
+`www.bonimbait.com` redirects (301) to `bonimbait.com`. Details and checks: `docs/DNS_SETUP.md`.
 
 ---
 
@@ -188,7 +201,7 @@ DNS propagation may take up to 48 hours (usually under 1 hour).
 
 SSL is **automatic**:
 
-- **Vercel**: Provisions and renews Let's Encrypt certificates automatically.
+- **Render**: Issues and renews certificates for `bonimbait.com` and `www` automatically (Google Trust Services).
 - **Fly.io**: Provisions certificates automatically when a custom domain is added.
 - **Supabase**: Connections are encrypted by default.
 
@@ -240,11 +253,12 @@ WITH (lists = 100);
 
 ## 7. Monitoring
 
-### Frontend (Vercel)
+### Web app (Render)
 
-- **Vercel Analytics**: Enable in project settings for Core Web Vitals.
-- **Vercel Speed Insights**: Built-in performance monitoring.
-- **Deployment logs**: Available in the Vercel dashboard.
+- **Logs, events and deploys**: the `bonimbait-web` service in the Render dashboard.
+- **Metrics**: CPU and memory on the service's **Metrics** page; watch memory against the 512 MB limit.
+- **Cron**: each run's log is on the `bonimbait-youtube-watch` job.
+- **Health**: `curl https://bonimbait.com/api/health`.
 
 ### API (Fly.io)
 
@@ -316,7 +330,7 @@ flyctl logs --app bonimbait-api
 
 ### Frontend Build Failures
 
-- Check Vercel deployment logs.
+- Check the deploy logs of `bonimbait-web` in Render.
 - Verify `NEXT_PUBLIC_API_URL` is set correctly.
 - Run `npm run build` locally to reproduce errors.
 

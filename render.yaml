@@ -1,10 +1,15 @@
-# Render Blueprint — Bonimbait API
+# Render Blueprint — Bonimbait API (legacy)
 # https://render.com/docs/blueprint-spec
 #
-# Deploy: Push to GitHub → Render Dashboard → New → Blueprint → Connect repo
+# The Blueprint "BonimBaitBluePrint" syncs this file from main automatically.
+# It manages only the FastAPI backend below, which is legacy and suspended:
+# search and AI answers run inside the Next.js app.
 #
-# Frontend stays on Vercel. Database stays on Supabase.
-# This Blueprint deploys only the FastAPI backend.
+# The Next.js app also runs on Render (since 2026-11-08), in the Render project
+# "Bonimbait": web service `bonimbait-web` and cron job `bonimbait-youtube-watch`.
+# They were created through the Render API, not this Blueprint, so do NOT add
+# them here: the auto-sync would create a second copy of each. Their settings
+# are in docs/deployment.md (section 3). The database stays on Supabase.
 
 services:
   # ─── FastAPI Backend (Docker) ───────────────────────────────────────
