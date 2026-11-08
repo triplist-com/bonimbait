@@ -32,5 +32,6 @@ Log every paid run here: amounts and volumes only, never keys.
 | 2026-10-15 | integration | End-to-end journeys on the local stack: one visitor answer (offer, pros, save) and one member answer (region from the hub project), Sonnet 5.5, with `cost_usd` read from `answer_completed` | 2 answers (600 + 717 output tokens) | 0.0362 |
 | 2026-10-15 | integration | The two answers' pros classifications, Haiku 4.5 (estimated at the measured ~$0.0015 each) | 2 calls | ~0.003 |
 | 2026-10-15 | integration | Query embeddings for about 30 retrieval dry runs (the hub's 21 stage questions, alternatives), text-embedding-3-small | ~30 queries, ~700 tokens | <0.0001 |
+| 2026-10-18 | orchestrator | Production deploy smoke test (PR #18): one live answer on bonimbait.com, Sonnet 5.5 + pros classifier (estimated from the 2026-10-15 post-merge check) | 1 answer + 1 pros call | ~0.02 |
 
-**Running total:** ~$1.15 (autopilot ~$0.09 of $0.75; knowledge $0.279 of $1.50; command $0.011 of $0.50; pitch $0.032 of $0.20; advisor $0.678 of $1.00; integration ~$0.039 of $0.20)
+**Running total:** ~$1.17 (orchestrator ~$0.04; autopilot ~$0.09 of $0.75; knowledge $0.279 of $1.50; command $0.011 of $0.50; pitch $0.032 of $0.20; advisor $0.678 of $1.00; integration ~$0.039 of $0.20)

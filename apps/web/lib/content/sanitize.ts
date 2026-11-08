@@ -235,7 +235,10 @@ export function prepareContentHtml(raw: string | null | undefined): PreparedHtml
     const isAudio = /spotify\.com|podbean\.com/i.test(frame);
     return `<div class="${isAudio ? 'bb-embed bb-embed-audio' : 'bb-embed'}">${frame}</div>`;
   });
-  html = html.replace(/<table\b/gi, '<div class="bb-table"><table').replace(/<\/table>/gi, '</table></div>');
+  // The scroll box takes focus so keyboard users can scroll it (WCAG 2.1.1, axe scrollable-region-focusable).
+  html = html
+    .replace(/<table\b/gi, '<div class="bb-table" tabindex="0" role="region" aria-label="טבלה"><table')
+    .replace(/<\/table>/gi, '</table></div>');
 
   // Empty paragraphs left behind by removed widgets.
   html = html.replace(/<p>(\s|&nbsp;|<br \/>)*<\/p>/g, '');

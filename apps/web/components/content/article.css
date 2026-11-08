@@ -188,6 +188,11 @@
   -webkit-overflow-scrolling: touch;
 }
 
+.bb-prose .bb-table:focus-visible {
+  outline: 2px solid rgb(var(--bb-primary-600));
+  outline-offset: 2px;
+}
+
 .bb-prose table {
   width: 100%;
   min-width: 32rem;

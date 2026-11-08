@@ -44,9 +44,18 @@ const nextConfig = {
   // bonimbayit.co.il) out of search results so it can't compete with the live
   // site. Crawling stays allowed so search engines see the noindex and drop any
   // pages they already indexed.
+  //
+  // The security headers apply on any host (they lived in vercel.json while the
+  // site ran on Vercel).
   async headers() {
-    if (process.env.SITE_NOINDEX !== "true") return [];
-    return [{ source: "/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] }];
+    const headers = [
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "X-Frame-Options", value: "DENY" },
+      { key: "X-XSS-Protection", value: "1; mode=block" },
+      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+    ];
+    if (process.env.SITE_NOINDEX === "true") headers.push({ key: "X-Robots-Tag", value: "noindex, nofollow" });
+    return [{ source: "/:path*", headers }];
   },
 };
 

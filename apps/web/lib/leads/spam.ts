@@ -8,6 +8,7 @@
  *      is set (the widget renders when NEXT_PUBLIC_TURNSTILE_SITE_KEY is set).
  */
 import { createHash } from 'node:crypto';
+import { isRender } from '@/lib/deploy';
 
 export const RATE_LIMIT_MAX = Number(process.env.LEAD_RATE_LIMIT_MAX || 5);
 export const RATE_LIMIT_WINDOW_MIN = Number(process.env.LEAD_RATE_LIMIT_WINDOW_MIN || 10);
@@ -22,8 +23,17 @@ export function hashIp(ip: string | null | undefined, salt = process.env.LEAD_IP
   return createHash('sha256').update(`${salt}:${ip.trim()}`).digest('hex').slice(0, 32);
 }
 
-/** First address in x-forwarded-for, else x-real-ip. */
-export function clientIpFromHeaders(h: { get(name: string): string | null }): string | null {
+/**
+ * The client's IP. On Render the edge (Cloudflare) sets True-Client-IP /
+ * CF-Connecting-IP itself, while a client-supplied X-Forwarded-For can survive
+ * as its first entry, so those headers come first there. Elsewhere (Vercel,
+ * local): the first address in x-forwarded-for, else x-real-ip.
+ */
+export function clientIpFromHeaders(h: { get(name: string): string | null }, env: Record<string, string | undefined> = process.env): string | null {
+  if (isRender(env)) {
+    const edge = h.get('true-client-ip')?.trim() || h.get('cf-connecting-ip')?.trim();
+    if (edge) return edge;
+  }
   const fwd = h.get('x-forwarded-for');
   if (fwd) return fwd.split(',')[0]!.trim() || null;
   return h.get('x-real-ip')?.trim() || null;

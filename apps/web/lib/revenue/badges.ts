@@ -7,6 +7,7 @@ import 'server-only';
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { DbClient } from '@/lib/db/client';
+import { isProductionDeploy } from '@/lib/deploy';
 import { isEnabled } from '@/lib/flags';
 import { asRevenueDb, revenuePublicDb } from './db';
 import type { PartnerBadge } from './tiers';
@@ -17,7 +18,7 @@ import type { PartnerBadge } from './tiers';
  * business on the live site (QA; partner_badges.is_mock, migration 20261014131200).
  */
 export function countsPublicly(badge: { is_mock?: boolean | null }, env: Record<string, string | undefined> = process.env): boolean {
-  return !(badge.is_mock && env.VERCEL_ENV === 'production');
+  return !(badge.is_mock && isProductionDeploy(env));
 }
 
 export async function loadPartnerBadges(db?: DbClient | SupabaseClient | null): Promise<Map<string, PartnerBadge>> {

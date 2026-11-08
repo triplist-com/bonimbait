@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { CART_COOKIE } from '@/lib/commerce/cart';
 import { handlePaymentCallback } from '@/lib/commerce/payment-callback';
+import { isRscFetch, rscFetchFallback } from '@/lib/payments/return';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +13,8 @@ export const dynamic = 'force-dynamic';
  *  - other  -> /cart/?payment=failed (cart kept for a retry)
  */
 async function handle(request: Request): Promise<NextResponse> {
+  // A server action's redirect here: let Next load it as a full page instead.
+  if (isRscFetch(request)) return rscFetchFallback();
   const outcome = await handlePaymentCallback(request);
   const base = new URL(request.url);
 

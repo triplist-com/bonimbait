@@ -41,7 +41,7 @@ function Contact({ contact }: { contact: PitchContact }) {
           <h3 className="text-headline-sm text-white">
             {hasContact(contact) ? talk : 'רוצים לראות את זה רץ מקרוב?'}
           </h3>
-          <p className="mt-2 max-w-lg text-body text-white/85">
+          <p className="mt-2 max-w-lg text-body text-white">
             הצעד הבא: גישת צפייה ל-GA4 כדי להחליף הנחות במספרים שלכם, ושבועיים של הרצה מקבילה עם הצוות.
           </p>
         </div>

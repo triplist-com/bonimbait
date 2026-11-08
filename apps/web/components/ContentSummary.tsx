@@ -232,7 +232,7 @@ function WarningsSection({ items, compact }: { items: string[]; compact: boolean
         title="אזהרות"
         color="text-danger-800"
       />
-      <ul className={`space-y-${compact ? '1.5' : '2.5'}`} role="alert">
+      <ul className={`space-y-${compact ? '1.5' : '2.5'}`}>
         {items.map((warning, i) => (
           <li key={i} className={`flex items-start gap-2.5 ${compact ? 'text-xs' : 'text-sm'} text-danger-800`}>
             <svg className="w-4 h-4 text-danger-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>

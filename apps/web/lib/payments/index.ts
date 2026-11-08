@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { isHostedDeploy } from '@/lib/deploy';
 import { MockProvider } from './mock';
 import { UpayProvider } from './upay';
 import { type PaymentProvider, type PaymentProviderName, PaymentConfigurationError } from './types';
@@ -18,13 +19,12 @@ function providerName(): PaymentProviderName {
 
 /**
  * The mock provider marks orders paid without charging anyone, so it is refused
- * on every Vercel deployment (production, and previews, which may share the
- * production database) unless PAYMENT_ALLOW_MOCK_IN_PRODUCTION=true. Local
- * development and the test suites keep it.
+ * on every hosted deployment (Vercel or Render; production, and previews, which
+ * may share the production database) unless PAYMENT_ALLOW_MOCK_IN_PRODUCTION=true.
+ * Local development and the test suites keep it.
  */
 function mockBlocked(name: PaymentProviderName): boolean {
-  const onVercel = Boolean(process.env.VERCEL) || Boolean(process.env.VERCEL_ENV);
-  return name === 'mock' && onVercel && process.env.PAYMENT_ALLOW_MOCK_IN_PRODUCTION !== 'true';
+  return name === 'mock' && isHostedDeploy() && process.env.PAYMENT_ALLOW_MOCK_IN_PRODUCTION !== 'true';
 }
 
 /** Whether the site may offer online purchase (buy buttons, add to cart, checkout). */
