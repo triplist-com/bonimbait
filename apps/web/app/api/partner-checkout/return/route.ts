@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isRscFetch, rscFetchFallback } from '@/lib/payments/return';
 import { completeTierCheckout } from '@/lib/revenue/checkout';
 
 export const dynamic = 'force-dynamic';
@@ -9,6 +10,8 @@ export const dynamic = 'force-dynamic';
  * to their portal: ?upgraded=1 on success, ?checkout=failed otherwise.
  */
 async function handle(request: Request): Promise<NextResponse> {
+  // A server action's redirect here: let Next load it as a full page instead.
+  if (isRscFetch(request)) return rscFetchFallback();
   const base = new URL(request.url);
   let outcome: Awaited<ReturnType<typeof completeTierCheckout>>;
   try {
