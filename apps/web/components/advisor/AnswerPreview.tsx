@@ -8,9 +8,9 @@
  * asking, and paying, again.
  */
 import Link from 'next/link';
-import { useEffect, useRef } from 'react';
-import { ArrowLeft, Play, Sparkles } from 'lucide-react';
-import { ButtonLink } from '@/components/ui/Button';
+import { useEffect, useId, useRef, useState } from 'react';
+import { ArrowLeft, ChevronDown, Play, Sparkles } from 'lucide-react';
+import { Button, ButtonLink } from '@/components/ui/Button';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { track } from '@/lib/analytics/track';
 import { clock, statsLine } from '@/lib/advisor/format';
@@ -31,14 +31,47 @@ export default function AnswerPreview({ query }: { query: string }) {
     void ask(q, { origin: 'search', fresh: true });
   }, [query, ask]);
 
+  // The preview is capped; a toggle opens the whole answer when it runs past the cap.
+  const answerId = useId();
+  const sectionRef = useRef<HTMLElement>(null);
+  const clipRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+
+  useEffect(() => {
+    setExpanded(false);
+  }, [query]);
+
+  useEffect(() => {
+    const clip = clipRef.current;
+    const body = bodyRef.current;
+    if (!clip || !body) return;
+    const measure = () => {
+      // max-height is 'none' while expanded: keep the last answer, the content only grows.
+      const cap = parseFloat(getComputedStyle(clip).maxHeight);
+      if (!Number.isNaN(cap)) setOverflows(body.offsetHeight > cap + 1);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(body);
+    return () => observer.disconnect();
+  }, [expanded]);
+
+  const toggle = () => {
+    if (expanded) sectionRef.current?.scrollIntoView({ block: 'nearest' });
+    setExpanded(!expanded);
+  };
+
   const turn = turns[turns.length - 1];
   const done = turn?.status === 'done';
   const continueHref = done ? `/ask/?thread=${threadId}` : `/ask/?q=${encodeURIComponent(query)}`;
   const moments = (turn?.sources ?? []).filter((s): s is AdvisorVideoSource => s.kind === 'video').slice(0, 3);
   const line = turn && !turn.refused ? statsLine(turn.stats) : null;
+  const canExpand = overflows && !!turn?.answer && !(done && isUnavailable(turn.degraded));
 
   return (
-    <section aria-labelledby="search-answer" className="rounded-3xl border border-ink-100 bg-white p-5 shadow-card sm:p-7">
+    <section ref={sectionRef} aria-labelledby="search-answer" className="rounded-3xl border border-ink-100 bg-white p-5 shadow-card sm:p-7">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="search-answer" className="eyebrow">
           <Sparkles aria-hidden="true" className="size-4" />
@@ -49,27 +82,48 @@ export default function AnswerPreview({ query }: { query: string }) {
         </p>
       </div>
 
-      <div className="relative mt-3 max-h-[14rem] overflow-hidden" aria-busy={!done}>
-        {done && turn?.degraded && isUnavailable(turn.degraded) ? (
-          <AnswerUnavailable degraded={turn.degraded} message={turn.answer} />
-        ) : turn?.answer ? (
-          <AnswerMarkdown
-            markdown={turn.answer}
-            streaming={turn.status === 'answering'}
-            sources={turn.sources}
-            onCite={() => {
-              window.location.href = continueHref;
-            }}
-          />
-        ) : turn?.status === 'error' ? (
-          <p className="text-body-sm text-danger-700">{turn.error}</p>
-        ) : (
-          <SkeletonText lines={3} />
-        )}
-        {turn?.answer && !(done && isUnavailable(turn.degraded)) && (
+      <div
+        ref={clipRef}
+        id={answerId}
+        className={expanded ? 'relative mt-3' : 'relative mt-3 max-h-[14rem] overflow-hidden'}
+        aria-busy={!done}
+      >
+        <div ref={bodyRef}>
+          {done && turn?.degraded && isUnavailable(turn.degraded) ? (
+            <AnswerUnavailable degraded={turn.degraded} message={turn.answer} />
+          ) : turn?.answer ? (
+            <AnswerMarkdown
+              markdown={turn.answer}
+              streaming={turn.status === 'answering'}
+              sources={turn.sources}
+              onCite={() => {
+                window.location.href = continueHref;
+              }}
+            />
+          ) : turn?.status === 'error' ? (
+            <p className="text-body-sm text-danger-700">{turn.error}</p>
+          ) : (
+            <SkeletonText lines={3} />
+          )}
+        </div>
+        {canExpand && !expanded && (
           <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent" />
         )}
       </div>
+
+      {canExpand && (
+        <Button
+          variant="link"
+          size="sm"
+          onClick={toggle}
+          aria-expanded={expanded}
+          aria-controls={answerId}
+          iconEnd={<ChevronDown className={expanded ? 'rotate-180' : undefined} />}
+          className="mt-1"
+        >
+          {expanded ? 'הציגו פחות' : 'קראו את כל התשובה'}
+        </Button>
+      )}
 
       {moments.length > 0 && (
         <ul aria-label="הרגעים בסרטונים" className="mt-4 flex flex-wrap gap-2">
