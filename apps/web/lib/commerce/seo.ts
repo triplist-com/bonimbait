@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { SITE_NAME, absoluteUrl } from '@/lib/site';
+import { pageRobots } from '@/lib/seo/robots';
 
 /** Decode a (possibly percent-encoded) Hebrew route param and NFC-normalize it. */
 export function decodeSlug(param: string): string {
@@ -32,7 +33,7 @@ export function commerceMetadata(opts: {
     title: { absolute: opts.title },
     description,
     alternates: { canonical },
-    robots: { index: !opts.noindex, follow: !opts.nofollow },
+    robots: pageRobots({ index: !opts.noindex, follow: !opts.nofollow }),
     openGraph: {
       title: opts.title,
       description,

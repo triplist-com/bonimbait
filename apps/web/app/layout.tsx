@@ -9,6 +9,7 @@ import PageViewTracker from '@/components/analytics/PageViewTracker';
 import SiteChromeGate from '@/components/platform/SiteChromeGate';
 import ConsultationCTA from '@/components/leads/ConsultationCTA';
 import { SITE_URL, absoluteUrl } from '@/lib/site';
+import { pageRobots } from '@/lib/seo/robots';
 import { primary } from '@/lib/design/tokens';
 
 // Heebo (variable 100-900). `subsets` only controls preloading: every subset's
@@ -57,10 +58,7 @@ export const metadata: Metadata = {
     description:
       'מאגר ידע מקיף לבנייה פרטית בישראל עם תשובות AI מבוססות מאות סרטונים',
   },
-  robots: {
-    index: true,
-    follow: true,
-  },
+  robots: pageRobots(),
   alternates: {
     canonical: absoluteUrl(),
   },
