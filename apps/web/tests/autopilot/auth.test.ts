@@ -80,6 +80,23 @@ describe('cron: /api/cron/youtube-watch', () => {
     expect(state.watch).toHaveBeenCalledWith(expect.anything(), { via: 'cron' });
     expect(await res.json()).toEqual(REPORT);
   });
+
+  it('returns 502 when the channel could not be read, so the cron run fails', async () => {
+    const feeds = [{ kind: 'youtube', url: 'https://www.youtube.com/feeds/videos.xml', items: 0, error: 'HTTP 404' }];
+    state.watch.mockResolvedValue({ ...REPORT, feeds });
+    const res = await cron(cronRequest('Bearer cron-test-secret'));
+    expect(res.status).toBe(502);
+    expect((await res.json()).feeds).toEqual(feeds);
+  });
+
+  it('returns 200 when the Data API fallback recovered from a feed error', async () => {
+    const feeds = [
+      { kind: 'youtube', url: 'https://www.youtube.com/feeds/videos.xml', items: 0, error: 'HTTP 404' },
+      { kind: 'youtube', url: 'https://www.googleapis.com/youtube/v3/playlistItems', items: 15 },
+    ];
+    state.watch.mockResolvedValue({ ...REPORT, feeds });
+    expect((await cron(cronRequest('Bearer cron-test-secret'))).status).toBe(200);
+  });
 });
 
 describe('admin endpoints', () => {

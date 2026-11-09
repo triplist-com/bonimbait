@@ -25,6 +25,8 @@ function intEnv(name: string, fallback: number, min: number, max: number): numbe
 export function autopilotConfig() {
   return {
     channelId: process.env.YOUTUBE_CHANNEL_ID || DEFAULT_CHANNEL_ID,
+    /** YouTube Data API v3 key: detection falls back to it when the Atom feed fails. */
+    youtubeApiKey: process.env.YOUTUBE_API_KEY || null,
     /** Optional podcast RSS feed to watch alongside YouTube. */
     podcastRssUrl: process.env.PODCAST_RSS_URL || null,
     /** Cron also processes new sources (never publishes). Default off. */
