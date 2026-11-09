@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import StructuredData from '@/components/StructuredData';
 import { STAGE_CATEGORY_SLUGS } from '@/lib/content/queries';
-import { legacyCategories, loadAllVideoPages, type VideoHubItem } from '@/lib/content/videos';
+import { legacyCategories, loadVideoHubItems, type VideoHubItem } from '@/lib/content/videos';
 import { absoluteUrl } from '@/lib/site';
 import { stageForCategory } from '@/lib/stages';
 import Breadcrumbs from './Breadcrumbs';
@@ -30,7 +30,8 @@ function Grid({ items }: { items: VideoHubItem[] }) {
 }
 
 async function VideoHubContent() {
-  const all = await loadAllVideoPages();
+  // Legacy video pages plus published Content Autopilot videos, newest first.
+  const all = await loadVideoHubItems();
   const podcasts = all.filter((v) => v.kind === 'podcast');
 
   // Group by the live video categories (construction stages), 4 per stage.

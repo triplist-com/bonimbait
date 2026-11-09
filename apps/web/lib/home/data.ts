@@ -10,7 +10,9 @@ import { getPublicDb, safeQuery } from '@/lib/content/db';
 import { listActiveServicePlans, type ServicePlanWithPrices } from '@/lib/db/commerce';
 import { getReviewStats } from '@/lib/db/reviews';
 import { listPublishedVideoPages, type VideoPageSummary } from '@/lib/db/videos';
-import { videoThumb } from '@/lib/content/videos';
+import { loadLegacyEmbeddedIds, videoThumb } from '@/lib/content/videos';
+import { mergeNewestFirst, runtimeKind, withoutEmbedded, type RuntimeListItem } from '@/lib/autopilot/listing';
+import { listPublishedRuntimeVideoItems } from '@/lib/autopilot/video-list';
 import { BUILD_STAGES } from '@/lib/stages';
 import { computeVideoStats, type KnowledgeStats } from './stats';
 import { episodeNumber } from '@/lib/format';
@@ -110,14 +112,45 @@ function toMediaItem(p: VideoPageSummary): HomeMediaItem {
   };
 }
 
+/** A published Content Autopilot video in a homepage rail (its AI page is /video/<youtube-id>/). */
+function runtimeMediaItem(v: RuntimeListItem): HomeMediaItem {
+  const kind = runtimeKind(v.title);
+  return {
+    id: v.youtube_id,
+    title: v.title,
+    href: `/video/${v.youtube_id}/`,
+    thumb: v.thumbnail_url,
+    durationSeconds: v.duration_s || null,
+    kind,
+    episode: kind === 'podcast' ? episodeNumber(v.title) : null,
+  };
+}
+
+/**
+ * The homepage rails: the newest legacy video pages and published Content
+ * Autopilot videos of each kind, merged newest first. A runtime video that a
+ * legacy page already embeds shows as that page.
+ */
 export async function getHomeMedia(limit = 8): Promise<{ podcasts: HomeMediaItem[]; videos: HomeMediaItem[] }> {
   const db = getPublicDb();
   if (!db) return { podcasts: [], videos: [] };
-  const [podcasts, videos] = await Promise.all([
+  const [podcasts, videos, runtimeAll] = await Promise.all([
     safeQuery(async () => (await listPublishedVideoPages(db, { page: 1, pageSize: limit, kind: 'podcast' })).items, [] as VideoPageSummary[]),
     safeQuery(async () => (await listPublishedVideoPages(db, { page: 1, pageSize: limit, kind: 'video' })).items, [] as VideoPageSummary[]),
+    listPublishedRuntimeVideoItems(),
   ]);
-  return { podcasts: podcasts.map(toMediaItem), videos: videos.map(toMediaItem) };
+  const newest = runtimeAll.slice(0, limit * 2);
+  const runtime = withoutEmbedded(newest, await loadLegacyEmbeddedIds(newest.map((v) => v.youtube_id)));
+  const rail = (legacy: VideoPageSummary[], kind: HomeMediaItem['kind']): HomeMediaItem[] =>
+    mergeNewestFirst(
+      legacy,
+      runtime.filter((v) => runtimeKind(v.title) === kind),
+      (p) => p.published_at,
+      (v) => v.published_at,
+    )
+      .slice(0, limit)
+      .map((x) => ('legacy_slug' in x ? toMediaItem(x) : runtimeMediaItem(x)));
+  return { podcasts: rail(podcasts, 'podcast'), videos: rail(videos, 'video') };
 }
 
 /* ------------------------------------------------------------------ */

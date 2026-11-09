@@ -164,12 +164,8 @@ function loadData(): DataFile {
 
 // ---- Public helpers ----
 
-export function getVideos(params: {
-  page?: number;
-  limit?: number;
-  category?: string;
-  sort?: string;
-}): { videos: VideoRecord[]; total: number; page: number; pages: number } {
+/** Every static-index video in one category (or all), sorted; getVideos pages through it. */
+export function listVideos(params: { category?: string; sort?: string }): VideoRecord[] {
   const data = loadData();
   let filtered = data.videos;
 
@@ -190,9 +186,25 @@ export function getVideos(params: {
     );
   }
   // default 'newest' — data is already sorted newest-first
+  return filtered;
+}
 
-  const page = Math.max(1, params.page || 1);
-  const limit = Math.min(100, Math.max(1, params.limit || 20));
+/** Page and limit as getVideos clamps them. */
+export function pageParams(params: { page?: number; limit?: number }): { page: number; limit: number } {
+  return {
+    page: Math.max(1, params.page || 1),
+    limit: Math.min(100, Math.max(1, params.limit || 20)),
+  };
+}
+
+export function getVideos(params: {
+  page?: number;
+  limit?: number;
+  category?: string;
+  sort?: string;
+}): { videos: VideoRecord[]; total: number; page: number; pages: number } {
+  const filtered = listVideos(params);
+  const { page, limit } = pageParams(params);
   const total = filtered.length;
   const pages = Math.ceil(total / limit);
   const start = (page - 1) * limit;

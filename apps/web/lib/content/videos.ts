@@ -2,6 +2,8 @@ import 'server-only';
 
 import { cache } from 'react';
 import { getStaticVideo as getIndexedVideo, getVideos as getIndexedVideos } from '@/app/api/_lib/data';
+import { mergeNewestFirst, runtimeKind, stageCategories, withoutEmbedded, type RuntimeListItem } from '@/lib/autopilot/listing';
+import { listPublishedRuntimeVideoItems } from '@/lib/autopilot/video-list';
 import { findPublishedRuntimeIds } from '@/lib/autopilot/videos';
 import type { Video } from '@/lib/types';
 import type { VideoPageRow } from '@/lib/db/types';
@@ -77,6 +79,50 @@ export const loadAllVideoPages = cache(async (): Promise<VideoHubItem[]> => {
     return out;
   }, []);
 });
+
+/**
+ * A published Content Autopilot video as a hub card. Its AI page is
+ * /video/<youtube-id>/, so the YouTube id stands in for the legacy slug.
+ */
+export function runtimeHubItem(v: RuntimeListItem): VideoHubItem {
+  return {
+    id: v.youtube_id,
+    legacy_slug: v.youtube_id,
+    title: v.title,
+    excerpt: v.summary || null,
+    featured_image: v.thumbnail_url,
+    youtube_ids: [v.youtube_id],
+    kind: runtimeKind(v.title),
+    published_at: v.published_at,
+    legacy_categories: stageCategories(v.stage),
+  };
+}
+
+/**
+ * The video hub's list: legacy video pages plus published Content Autopilot
+ * videos that no legacy page embeds, newest first.
+ */
+export const loadVideoHubItems = cache(async (): Promise<VideoHubItem[]> => {
+  const [legacy, runtime] = await Promise.all([loadAllVideoPages(), listPublishedRuntimeVideoItems()]);
+  const fresh = withoutEmbedded(runtime, legacy.flatMap((p) => p.youtube_ids ?? [])).map(runtimeHubItem);
+  return mergeNewestFirst(legacy, fresh, (p) => p.published_at, (p) => p.published_at);
+});
+
+/** Which of these YouTube ids a published legacy page already embeds (one query; empty on error). */
+export async function loadLegacyEmbeddedIds(youtubeIds: string[]): Promise<string[]> {
+  const db = getPublicDb();
+  if (!db || youtubeIds.length === 0) return [];
+  return safeQuery(async () => {
+    const { data, error } = await db
+      .from('video_pages')
+      .select('youtube_ids')
+      .eq('status', 'published')
+      .overlaps('youtube_ids', youtubeIds);
+    if (error) throw new Error(error.message);
+    const wanted = new Set(youtubeIds);
+    return (data ?? []).flatMap((r) => (r.youtube_ids ?? []).filter((id: string) => wanted.has(id)));
+  }, []);
+}
 
 /** Latest legacy video pages of one kind (homepage carousels). */
 export async function loadLatestVideoPages(kind: VideoPageRow['kind'], limit: number): Promise<VideoPageSummary[]> {

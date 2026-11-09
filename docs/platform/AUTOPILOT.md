@@ -2,8 +2,9 @@
 
 **Keep filming; the platform does the rest.** A new video on the channel is detected,
 transcribed, chunked, embedded and summarised at runtime, then published by staff with one
-click. It gets a `/video/<youtube-id>/` page, goes into the sitemap, and shows up in search and
-in AI answers. There is no index rebuild and no redeploy.
+click. It gets a `/video/<youtube-id>/` page, goes into the sitemap, shows up in search and
+in AI answers, and joins the video lists: the homepage rails, the video hub (`/בונים-בית-tv/`,
+under its build stage) and `/videos`. There is no index rebuild and no redeploy.
 
 Owner: `autopilot` squad. Code: `apps/web/lib/autopilot/`, `apps/web/app/admin/autopilot/`,
 `apps/web/app/api/{cron,admin/autopilot}/`, `apps/web/components/{autopilot,admin/autopilot}/`.
