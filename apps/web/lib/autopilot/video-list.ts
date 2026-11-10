@@ -14,8 +14,21 @@ import { DEFAULT_CATEGORY, STAGES } from './summary';
  */
 
 const LIST_TTL_MS = 60_000;
+/** Serving: a visitor may wait on it (the memo hides most calls), so keep it short. */
 const LIST_TIMEOUT_MS = 1_500;
+/**
+ * `next build` pre-renders the homepage with this list. Under build load the
+ * query can take longer than 1.5 s, and the fail-open empty list then stays
+ * baked into the homepage until its hourly revalidation (2026-11-09 deploy).
+ * Nobody waits on a build, so give it time.
+ */
+const BUILD_TIMEOUT_MS = 15_000;
 const LIST_LIMIT = 500;
+
+/** The query's timeout: long while `next build` pre-renders, short while serving. */
+export function listTimeoutMs(env: Record<string, string | undefined> = process.env): number {
+  return env.NEXT_PHASE === 'phase-production-build' ? BUILD_TIMEOUT_MS : LIST_TIMEOUT_MS;
+}
 let listMemo: { at: number; items: RuntimeListItem[] } | null = null;
 
 /** Tests: forget the memoized list. */
@@ -76,7 +89,7 @@ export async function listPublishedRuntimeVideoItems(now = Date.now()): Promise<
       .not('summary', 'is', null)
       .order('published_at', { ascending: false, nullsFirst: false })
       .limit(LIST_LIMIT)
-      .abortSignal(AbortSignal.timeout(LIST_TIMEOUT_MS));
+      .abortSignal(AbortSignal.timeout(listTimeoutMs()));
     if (error) throw new Error(error.message);
     const items = ((data ?? []) as unknown as ListRow[])
       .filter((r) => YOUTUBE_ID_RE.test(r.external_id))
