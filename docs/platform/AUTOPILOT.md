@@ -25,7 +25,7 @@ detected ──► transcribing ──► transcribed ──► summarizing ─�
 
 | Step | What happens | Where |
 |---|---|---|
-| Detect | Parse the channel's Atom feed (15 newest uploads, free, no key) and `PODCAST_RSS_URL`. Insert `detected` rows for items that are neither in the static index (`apps/web/data/videos.json`) nor already in the store. Idempotent. | `detect.ts`, `rss.ts` |
+| Detect | Parse the channel's Atom feed (15 newest uploads, free, no key) and `PODCAST_RSS_URL`. If the feed fails or comes back empty and `YOUTUBE_API_KEY` is set, read the same 15 uploads from the YouTube Data API instead (the uploads playlist, `UC…` → `UU…`). Insert `detected` rows for items that are neither in the static index (`apps/web/data/videos.json`) nor already in the store. Idempotent. | `detect.ts`, `rss.ts`, `youtube-api.ts` |
 | Transcribe (a) | Fetch Hebrew captions server-side: InnerTube player API as the ANDROID (then IOS) client, then the track as **json3**. That is the format yt-dlp gave the static pipeline, so the cues are byte-identical to it. Manual Hebrew is preferred over auto-generated. | `captions.ts` |
 | Transcribe (b) | Staff upload a VTT/SRT/SBV/TXT/json3 file or paste text in the detail view. | `transcript.ts`, `saveTranscript` action |
 | Transcribe (c) | Optional (`AUTOPILOT_AUDIO_TRANSCRIPTION=true`): upload an audio file (≤25 MB) to the private `autopilot-audio` bucket; OpenAI `whisper-1` returns timed segments. | `audio.ts`, `/api/admin/autopilot/transcribe-audio` |
@@ -116,6 +116,7 @@ page (`findAiPageYoutubeId`).
 |---|---|---|
 | `CRON_SECRET` | none | **Required** for the cron. Vercel sends `Authorization: Bearer $CRON_SECRET`. Without it every cron call gets 401. |
 | `YOUTUBE_CHANNEL_ID` | `UCCehs0A1gUmOUtZIhvkXVJQ` | Channel to watch. |
+| `YOUTUBE_API_KEY` | unset | **Required on Render.** YouTube Data API v3 key, used when the Atom feed fails. The feed answers 404 to Render's servers, so without the key nothing is detected there. Each fallback costs 1 unit of the free 10,000 per day. Restrict the key to "YouTube Data API v3" in Google Cloud. It never appears in reports or logs. |
 | `PODCAST_RSS_URL` | unset | Optional podcast feed to watch. |
 | `AUTOPILOT_AUTO_PROCESS` | `false` | Cron also processes, in this order: new YouTube videos, then `transcribed` sources (budget-refused or handed off), then YouTube videos whose captions weren't ready (up to 3 attempts). Podcast episodes wait for staff. It never publishes. |
 | `AUTOPILOT_AUTO_PROCESS_LIMIT` | `1` | Videos per cron run (1-5). |
@@ -130,9 +131,13 @@ Also used: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_
 
 ### Schedule and endpoints
 
-- `vercel.json` cron: `GET /api/cron/youtube-watch` daily at 06:00 UTC (09:00 Israel). The channel
-  publishes around 21:30 Israel, so new videos are in the queue the next morning. Daily is the
-  Vercel Hobby limit. On Pro, `0 */6 * * *` works.
+- Render cron job `bonimbait-youtube-watch` (docs/deployment.md): `GET /api/cron/youtube-watch`
+  daily at 06:00 UTC (09:00 Israel). The channel publishes around 21:30 Israel, so new videos are
+  in the queue the next morning.
+- The cron answers **502** (with the usual report) when a source couldn't be read at all, for
+  example when the feed fails and there is no `YOUTUBE_API_KEY`. `curl -f` then fails, so Render
+  marks the run failed instead of "succeeded with nothing new". A feed error that the Data API
+  recovered from is still a 200.
 - Admin endpoints (editor or admin; 401 when signed out, 403 for members and pros):
   `POST /api/admin/autopilot/check` (detection only), `POST /api/admin/autopilot/process`
   `{id}` (up to ~20 s per video), and `POST /api/admin/autopilot/transcribe-audio` `{id, path}`.
@@ -195,7 +200,8 @@ for prompts up to 100K tokens, and `text-embedding-3-small` at $0.02 per MTok.
 | "נכשל" with "עיבוד קודם נקטע באמצע" | The step ran past the function limit or the server crashed. That should be rare with the time budget. | Click "ניסיון חוזר" (offered automatically after 10 minutes). |
 | Error "תקציב העיבוד החודשי נוצל" or "גבוהה מהתקרה לסרטון" | The budget gate refused before any paid call. | Raise `AUTOPILOT_MONTHLY_BUDGET_USD` or `AUTOPILOT_MAX_USD_PER_VIDEO`, or wait for the window to roll. |
 | Search fine, but new videos missing from it | The store is unreachable, the RPC is missing, or `AUTOPILOT_SEARCH=off`. | Look for `[autopilot] runtime search skipped (fail-open)` in the logs. Apply the migration and check the service key. Static search keeps working meanwhile. |
-| The cron returns 401 | `CRON_SECRET` isn't set in Vercel, or doesn't match. | Set it. Vercel sends it automatically. |
+| The cron returns 401 | `CRON_SECRET` isn't set on the web service, or doesn't match the cron job's. | Set the same value on both Render services. |
+| The cron run fails with 502; the report shows the feed with `"error":"HTTP 404"` | YouTube's Atom feed refuses Render's IPs, and the Data API fallback is missing or failed. | Set `YOUTUBE_API_KEY` on `bonimbait-web`. If the API entry shows `HTTP 400 badRequest`/`keyInvalid` the key is wrong; `HTTP 403 quotaExceeded` clears the next day; `accessNotConfigured` means the API isn't enabled in that Google Cloud project. |
 | A podcast episode won't publish | Only YouTube sources get a page today. | It stays indexed. Podcasts that are also on YouTube, which the owner's are, come in through the YouTube feed. |
 
 ## 5. Day to day (for the owner)

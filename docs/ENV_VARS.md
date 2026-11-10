@@ -19,6 +19,7 @@
 |----------|----------|-------------|
 | `CRON_SECRET` | Yes (for the cron) | Bearer secret for `/api/cron/youtube-watch`; the Render cron job `bonimbait-youtube-watch` sends it, so set the same value on both services |
 | `YOUTUBE_CHANNEL_ID` | No | Channel to watch (default: the בונים בית channel) |
+| `YOUTUBE_API_KEY` | Yes on Render | YouTube Data API v3 key. Detection falls back to it when the channel's Atom feed fails, which it does from Render's servers (HTTP 404). Without it the cron run fails with 502 |
 | `PODCAST_RSS_URL` | No | Podcast RSS feed to watch too |
 | `AUTOPILOT_AUTO_PROCESS` | No | `true`: the cron also processes new videos (never publishes). Default `false` |
 | `AUTOPILOT_AUTO_PROCESS_LIMIT` | No | Videos per cron run, 1-5 (default 1) |

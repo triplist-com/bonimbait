@@ -27,7 +27,8 @@ export default function CheckChannelButton({ size = 'md' }: { size?: 'md' | 'lg'
         return;
       }
       const r = data.report;
-      const feedError = r.feeds.find((f) => f.error);
+      // An error counts only when nothing of that kind was read (a fallback may have recovered).
+      const feedError = r.feeds.find((f) => f.error && !r.feeds.some((g) => g.kind === f.kind && !g.error));
       const n = r.inserted.length;
       const text =
         n > 0

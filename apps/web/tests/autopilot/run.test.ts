@@ -6,6 +6,7 @@ vi.mock('@/app/api/_lib/data', () => ({ getStaticVideo: () => null, getCategorie
 
 const config = {
   channelId: 'UCCehs0A1gUmOUtZIhvkXVJQ',
+  youtubeApiKey: null,
   podcastRssUrl: null,
   autoProcess: true,
   autoProcessLimit: 2,

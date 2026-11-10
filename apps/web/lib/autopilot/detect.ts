@@ -5,12 +5,14 @@ import { autopilotConfig, type AutopilotConfig } from './config';
 import { parsePodcastFeed, parseYoutubeFeed, youtubeFeedUrl, type FeedItem } from './rss';
 import type { SourceStore } from './store';
 import type { DetectedVia } from './types';
+import { fetchYoutubeUploads, uploadsPlaylistId, youtubeApiReportUrl } from './youtube-api';
 
 /**
  * Detection: read the channel's RSS feed (and the optional podcast feed) and
  * add a `detected` row for every item that is neither in the static index
  * (apps/web/data/videos.json, a superset of the search index's videos) nor
- * already in the knowledge store.
+ * already in the knowledge store. When the channel feed fails and
+ * YOUTUBE_API_KEY is set, the uploads come from the YouTube Data API instead.
  */
 
 export interface FeedReport {
@@ -26,6 +28,15 @@ export interface DetectionReport {
   inserted: Array<{ id: string; kind: 'youtube' | 'podcast'; external_id: string; title: string }>;
   alreadyKnown: number;
   inStaticIndex: number;
+}
+
+/**
+ * Source kinds that were not read at all: every attempt errored. A feed error
+ * that a fallback recovered from doesn't count.
+ */
+export function unreadSourceKinds(feeds: FeedReport[]): Array<FeedReport['kind']> {
+  const kinds = new Set(feeds.map((f) => f.kind));
+  return Array.from(kinds).filter((k) => !feeds.some((f) => f.kind === k && !f.error));
 }
 
 /** True when the video is part of the static AI index (static wins). */
@@ -71,12 +82,33 @@ export async function runDetection(
   const items: FeedItem[] = [];
 
   const ytUrl = youtubeFeedUrl(config.channelId);
+  let feedOk = false;
   try {
     const parsed = parseYoutubeFeed(await fetchFeed(ytUrl, fetchFn));
+    // An empty feed for a channel with uploads is a soft block, not "nothing new".
+    if (parsed.length === 0) throw new Error('empty feed');
     feeds.push({ kind: 'youtube', url: ytUrl, items: parsed.length });
     items.push(...parsed);
+    feedOk = true;
   } catch (err) {
     feeds.push({ kind: 'youtube', url: ytUrl, items: 0, error: (err as Error)?.message ?? String(err) });
+  }
+
+  // The feed answers 404 to some datacenter IPs; the Data API doesn't.
+  if (!feedOk && config.youtubeApiKey) {
+    const playlistId = uploadsPlaylistId(config.channelId);
+    if (!playlistId) {
+      feeds.push({ kind: 'youtube', url: 'youtube-data-api', items: 0, error: 'channel id has no uploads playlist' });
+    } else {
+      const apiUrl = youtubeApiReportUrl(playlistId);
+      try {
+        const parsed = await fetchYoutubeUploads(playlistId, config.youtubeApiKey, fetchFn);
+        feeds.push({ kind: 'youtube', url: apiUrl, items: parsed.length });
+        items.push(...parsed);
+      } catch (err) {
+        feeds.push({ kind: 'youtube', url: apiUrl, items: 0, error: (err as Error)?.message ?? String(err) });
+      }
+    }
   }
 
   if (config.podcastRssUrl) {
