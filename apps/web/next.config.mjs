@@ -53,7 +53,8 @@ const nextConfig = {
   // SITE_NOINDEX=true keeps a temporary domain (bonimbait.com before the move to
   // bonimbayit.co.il) out of search results so it can't compete with the live
   // site. Crawling stays allowed so search engines see the noindex and drop any
-  // pages they already indexed.
+  // pages they already indexed. The robots meta tag follows the same flag
+  // (lib/seo/robots.ts).
   //
   // The security headers apply on any host (they lived in vercel.json while the
   // site ran on Vercel).
