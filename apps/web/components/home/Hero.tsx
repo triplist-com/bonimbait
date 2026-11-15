@@ -6,6 +6,7 @@ import { ChipLink } from '@/components/ui/Chip';
 import { CHANNEL_TRAILER, COMMUNITY_STATS } from '@/lib/brand';
 import { HERO_COPY, HERO_MOMENT } from '@/lib/home/content';
 import { EXAMPLE_QUESTIONS } from '@/lib/home/questions';
+import type { HeroVideo } from '@/lib/home/data';
 import type { KnowledgeStats } from '@/lib/home/stats';
 import { aiHref } from '@/lib/nav';
 import { formatDuration } from '@/lib/format';
@@ -14,8 +15,11 @@ import TrailerFacade from './TrailerFacade';
 
 const STAT_ICONS = [PlayCircle, Clock, BookOpen];
 
-/** Hero: the owner's line, the question box, live counts and the trailer. */
-export default function Hero({ stats }: { stats: KnowledgeStats }) {
+/**
+ * Hero: the owner's line, the question box, live counts and the channel's
+ * newest upload (the trailer when the video list is unavailable).
+ */
+export default function Hero({ stats, video }: { stats: KnowledgeStats; video?: HeroVideo | null }) {
   const parts = [
     stats.videos > 0 && { value: stats.videos, label: 'סרטונים' },
     stats.hours > 0 && { value: stats.hours, label: 'שעות וידאו' },
@@ -101,14 +105,27 @@ export default function Hero({ stats }: { stats: KnowledgeStats }) {
 
           {/* Visual */}
           <div className="relative lg:col-span-5">
-            <TrailerFacade
-              youtubeId={CHANNEL_TRAILER.youtubeId}
-              title={CHANNEL_TRAILER.title}
-              poster={CHANNEL_TRAILER.poster}
-              posterWidth={CHANNEL_TRAILER.posterWidth}
-              posterHeight={CHANNEL_TRAILER.posterHeight}
-              cta="הכירו את בונים בית"
-            />
+            {video ? (
+              <TrailerFacade
+                youtubeId={video.youtubeId}
+                title={video.title}
+                poster={video.poster}
+                posterWidth={video.posterWidth}
+                posterHeight={video.posterHeight}
+                letterboxed={video.letterboxed}
+                badge="חדש בערוץ"
+                cta="צפו בסרטון החדש"
+              />
+            ) : (
+              <TrailerFacade
+                youtubeId={CHANNEL_TRAILER.youtubeId}
+                title={CHANNEL_TRAILER.title}
+                poster={CHANNEL_TRAILER.poster}
+                posterWidth={CHANNEL_TRAILER.posterWidth}
+                posterHeight={CHANNEL_TRAILER.posterHeight}
+                cta="הכירו את בונים בית"
+              />
+            )}
 
             {/* A real answer moment: opens the video at that second */}
             <Link

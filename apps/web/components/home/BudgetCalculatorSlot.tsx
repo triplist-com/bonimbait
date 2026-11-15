@@ -1,9 +1,10 @@
-import { ArrowLeft, Calculator, Clock3 } from 'lucide-react';
-import { ButtonLink } from '@/components/ui/Button';
-import { BUDGET_TEASER } from '@/lib/home/content';
+import Link from 'next/link';
+import { ArrowLeft, Check, FileUp } from 'lucide-react';
+import { BUDGET_TEASER, PLAN_BUDGET_OFFER } from '@/lib/home/content';
 import { calculateCost } from '@/lib/calculator';
 import { cn } from '@/lib/cn';
 import type { PriceBook } from '@/lib/planner/types';
+import PlanBudgetRequest from './PlanBudgetRequest';
 
 /** "₪1,724,310" -> "1.72"; millions with two decimals. */
 function millions(n: number): string {
@@ -11,29 +12,21 @@ function millions(n: number): string {
 }
 
 export interface BudgetCalculatorSlotProps {
-  title?: string;
-  subtitle?: string;
-  cta?: string;
-  /** Today /calculator/; the growth squad (Wave B) can point it at the planner. */
-  href?: string;
   /** The owner's current price book (the page loads it); the seeded book otherwise. */
   book?: PriceBook;
   className?: string;
 }
 
 /**
- * "מחשבון תקציב" slot: a real example run through the site's calculator
- * (lib/calculator.ts, on the planner engine and the current price book),
- * dated, plus the way in.
+ * The homepage's first paid offer: upload the plans, get a budget from them
+ * at current field prices, with access to the project-management system
+ * (₪500, copy in lib/home/content.ts). Beside it, a real example run through
+ * the site's calculator (lib/calculator.ts, on the planner engine and the
+ * current price book), dated, and the way to the free calculator.
  */
-export default function BudgetCalculatorSlot({
-  title = BUDGET_TEASER.title,
-  subtitle = BUDGET_TEASER.subtitle,
-  cta = BUDGET_TEASER.cta,
-  href = BUDGET_TEASER.href,
-  book,
-  className,
-}: BudgetCalculatorSlotProps) {
+export default function BudgetCalculatorSlot({ book, className }: BudgetCalculatorSlotProps) {
+  const offer = PLAN_BUDGET_OFFER;
+  const at = offer.title.indexOf(offer.highlight);
   const example = calculateCost({ ...BUDGET_TEASER.example.answers, special_features: [...BUDGET_TEASER.example.answers.special_features] }, book);
   const top = [...example.breakdown].sort((a, b) => b.percentage - a.percentage).slice(0, 4);
   const max = top[0]?.percentage ?? 1;
@@ -44,21 +37,44 @@ export default function BudgetCalculatorSlot({
         <div className="grid items-center gap-10 rounded-[2rem] border border-sand-200 bg-sand-50 p-6 sm:p-10 lg:grid-cols-2 lg:gap-14 lg:p-12">
           <div>
             <p className="eyebrow">
-              <Calculator aria-hidden="true" className="size-4" />
-              מחשבון תקציב
+              <FileUp aria-hidden="true" className="size-4" />
+              {offer.eyebrow}
             </p>
             <h2 id="budget-title" className="mt-3 text-headline text-ink-900">
-              {title}
+              {at < 0 ? (
+                offer.title
+              ) : (
+                <>
+                  {offer.title.slice(0, at)}
+                  <span className="text-primary-600">{offer.highlight}</span>
+                  {offer.title.slice(at + offer.highlight.length)}
+                </>
+              )}
             </h2>
-            <p className="mt-3 text-body-lg text-ink-600">{subtitle}</p>
-            <p className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-ink-600">
-              <Clock3 aria-hidden="true" className="size-4 text-primary-600" />
-              בלי הרשמה. התוצאה מיד, עם פירוק לפי שלבים.
+            <p className="mt-3 text-body-lg text-ink-600">{offer.subtitle}</p>
+            <ul className="mt-6 space-y-3">
+              {offer.points.map((point) => (
+                <li key={point} className="flex items-start gap-3 text-ink-800">
+                  <span aria-hidden="true" className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-600 text-white">
+                    <Check className="size-3.5" strokeWidth={3} />
+                  </span>
+                  <span className="font-medium">{point}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-7 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="num text-4xl font-extrabold tracking-tight text-ink-900">{offer.price}</span>
+              <span className="text-sm font-semibold text-ink-600">{offer.priceNote}</span>
             </p>
-            <div className="mt-8">
-              <ButtonLink href={href} size="lg" iconEnd={<ArrowLeft className="ltr:rotate-180" />}>
-                {cta}
-              </ButtonLink>
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+              <PlanBudgetRequest />
+              <p className="text-sm text-ink-600">
+                {offer.freeLead}{' '}
+                <Link href={offer.freeHref} className="link inline-flex items-center gap-1">
+                  {offer.freeCta}
+                  <ArrowLeft aria-hidden="true" className="size-3.5 ltr:rotate-180" />
+                </Link>
+              </p>
             </div>
           </div>
 

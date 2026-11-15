@@ -86,6 +86,9 @@ export interface HomeMediaItem {
   kind: 'video' | 'podcast';
   /** "פרק 112" for podcasts, parsed from the title. */
   episode: string | null;
+  /** The YouTube upload behind the item (legacy pages: the first embedded video). */
+  youtubeId: string | null;
+  publishedAt: string | null;
 }
 
 function toMediaItem(p: VideoPageSummary): HomeMediaItem {
@@ -109,6 +112,8 @@ function toMediaItem(p: VideoPageSummary): HomeMediaItem {
     durationSeconds: duration,
     kind: p.kind,
     episode: p.kind === 'podcast' ? episodeNumber(p.title) : null,
+    youtubeId: p.youtube_ids?.[0] ?? null,
+    publishedAt: p.published_at,
   };
 }
 
@@ -123,6 +128,8 @@ function runtimeMediaItem(v: RuntimeListItem): HomeMediaItem {
     durationSeconds: v.duration_s || null,
     kind,
     episode: kind === 'podcast' ? episodeNumber(v.title) : null,
+    youtubeId: v.youtube_id,
+    publishedAt: v.published_at,
   };
 }
 
@@ -131,9 +138,11 @@ function runtimeMediaItem(v: RuntimeListItem): HomeMediaItem {
  * Autopilot videos of each kind, merged newest first. A runtime video that a
  * legacy page already embeds shows as that page.
  */
-export async function getHomeMedia(limit = 8): Promise<{ podcasts: HomeMediaItem[]; videos: HomeMediaItem[] }> {
+export async function getHomeMedia(
+  limit = 8,
+): Promise<{ podcasts: HomeMediaItem[]; videos: HomeMediaItem[]; latest: HomeMediaItem | null }> {
   const db = getPublicDb();
-  if (!db) return { podcasts: [], videos: [] };
+  if (!db) return { podcasts: [], videos: [], latest: null };
   const [podcasts, videos, runtimeAll] = await Promise.all([
     safeQuery(async () => (await listPublishedVideoPages(db, { page: 1, pageSize: limit, kind: 'podcast' })).items, [] as VideoPageSummary[]),
     safeQuery(async () => (await listPublishedVideoPages(db, { page: 1, pageSize: limit, kind: 'video' })).items, [] as VideoPageSummary[]),
@@ -150,7 +159,52 @@ export async function getHomeMedia(limit = 8): Promise<{ podcasts: HomeMediaItem
     )
       .slice(0, limit)
       .map((x) => ('legacy_slug' in x ? toMediaItem(x) : runtimeMediaItem(x)));
-  return { podcasts: rail(podcasts, 'podcast'), videos: rail(videos, 'video') };
+  const rails = { podcasts: rail(podcasts, 'podcast'), videos: rail(videos, 'video') };
+  return { ...rails, latest: newestUpload([...rails.videos, ...rails.podcasts]) };
+}
+
+/** The channel's newest upload among the rails (both kinds), for the hero player. */
+function newestUpload(items: HomeMediaItem[]): HomeMediaItem | null {
+  const time = (x: HomeMediaItem) => (x.publishedAt ? Date.parse(x.publishedAt) || 0 : 0);
+  return items.filter((x) => x.youtubeId).sort((a, b) => time(b) - time(a))[0] ?? null;
+}
+
+export interface HeroVideo {
+  youtubeId: string;
+  title: string;
+  poster: string;
+  posterWidth: number;
+  posterHeight: number;
+  /** hqdefault.jpg is 4:3 with black bars; the player crops them. */
+  letterboxed: boolean;
+}
+
+/**
+ * The hero player's video: the channel's newest upload, with the sharpest
+ * YouTube poster that exists (maxresdefault is missing on some uploads, and
+ * YouTube then answers 404 with a grey placeholder).
+ */
+export async function getHeroVideo(latest: HomeMediaItem | null): Promise<HeroVideo | null> {
+  const id = latest?.youtubeId;
+  if (!latest || !id) return null;
+  const maxres = `https://i.ytimg.com/vi/${id}/maxresdefault.jpg`;
+  let hasMaxres = false;
+  try {
+    const res = await fetch(maxres, { method: 'HEAD', signal: AbortSignal.timeout(3000) });
+    hasMaxres = res.ok;
+  } catch {
+    hasMaxres = false;
+  }
+  return hasMaxres
+    ? { youtubeId: id, title: latest.title, poster: maxres, posterWidth: 1280, posterHeight: 720, letterboxed: false }
+    : {
+        youtubeId: id,
+        title: latest.title,
+        poster: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+        posterWidth: 480,
+        posterHeight: 360,
+        letterboxed: true,
+      };
 }
 
 /* ------------------------------------------------------------------ */
