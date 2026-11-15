@@ -19,6 +19,7 @@ import FinalCTA from '@/components/home/FinalCTA';
 import { getVideo as getIndexedVideo } from '@/app/api/_lib/data';
 import {
   countPublishedPros,
+  getHeroVideo,
   getHomeBenefits,
   getHomeMedia,
   getHomePlans,
@@ -62,6 +63,7 @@ export default async function Home() {
     getHomePlans(),
     loadPriceBook(),
   ]);
+  const heroVideo = await getHeroVideo(media.latest);
 
   return (
     <>
@@ -75,11 +77,11 @@ export default async function Home() {
         }}
       />
 
-      <Hero stats={stats} />
+      {/* 1. The owner's line, the question box and the channel's newest video */}
+      <Hero stats={stats} video={heroVideo} />
       <ProofBar />
-      <ValueStrip />
-      <HowItWorks pro={pros[0]} momentPercent={momentPercent()} />
 
+      {/* 2. The 7 build stages */}
       <Section tone="sand" id="journey" labelledBy="journey-title">
         <SectionHeader
           id="journey-title"
@@ -95,12 +97,17 @@ export default async function Home() {
         </div>
       </Section>
 
-      <MediaRails podcasts={media.podcasts} videos={media.videos} />
-      <ProsShowcase pros={pros} total={prosTotal} />
+      {/* 3. First paid offer: a budget from the visitor's plans (₪500), next to the calculator example */}
       <BudgetCalculatorSlot book={priceBook.book} />
-      <BenefitsTeaser items={benefits} />
+
+      {/* Then: what you get and how answers work, the pros, the channel, proof, plans, benefits */}
+      <ValueStrip />
+      <HowItWorks pro={pros[0]} momentPercent={momentPercent()} />
+      <ProsShowcase pros={pros} total={prosTotal} />
+      <MediaRails podcasts={media.podcasts} videos={media.videos} />
       <SocialProof />
       <PlansTeaser plans={plans} />
+      <BenefitsTeaser items={benefits} />
       <FinalCTA />
     </>
   );

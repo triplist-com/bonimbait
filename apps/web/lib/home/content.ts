@@ -62,6 +62,37 @@ export const HUB_TEASER = {
   points: ['מפת דרך לפי השלב שלכם', 'סרטונים ומאמרים ששמרתם', 'בעלי מקצוע ברשימה הקצרה'],
 } as const;
 
+/**
+ * The homepage's first paid offer (third section): upload the plans, get a
+ * budget computed from them at current field prices, plus access to the
+ * project-management system. Requests arrive as `budget_report` leads with
+ * `offer=plan_budget` until the upload and payment flow exists.
+ */
+export const PLAN_BUDGET_OFFER = {
+  eyebrow: 'תקציב לפי התוכניות שלכם',
+  title: 'העלו את התוכניות, קבלו תקציב אוטומטי',
+  highlight: 'תקציב אוטומטי',
+  subtitle: 'תקציב מפורט שמחושב מהתוכניות של הבית שלכם, לפי המחירים העדכניים מהשטח.',
+  points: [
+    'תקציב מפורט לפי שלבי הבנייה, מתוך התוכניות שלכם',
+    'מחירים עדכניים מהשטח, לא הערכה כללית',
+    'גישה למערכת לניהול הפרויקט: תקציב, תשלומים ומסמכים במקום אחד',
+  ],
+  price: '₪500',
+  priceNote: 'כולל גישה למערכת לניהול הפרויקט',
+  cta: 'אני רוצה תקציב לפי התוכניות',
+  form: {
+    title: 'תקציב לפי התוכניות שלכם',
+    description: 'השאירו שם וטלפון, ונחזור אליכם עם הפרטים להעלאת התוכניות.',
+    submit: 'שלחו לי פרטים',
+    successTitle: 'קיבלנו!',
+    successMessage: 'נחזור אליכם בהקדם עם הפרטים להעלאת התוכניות.',
+  },
+  freeLead: 'רק רוצים הערכה מהירה?',
+  freeCta: 'למחשבון החינמי',
+  freeHref: '/calculator/',
+} as const;
+
 export const BUDGET_TEASER = {
   title: 'כמה יעלה הבית שלכם?',
   subtitle: 'תקציב ראשוני ב-3 דקות: גודל, קומות, אזור, רמת גמר ותוספות.',

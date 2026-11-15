@@ -20,6 +20,10 @@ export interface TrailerFacadeProps {
   posterHeight: number;
   /** Text next to the play button. */
   cta?: string;
+  /** Small label on the poster's top corner (e.g. "חדש בערוץ"). */
+  badge?: string;
+  /** The poster is 4:3 with black bars (YouTube hqdefault): zoom past them. */
+  letterboxed?: boolean;
   className?: string;
   priority?: boolean;
 }
@@ -31,6 +35,8 @@ export default function TrailerFacade({
   posterWidth,
   posterHeight,
   cta = 'צפו בסרטון',
+  badge,
+  letterboxed = false,
   className,
   priority = true,
 }: TrailerFacadeProps) {
@@ -60,8 +66,17 @@ export default function TrailerFacade({
             height={posterHeight}
             priority={priority}
             sizes="(min-width: 1024px) 40vw, 100vw"
-            className="absolute inset-0 size-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+            className={cn(
+              'absolute inset-0 size-full object-cover transition-transform duration-700 ease-out',
+              letterboxed ? 'scale-[1.12] group-hover:scale-[1.15]' : 'group-hover:scale-[1.03]',
+            )}
           />
+          {badge && (
+            <span className="absolute start-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-ink-900 shadow-xs backdrop-blur">
+              <span aria-hidden="true" className="size-2 rounded-full bg-primary-600" />
+              {badge}
+            </span>
+          )}
           <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-ink-950/55 via-ink-950/0 to-ink-950/0" />
           <span className="absolute bottom-10 end-4 inline-flex items-center gap-3 rounded-full bg-white/95 py-2 pe-5 ps-2 shadow-lift backdrop-blur transition-transform duration-300 group-hover:scale-[1.03] group-focus-visible:outline group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-primary-600 lg:bottom-5 lg:end-5">
             <span className="inline-flex size-10 items-center justify-center rounded-full bg-primary-600 text-white shadow-brand sm:size-11">
