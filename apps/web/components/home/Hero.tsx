@@ -37,7 +37,7 @@ export default function Hero({ stats, video }: { stats: KnowledgeStats; video?: 
         <div className="absolute -top-24 start-[-12%] size-[30rem] rounded-full bg-sand-200/60 blur-3xl" />
       </div>
 
-      <div className="container-page pb-20 pt-8 sm:pb-24 sm:pt-12 lg:pb-28 lg:pt-14">
+      <div className="container-page pb-8 pt-8 sm:pb-10 sm:pt-12 lg:pb-14 lg:pt-14">
         <div className="grid items-center gap-10 lg:grid-cols-12 lg:gap-12">
           {/* Copy + ask */}
           <div className="lg:col-span-7">
