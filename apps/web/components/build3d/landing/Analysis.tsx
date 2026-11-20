@@ -39,7 +39,7 @@ function quantities(o: PlanOverlay) {
   const concrete = Math.round(o.stats.builtAreaM2 * 0.45);
   return { concrete, rebar: +(concrete * 0.09).toFixed(1), blocks: Math.round(o.stats.builtAreaM2 * 32) };
 }
-const PLANNED_STEPS = 72;
+const PLANNED_STEPS = 87; // docs/build3d/STEPS.md
 
 function union(boxes: BBox[]): BBox {
   return [
@@ -161,7 +161,8 @@ export default function Analysis({ onReveal, onDone }: AnalysisProps) {
       case S.openings:
         return boxes.houseBoth;
       case S.handoff:
-        return pad(boxes.houseE, -10);
+        // The viewer's intro opens top-down on the entrance drawing frame.
+        return boxes.entrance;
       default:
         return boxes.houseE;
     }

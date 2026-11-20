@@ -34,6 +34,9 @@ export default function Build3DApp() {
 
   const start = useCallback(() => {
     void loadViewer(); // warm the viewer chunk while the animation plays
+    // The viewer's intro opens on this crop; have it decoded before the hand-off.
+    const plan = new Image();
+    plan.src = '/build3d/plan-entrance.webp';
     setPhase('analyzing');
   }, []);
   const reveal = useCallback(() => setViewerOn(true), []);
