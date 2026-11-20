@@ -117,3 +117,17 @@ Phase colors are the Engine's call. A step may be merged/split only via the orch
 - `p13-furniture` — ריהוט. + all interior fixtures from the plan.
 - `p13-cars` — הרכבים בחניה. + 2 cars drive in.
 - `p13-done` — הבית מוכן. dusk lighting, interior lights glow, final orbit, summary card.
+
+## Cross-phase conventions (all step authors)
+- Part ids globally unique: prefix with the step id (`p7-blocks-lower:w12:c3`).
+- Tags every part should carry: `level:lower|entrance|roof|site` + a kind tag. Kind tags other phases rely on:
+  - `formwork` (any temporary forms/decks; exit by lifting), `props` (shoring), `machine` (vehicles/equipment; remove when the step's work ends), `site-temp` (fence, container, toilet, sign, power pole → removed in p12-site-walls).
+  - `rebar` (removed? never — it is hidden inside concrete; concrete parts must fully enclose their rebar).
+  - `blocks`, `blocks-exterior`, `blocks-interior`, `parapet`, `lintel`, `blind-frame`.
+  - `mep-in-wall` (pipes/conduits/boxes inside walls → removed by p10-plaster-interior), `duct` (AC ducts → stay; hidden by p11-gypsum ceilings), `mep-under-floor` (removed by p11-flooring).
+  - `roof-membrane` (black; p8-roof-coat removes it and adds the white coat), `screed`.
+  - `scaffolding` (removed by p10-scaffolding-down), `plaster-interior` (p11-paint removes it and adds `paint-interior` skins), `plaster-exterior`, `stone`.
+  - `terrain-*` ids per engine README (p4-backfill swaps the excavated terrain, p12-garden swaps to finished grade).
+- Skins (plaster/paint/tiles/stone) are thin boxes 1–2 cm proud of the surface they cover, built per wall piece from `wallPieces` so openings stay open. Avoid z-fighting: offset ≥ 8 mm.
+- Machines arrive with `drop`/`slide`, do their idle animation during their step, and are removed in the step where the work ends (same step's `remove` is not allowed for own parts — remove them in the next step).
+- Cost/quantities: compute from geometry × `PRICES` (content module); keep the per-step `materials` list short (≤ 5 lines), most important first.
