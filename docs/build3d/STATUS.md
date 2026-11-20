@@ -3,6 +3,11 @@
 Each agent appends to its own section (newest entry on top within the section). Keep entries short.
 
 ## Orchestrator
+- 2026-11-21 · Demo complete on `feature/plan-to-3d` (not pushed). Landing hero = 9 real renders
+  (`public/build3d/landing/`, phone twins `-800.webp`), /3d OG card, golden-hour finale. Production
+  build clean (/3d first load 112 kB; three.js stays in the lazy viewer chunk). E2E (landing →
+  sample → analysis → viewer → steps → finale, 1440 and 390 px) passes with no console errors:
+  `data/tools/pw/e2e.mjs`, `e2e-intro.mjs`, `landing-shot.mjs`. Open polish: QA #21, #23, #32.
 - Branch `feature/plan-to-3d` created from origin/main. three/fiber/drei installed. Sheet image at
   `apps/web/public/build3d/plan-sheet.webp` (3600×3225, = PDF page 1899×1701 pt). Contract in
   `apps/web/lib/build3d/house/types.ts`.

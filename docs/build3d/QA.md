@@ -44,4 +44,5 @@ Severity: **P1** = visible in a normal demo run, looks broken · **P2** = notice
 | 30 | all | Magenta "new" tint barely visible on dark parts (steel, aluminum frames, bitumen). | P2 | FIXED — highlight gain scales with darkness (0.26 → up to 0.6). |
 | 32 | 56, 58, 59 | Systems steps: pipes / conduits / ducts tiny in a far, shallow x-ray view. | P3 | IMPROVED — steeper and closer (polar 46, zoom 0.9), looking down into the rooms with the roof lifted; AC and conduits read, the thin water pipes still read best with a zoom-in. |
 | 31 | 54, 76, 79 | Fully translucent frames in the first highlight walk. | — | NOT A BUG — the dev server reloaded the page mid-walk (source edited while capturing). |
+| 33 | 1 → any | Moving off the plan step during the intro (arrow keys, autoplay, a click) left `introRunning` true, so the viewer UI never faded in. | P1 | FIXED — Stage releases the intro (and restores the camera pace) when a step change cuts it short; AssemblyViewer also ends it on any step ≠ 0. Covered by `data/tools/pw/e2e-intro.mjs`. |
 

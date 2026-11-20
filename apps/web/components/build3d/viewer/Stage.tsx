@@ -303,6 +303,11 @@ function Scene({ house, timeline, step, ghost, xray, autoRotate, resetTick, intr
       }
       introState.current = 'hold';
     } else {
+      if (introState.current !== 'none') {
+        // The intro was cut short by a step change: restore the normal camera pace and release the UI.
+        if (c) c.smoothTime = 0.55;
+        if (!first) onIntroDone?.();
+      }
       introState.current = 'none';
       frame(director.focus(step), first);
     }

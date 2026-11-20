@@ -163,6 +163,10 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
 
   const ui = !introRunning;
   const onIntroDone = useCallback(() => setIntroRunning(false), []);
+  // Leaving the plan step (arrow keys, a click) ends the intro early; the UI must come back.
+  useEffect(() => {
+    if (step !== 0) setIntroRunning(false);
+  }, [step]);
 
   const toggles = (
     <>
