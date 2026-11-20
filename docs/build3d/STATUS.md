@@ -8,6 +8,23 @@ Each agent appends to its own section (newest entry on top within the section). 
   `apps/web/lib/build3d/house/types.ts`.
 
 ## Extractor
+- DONE `house.json` (full model, type-checks against `types.ts` as a strict TS literal, ~64 KB) + `overlay.json` final.
+  Counts: walls 124 = 57 storey (14 concrete, 43 block) + 12 roof parapets + 4 site retaining + 49 boundary-fence
+  pieces; openings 32 (13 doors with `swingSide`); rooms 20; columns 18 (all drawn blue stubs, none inferred);
+  fixtures 59; outdoor 17; slabs 5; stair 1 (19 risers × 0.171); terrain grids 30×38 @ 1 m; 43 spot elevations.
+  Frame: origin = entrance NW outer corner, page (422.92, 562.76) / lower (1207.72, 562.76); scale 1:100
+  (fit 0.0352832 vs nominal 0.0352778 m/pt, max resid 0.27 cm over 22 dims). Lower floor −3.25, roof top +3.30.
+  Lot 511.6 m², built footprints 238.5 m². Fixture convention (size/rotation/front) in `docs/build3d/extraction.md`.
+  Also `public/build3d/plan-entrance.webp`, `plan-lower.webp` (per-viewport, bbox in extraction.md).
+  Checks: `scripts/build3d/render_check.py` → `data/build3d-shots/extract/` (inverse-transform overlays, model plot,
+  terrain). Uncertain: heights/sills are assumptions (no sections), 9 room names descriptive (unlabelled on plan),
+  natural terrain interpolated from boundary survey only.
+- MILESTONE 1 (overlay) DONE: `apps/web/lib/build3d/house/overlay.json` (type `PlanOverlay`, sheet page points,
+  viewBox `0 0 1899 1701`). Viewports: entrance bbox [181.36,209.12,939.88,1321.52], lower [966.16,209.12,1724.8,1321.52].
+  Contents: wall fills as 4 SVG paths (entrance/lower × concrete/block, exact hatch rectangles), 32 openings
+  (x,y = center, w = width pt, angle 0|90), 20 rooms (Hebrew name, label point, m², polygon `d`), 12 dims, lot boundary
+  (both viewports), 11 elevation labels, stats. A first `house.json` is also written (being refined).
+  Regenerate: `data/build3d-venv/bin/python -I scripts/build3d/extract.py`.
 
 ## Engine
 
