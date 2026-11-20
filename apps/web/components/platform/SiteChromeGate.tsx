@@ -12,6 +12,11 @@ function isManagePath(pathname: string | null): boolean {
   return pathname === '/manage' || (pathname?.startsWith('/manage/') ?? false);
 }
 
+/** The plan-to-3D demo (/3d/*) is a full-screen experience (docs/build3d/SPEC.md). */
+function isBuild3dPath(pathname: string | null): boolean {
+  return pathname === '/3d' || (pathname?.startsWith('/3d/') ?? false);
+}
+
 /**
  * Renders the public site's chrome (header, footer, floating CTAs) everywhere
  * except /platform/* (the pitch shell, app/platform/layout.tsx), /admin/*
@@ -22,6 +27,7 @@ function isManagePath(pathname: string | null): boolean {
  */
 export default function SiteChromeGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const ownShell = isPlatformPath(pathname) || isAdminPath(pathname) || isManagePath(pathname);
+  const ownShell =
+    isPlatformPath(pathname) || isAdminPath(pathname) || isManagePath(pathname) || isBuild3dPath(pathname);
   return ownShell ? null : <>{children}</>;
 }
