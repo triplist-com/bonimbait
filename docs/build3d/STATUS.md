@@ -29,10 +29,32 @@ Each agent appends to its own section (newest entry on top within the section). 
   Regenerate: `data/build3d-venv/bin/python -I scripts/build3d/extract.py`.
 
 ## Engine
+- **[22:40] Engine/viewer polish + features for authors.** Added `view.lighting: 'dusk'` (+ glowing palette keys
+  `light`, `glassLit`), `view.ghostTags`, `camera.orbit`, finale Summary overlay (months, concrete m³, rebar t,
+  blocks, cost; "צפו שוב מההתחלה" / "לאתר בונים בית"), responsive card width, RTL keyboard (← next, → prev, space).
+  Perf on M1 Pro (real GPU, 266 parts, 2048×1536): ~0.5 ms/frame (419 draws, 361k tris), 1.6 ms with ghost
+  preview; all parts build progressively in idle slices (~200 ms total). Headless swiftshader is far slower — the
+  dev-only `window.__b3d.director.timeScale` speeds animations for screenshots. Shots: `data/build3d-shots/engine/`.
+  Known: one author's compile error 500s the whole viewer (static imports); keep `npx tsc` green before saving.
+- **[21:55] API ready, viewer up, real house.json integrated.** `/3d/viewer/?step=N` (and `&intro=plan`) renders
+  phases 0–3 (14 steps) on the extracted house. Step API + authoring guide: `apps/web/lib/build3d/engine/README.md`.
+  Files: `lib/build3d/engine/{types,phases,palette,anim,timeline}.ts`, `engine/runtime/{director,part,geometry,materials}.ts`,
+  `lib/build3d/house/{index,stub,geometry}.ts`, `lib/build3d/steps/{index,context,kit,p00-plan,p01-site,p02-earthworks,p03-foundations}.ts`,
+  `components/build3d/viewer/{AssemblyViewer,Stage,StepCard,StepList,Scrubber,BottomSheet,Summary,format}.tsx`, `app/3d/viewer/`.
+  Landing: `AssemblyViewer` default export, props `{ initialStep?: 1-based, intro?: 'plan'|'none', className? }`; it
+  fills its parent and reads/writes `?step=` itself. The intro starts top-down on `/build3d/plan-entrance.webp`
+  (prefetch it during the analysis) fitted to the viewport height, drawing-up = screen-up, then glides to 3/4.
+  Note for Content: the municipal sewer runs at the BACK of plot 43 (manholes I.L. 264.44 on the sheet), so the
+  p3-sleeves geometry routes the sewer to the back lot line, not to the street.
 
 ## Landing
 
 ## Step authors
+- Step author C (finishes, landscape, handover): phases 11-13 done (23 steps: p11 x12, p12 x7, p13 x3). Files `steps/p11-finishes.ts`, `p12-landscape.ts`, `p13-handover.ts`, shared `finish-kit.ts` (opening geometry, face runs, room tiling, fixture transforms). Registered after phasePlaster in `steps/index.ts`. Derived from the house model: tiles/parquet per room polygon (instanced, `sequence` sweep), bath wall tiles to 2.4 m per wall face with openings cut out, gypsum drops in halls/wet rooms, aluminum frames + `glassLit` panes for every window/vitrine/slider (+ guard rail in front of the garden-facing vitrine), steel blast door/window, slatted entry door, ajar interior doors with casings, full U-stair (sawtooth core, parquet treads, glass rail), kitchen (box-built runs where a window sits over the counter), sanitary models, paint skins (0.012-0.023 proud, cover B's 15 mm plaster; `p11-paint` removes `plaster-interior`), lighting with `light` material (spots, strips, pendants, sconces). p12: coursed stone fence + gate piers (street fence left open over the parking), pavers/slabs/steps per outdoor polygon, terrace deck, pergola, lawn/gravel/beds/trees, outdoor furniture. p13: furniture + rugs/pictures/plants, two cars sliding in, `view.lighting: 'dusk'` finale with orbit.
+  - Deviation: the final grading (`terrain-finished`, morph from `structureFrame(ctx).backfill`) happens in **p12-site-walls** (retaining walls hold the grade) instead of p12-garden, so pavers/paths always sit on their final ground. p12-garden adds lawn/gravel/beds/trees only.
+  - Needs: none. Note for the orchestrator: `steps/zz-preview-stub.ts` is a temporary stand-in shell used while phases 5-6 were missing; it is registered as `phasePreviewStub` in `steps/index.ts` and must be removed (registry entry + file) once p5/p6 are registered.
+  - Verify: `/3d/viewer/?step=N` (ids: p11-flooring ... p13-done); screenshots in `data/build3d-shots/steps-c/`.
+- Step author B (envelope & systems): phases 7-10 done (20 steps: p7 x6, p8 x5, p9 x4, p10 x5). Files `steps/p07-masonry.ts`, `p08-roof.ts`, `p09-systems.ts`, `p10-plaster.ts`, shared `envelope-kit.ts` (block laying + lintel cut-outs, wall skins, stone courses, nearest-wall/Manhattan routing, roof cell grid with 3% fall to 4 drains). Registered in `steps/index.ts` after phaseFoundations/structure. Facades: stone full-height on the south/street side and entry porch, 90 cm stone plinth + white render elsewhere on the entrance floor, render on lower floor and parapets. Tags per STEPS.md (`mep-in-wall`, `mep-under-floor`, `duct`, `roof-membrane`, `scaffolding`, `plaster-interior`, ...). Known simplifications: pipes cross walls in floor/ceiling runs; terrace parapets (concrete in the model) are laid as blocks; at last check the roof slab (p6) was not yet registered so roof layers float.
 
 ## QA
 

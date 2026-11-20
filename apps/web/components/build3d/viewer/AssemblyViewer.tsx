@@ -83,6 +83,15 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
     [clamp],
   );
 
+  /** Relative move (functional, so fast repeated key presses accumulate). */
+  const goRel = useCallback(
+    (delta: number) => {
+      setStep((s) => clamp(s + delta));
+      setPlaying(false);
+    },
+    [clamp],
+  );
+
   // Keep ?step= in sync (1-based), without adding history entries.
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -117,10 +126,10 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
       if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
       if (e.key === 'ArrowLeft' || e.key === 'PageDown') {
         e.preventDefault();
-        go(step + 1);
+        goRel(1);
       } else if (e.key === 'ArrowRight' || e.key === 'PageUp') {
         e.preventDefault();
-        go(step - 1);
+        goRel(-1);
       } else if (e.key === ' ') {
         e.preventDefault();
         setPlaying((p) => !p);
@@ -129,7 +138,7 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [step, n, go]);
+  }, [n, go, goRel]);
 
   useEffect(() => {
     const onFs = () => setFullscreen(!!document.fullscreenElement);
@@ -181,7 +190,7 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
   const nav = (big: boolean) => (
     <div className="flex items-center gap-1.5">
       <button
-        onClick={() => go(step - 1)}
+        onClick={() => goRel(-1)}
         disabled={step === 0}
         aria-label="השלב הקודם"
         title="השלב הקודם (→)"
@@ -198,7 +207,7 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
         {playing ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="-me-0.5" />}
       </button>
       <button
-        onClick={() => go(step + 1)}
+        onClick={() => goRel(1)}
         disabled={step === n - 1}
         aria-label="השלב הבא"
         title="השלב הבא (←)"

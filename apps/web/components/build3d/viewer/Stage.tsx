@@ -115,7 +115,7 @@ function Scene({ house, timeline, step, ghost, xray, autoRotate, resetTick, intr
     const sw = new THREE.Vector2(Math.sin(sAz), Math.cos(sAz));
     const south = new THREE.Vector2(Math.sin(front), Math.cos(front));
     const sunDir = new THREE.Vector3(sw.x, 1.12, sw.y).normalize();
-    const sun = new THREE.DirectionalLight('#FFF7EE', 2.3);
+    const sun = new THREE.DirectionalLight('#FFF7EE', 2.05);
     sun.position.copy(center).addScaledVector(sunDir, 60);
     sun.target.position.copy(center);
     sun.castShadow = true;
@@ -150,7 +150,7 @@ function Scene({ house, timeline, step, ghost, xray, autoRotate, resetTick, intr
     const dir = sunDir.clone().lerp(duskDir, k).normalize();
     sun.position.copy(center).addScaledVector(dir, 60);
     sun.color.set('#FFF7EE').lerp(new THREE.Color('#FF9A55'), k);
-    sun.intensity = 2.3 - 1.4 * k;
+    sun.intensity = 2.05 - 1.2 * k;
     hemi.color.set('#EEF3FA').lerp(new THREE.Color('#6C7BA8'), k);
     hemi.groundColor.set('#CFC7B8').lerp(new THREE.Color('#5A4636'), k);
     hemi.intensity = 0.95 - 0.4 * k;
