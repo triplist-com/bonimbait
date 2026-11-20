@@ -31,7 +31,8 @@ export default function Counter({ value, active, instant, durationMs = 900, deci
     let raf = 0;
     const t0 = performance.now();
     const tick = (now: number) => {
-      const p = Math.min(1, (now - t0) / durationMs);
+      // rAF timestamps can precede t0 (frame start), so clamp at 0 too.
+      const p = Math.min(1, Math.max(0, (now - t0) / durationMs));
       const eased = 1 - Math.pow(1 - p, 3);
       el.textContent = fmt(value * eased);
       if (p < 1) raf = requestAnimationFrame(tick);

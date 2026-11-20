@@ -7,6 +7,8 @@ Each agent appends to its own section (newest entry on top within the section). 
   `apps/web/public/build3d/plan-sheet.webp` (3600×3225, = PDF page 1899×1701 pt). Contract in
   `apps/web/lib/build3d/house/types.ts`.
 
+- overlay.json: removed two stray 50×742 pt blue rects (x≈821 / 1605, a non-wall blue fill) from the concrete wall paths by hand — re-running scripts/build3d would bring them back; filter fills wider than ~1 m if regenerated.
+
 ## Extractor
 - DONE `house.json` (full model, type-checks against `types.ts` as a strict TS literal, ~64 KB) + `overlay.json` final.
   Counts: walls 124 = 57 storey (14 concrete, 43 block) + 12 roof parapets + 4 site retaining + 49 boundary-fence
