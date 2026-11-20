@@ -252,10 +252,8 @@ export function phaseLandscape(ctx: BuildContext): StepDef[] {
         const y = lowGround + (rise * i) / n;
         const s0 = flip ? (alongZ ? b.max[1] : b.max[0]) - (i - 1) * run : (alongZ ? b.min[1] : b.min[0]) + (i - 1) * run;
         const sMid = flip ? s0 - run / 2 : s0 + run / 2;
-        // Each block reaches to the far end so it reads as a solid flight; the top block is the tread.
-        const reach = flip ? sMid - (alongZ ? b.min[1] : b.min[0]) : (alongZ ? b.max[1] : b.max[0]) - sMid;
-        void reach;
-        const depth = 0.3;
+        // Solid stepped mass from below the low ground up to the tread.
+        const depth = y - (lowGround - 0.25);
         treads.push({
           at: alongZ ? [c[0], y - depth / 2, sMid] : [sMid, y - depth / 2, c[1]],
           size: alongZ ? [W, depth, run + 0.004] : [run + 0.004, depth, W],
@@ -407,8 +405,13 @@ export function phaseLandscape(ctx: BuildContext): StepDef[] {
     const fb = bbox2(fp);
     const lb = bbox2(lotRing);
     const M = 0.65;
+    // The west side yard carries the garden stair and path: gravel there, lawn beyond it.
+    const westHard = out.filter((o) => (o.kind === 'steps' || o.kind === 'path') && polygonCentroid(o.outline)[0] < fb.min[0] - 0.5).map((o) => bbox2(o.outline));
+    const wz0 = westHard.length ? Math.min(...westHard.map((b) => b.min[1])) - 0.3 : lb.min[1];
+    const wz1 = westHard.length ? Math.max(...westHard.map((b) => b.max[1])) + 0.3 : lb.min[1];
     const lawnRects: Array<[string, Vec2, Vec2]> = [
-      ['w', [lb.min[0], lb.min[1]], [fb.min[0] - M, lb.max[1]]],
+      ['w1', [lb.min[0], lb.min[1]], [fb.min[0] - M, wz0]],
+      ['w2', [lb.min[0], wz1], [fb.min[0] - M, lb.max[1]]],
       ['e', [fb.max[0] + M, lb.min[1]], [lb.max[0], lb.max[1]]],
       ['n', [fb.min[0] - M, lb.min[1]], [fb.max[0] + M, fb.min[1] - M]],
       ['s', [fb.min[0] - M, fb.max[1] + M], [fb.max[0] + M, lb.max[1]]],
@@ -424,6 +427,17 @@ export function phaseLandscape(ctx: BuildContext): StepDef[] {
         anim: { type: 'fade', duration: 1.8 },
       });
     }
+    const westGravel = clipPolygonToRect(lotRing, [lb.min[0], wz0], [fb.min[0] - M, wz1]);
+    if (westGravel.length >= 3)
+      parts.push({
+        id: 'p12-west-gravel',
+        shape: { kind: 'drape', outline: westGravel, grid: finished, lift: 0.028, cell: 0.5 },
+        material: 'gravel',
+        color: '#CDC4B2',
+        tags: ['garden', 'gravel', 'level:site'],
+        anim: { type: 'fade', delay: 0.6, duration: 1.2 },
+        edges: false,
+      });
     // Gravel strip (drainage) around the house.
     const gravel: BoxItem[] = [];
     for (let i = 0; i < fp.length; i++) {
@@ -494,7 +508,6 @@ export function phaseLandscape(ctx: BuildContext): StepDef[] {
     let treeN = 0;
     treeFx.forEach((f, i) => {
       const palm = i === 0;
-      const d = f.size[0];
       placed.push(f.center);
       parts.push({
         id: `p12-tree-${f.id}`,
@@ -505,7 +518,6 @@ export function phaseLandscape(ctx: BuildContext): StepDef[] {
         tags: ['garden', 'tree', 'model', 'level:site'],
         anim: { type: 'grow', delay: 1.6 + treeN * 0.25, duration: 1.0, ease: 'back' },
       });
-      void d;
       treeN += 1;
     });
     const rand = rng(21);

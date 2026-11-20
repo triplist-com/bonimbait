@@ -165,6 +165,30 @@ export interface Rect2 {
   z1: number;
 }
 
+/** Fast point-in-polygon tester: bbox reject, exact for axis-aligned rectangles. */
+function tester(poly: Vec2[]): (x: number, z: number) => boolean {
+  let x0 = Infinity;
+  let z0 = Infinity;
+  let x1 = -Infinity;
+  let z1 = -Infinity;
+  for (const p of poly) {
+    x0 = Math.min(x0, p[0]);
+    z0 = Math.min(z0, p[1]);
+    x1 = Math.max(x1, p[0]);
+    z1 = Math.max(z1, p[1]);
+  }
+  const axisRect =
+    poly.length === 4 &&
+    poly.every((p, i) => {
+      const q = poly[(i + 1) % 4];
+      return Math.abs(p[0] - q[0]) < 1e-9 || Math.abs(p[1] - q[1]) < 1e-9;
+    });
+  return (x, z) => {
+    if (x < x0 || x > x1 || z < z0 || z > z1) return false;
+    return axisRect || pointInPolygon([x, z], poly);
+  };
+}
+
 function uniq(vals: number[], tol = 1e-4): number[] {
   const s = [...vals].sort((a, b) => a - b);
   const out: number[] = [];
@@ -211,12 +235,13 @@ export class Region {
     const nx = Math.max(0, xs.length - 1);
     const nz = Math.max(0, zs.length - 1);
     const cell = new Uint8Array(nx * nz);
+    const tA = add.map(tester);
+    const tS = sub.map(tester);
     for (let j = 0; j < nz; j++) {
       const z = (zs[j] + zs[j + 1]) / 2;
       for (let i = 0; i < nx; i++) {
         const x = (xs[i] + xs[i + 1]) / 2;
-        const p: Vec2 = [x, z];
-        if (add.some((poly) => pointInPolygon(p, poly)) && !sub.some((poly) => pointInPolygon(p, poly))) cell[j * nx + i] = 1;
+        if (tA.some((t) => t(x, z)) && !tS.some((t) => t(x, z))) cell[j * nx + i] = 1;
       }
     }
     return new Region(xs, zs, cell);
@@ -284,6 +309,58 @@ export class Region {
     const out: Rect2[] = [];
     for (let j = 0; j < r.nz; j++)
       for (let i = 0; i < r.nx; i++) if (r.at(i, j)) out.push({ x0: r.xs[i], z0: r.zs[j], x1: r.xs[i + 1], z1: r.zs[j + 1] });
+    return out;
+  }
+
+  /**
+   * Tiles on a lattice (sheets, formers, pour tiles) with the region's own cut lines
+   * merged back: one rect per lattice cell when it is whole, else a few maximal rects.
+   */
+  sheets(size: number | Vec2, origin: Vec2 = [0, 0]): Rect2[] {
+    const [sx, sz] = typeof size === 'number' ? [size, size] : size;
+    const groups = new Map<string, Rect2[]>();
+    for (const t of this.tiles([sx, sz], origin)) {
+      const k = `${Math.floor(((t.x0 + t.x1) / 2 - origin[0]) / sx)},${Math.floor(((t.z0 + t.z1) / 2 - origin[1]) / sz)}`;
+      const l = groups.get(k);
+      if (l) l.push(t);
+      else groups.set(k, [t]);
+    }
+    const out: Rect2[] = [];
+    const eq = (a: number, b: number) => Math.abs(a - b) < 1e-6;
+    for (const cells of Array.from(groups.values())) {
+      // Rows: merge x-contiguous cells sharing the same z band.
+      const byZ = new Map<string, Rect2[]>();
+      for (const c of cells) {
+        const k = `${c.z0.toFixed(6)}|${c.z1.toFixed(6)}`;
+        const l = byZ.get(k);
+        if (l) l.push(c);
+        else byZ.set(k, [c]);
+      }
+      const runs: Rect2[] = [];
+      for (const row of Array.from(byZ.values())) {
+        row.sort((a, b) => a.x0 - b.x0);
+        let cur = { ...row[0] };
+        for (let i = 1; i < row.length; i++) {
+          if (eq(row[i].x0, cur.x1)) cur.x1 = row[i].x1;
+          else {
+            runs.push(cur);
+            cur = { ...row[i] };
+          }
+        }
+        runs.push(cur);
+      }
+      // Stack runs with identical x-intervals that touch in z.
+      runs.sort((a, b) => a.x0 - b.x0 || a.x1 - b.x1 || a.z0 - b.z0);
+      let cur: Rect2 | null = null;
+      for (const r of runs) {
+        if (cur && eq(cur.x0, r.x0) && eq(cur.x1, r.x1) && eq(cur.z1, r.z0)) cur.z1 = r.z1;
+        else {
+          if (cur) out.push(cur);
+          cur = { ...r };
+        }
+      }
+      if (cur) out.push(cur);
+    }
     return out;
   }
 
@@ -480,6 +557,25 @@ export function pieceItem(b: WallBox): BoxItem {
   const f = wallFrame(b.wall);
   const c = add2(b.wall.a, scale2(f.dir, (b.s0 + b.s1) / 2));
   return { at: [c[0], (b.y0 + b.y1) / 2, c[1]], size: [b.s1 - b.s0, b.y1 - b.y0, b.wall.thickness], rotY: f.rotY };
+}
+
+/**
+ * Pour-step stand-ins for forms: translucent copies of form parts so the concrete is
+ * seen rising inside them (the originals use exit 'none' and are removed by the pour
+ * step; the copies lift away when `tag` is removed later). Ids: `${prefix}:<suffix>`.
+ */
+export function formGhosts(prefix: string, forms: Part[], tag: string, extraTags: string[], opacity = 0.3): Part[] {
+  return forms.map((p) => ({
+    ...p,
+    id: `${prefix}:${p.id.split(':').pop()}`,
+    tags: ['formwork', tag, ...extraTags],
+    opacity,
+    anim: 'none' as const,
+    highlight: false,
+    ghost: false,
+    castShadow: false,
+    exit: { type: 'lift' as const, duration: 0.8 },
+  }));
 }
 
 /** Concrete of wall pieces: seamless extrusions per height band (same y0/y1) + boxes for the rest. */
@@ -899,7 +995,7 @@ export function deckField(
   const z0 = deck.zs[0];
   const z1 = deck.zs[deck.nz];
   // Sheets (cut at the region faces), joints every 1.22 (X) × 2.44 (Z).
-  for (const r of deck.tiles([1.22, 2.44], [x0, z0])) {
+  for (const r of deck.sheets([1.22, 2.44], [x0, z0])) {
     const c: Vec2 = [(r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2];
     const y = soffit(c);
     out.sheets.push({ at: [c[0], y - PLY / 2, c[1]], size: [r.x1 - r.x0 - JOINT, PLY, r.z1 - r.z0 - JOINT] });
@@ -998,7 +1094,7 @@ export function edgeForms(
 
 /** Pour tiles of a slab region (instanced boxes, sweep outward from `origin`). */
 export function pourTiles(reg: Region, y0: (p: Vec2) => number, y1: (p: Vec2) => number, size = 0.7): BoxItem[] {
-  return reg.tiles(size, [reg.xs[0], reg.zs[0]]).map((r) => {
+  return reg.sheets(size, [reg.xs[0], reg.zs[0]]).map((r) => {
     const c: Vec2 = [(r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2];
     const a = y0(c);
     const b = y1(c);
@@ -1006,22 +1102,11 @@ export function pourTiles(reg: Region, y0: (p: Vec2) => number, y1: (p: Vec2) =>
   });
 }
 
-/** Outline line pairs (top + bottom rings + vertical corners) for a region slab. */
-export function outlineLines(reg: Region, y0: (p: Vec2) => number, y1: (p: Vec2) => number): Vec3[] {
-  const pts: Vec3[] = [];
-  for (const e of reg.edges()) {
-    const m = edgePoint(e, e.len / 2, -0.01);
-    const a = y0(m) - 0.002;
-    const b = y1(m) + 0.002;
-    const pa = edgePoint(e, 0, 0.002);
-    const pb = edgePoint(e, e.len, 0.002);
-    pts.push([pa[0], b, pa[1]], [pb[0], b, pb[1]], [pa[0], a, pa[1]], [pb[0], a, pb[1]]);
-    if (e.convexA) pts.push([pa[0], a, pa[1]], [pa[0], b, pa[1]]);
-  }
-  return pts;
-}
-
-/** Concrete slab part (pour sweep) + crisp outline lines. */
+/**
+ * Slab pour: instanced tiles sweep out from the hose (`pour-tiles`, removed by the next
+ * step), then ONE seamless extruded slab per region shape fades in under them at the end
+ * of the sweep (instanced tiles show hairline seams; the extrusion carries the outlines).
+ */
 export function slabPourParts(
   id: string,
   reg: Region,
@@ -1031,31 +1116,38 @@ export function slabPourParts(
   tags: string[],
   t: { delay?: number; total?: number; size?: number } = {},
 ): { parts: Part[]; m3: number; area: number } {
-  const tiles = pourTiles(reg, y0, y1, t.size ?? 0.7);
-  const m3 = boxVolume(tiles);
+  // Tiles stop 5 mm short of the slab faces so the slab fully covers them once it fades in.
+  const tiles = pourTiles(reg, (p) => y0(p) + 0.005, (p) => y1(p) - 0.005, t.size ?? 0.7);
+  const m3 = tiles.reduce((v, b) => v + b.size[0] * b.size[2] * (b.size[1] + 0.01), 0);
   const total = t.total ?? 4.2;
   const delay = t.delay ?? 1.4;
+  const end = delay + total + 0.8;
+  const slabs: Part[] = reg.shapes().map((sh, i) => {
+    const q = sh.outline.reduce<Vec2>((acc, p) => [acc[0] + p[0] / sh.outline.length, acc[1] + p[1] / sh.outline.length], [0, 0]);
+    const any = reg.contains(q) ? q : (reg.rects().map((r) => [(r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2] as Vec2)[0] ?? q);
+    return {
+      id: `${id}:slab${i}`,
+      shape: { kind: 'extrude', outline: sh.outline, holes: sh.holes, y0: y0(any), y1: y1(any) },
+      material: 'concrete',
+      tags: ['concrete', 'slab', ...tags],
+      anim: { type: 'fade', delay: end, duration: 0.35 },
+    };
+  });
   return {
     m3,
     area: reg.area,
     parts: [
       {
-        id: `${id}:slab`,
+        id: `${id}:tiles`,
         shape: { kind: 'boxes', items: tiles },
         material: 'concrete',
-        tags: ['concrete', 'slab', ...tags],
+        tags: ['pour-tiles', ...tags],
         edges: false,
+        ghost: false,
+        exit: 'none',
         anim: { type: 'pour', delay, duration: 0.8, stagger: fit(total, tiles.length, 0.08), order: 'near', origin },
       },
-      {
-        id: `${id}:outline`,
-        shape: { kind: 'lines', points: outlineLines(reg, y0, y1) },
-        material: 'ink',
-        color: '#8C8C8E',
-        tags: ['slab-outline', ...tags],
-        highlight: false,
-        anim: { type: 'fade', delay: delay + total * 0.7, duration: 1.2 },
-      },
+      ...slabs,
     ],
   };
 }
@@ -1158,8 +1250,11 @@ function standRaster(ctx: BuildContext, ground: TerrainGrid): StandRaster {
     if (res && keep.some((q) => dist2(q.at, p) < q.r)) res = false;
     if (res && !onStreet) {
       if (!inBox(p, lb) || !pointInPolygon(p, ctx.lot.boundary)) res = false;
-      // Not in the pit: ground must not be cut far below natural.
-      else res = sampleGrid(ground, p[0], p[1]) > sampleGrid(ctx.terrain.natural, p[0], p[1]) - 0.6;
+      // Not in the pit / low garden: at least near the entrance platform and not deeply cut.
+      else {
+        const g = sampleGrid(ground, p[0], p[1]);
+        res = g > ctx.y.platform - 0.3 && g > sampleGrid(ctx.terrain.natural, p[0], p[1]) - 1.2;
+      }
     }
     ok[idx] = res ? 1 : 0;
     return res;
@@ -1200,40 +1295,51 @@ export function pumpSpot(ctx: BuildContext, reg: Region, target: Vec2, ground: T
     for (const e of edges) d = Math.min(d, distanceToSegment(p, e.a, e.b));
     return d;
   };
-  const N = 40;
+  const N = 28;
   const samples: Vec2[] = [];
-  for (const sx of [-5.2, -2.6, 0, 2.6, 5.2]) for (const sz of [-1.5, 0, 1.5]) samples.push([sx, sz]);
-  samples.push([1.8, -2.6], [1.8, 2.6], [-3.4, -2.6], [-3.4, 2.6]);
-  // Cells sorted by a lower bound of their score (hose can be at best |d(c,target) - R| away).
-  const cells: Array<{ c: Vec2; idx: number; bound: number }> = [];
-  for (let j = 0; j < ras.nz; j += 2)
-    for (let i = 0; i < ras.nx; i += 2) {
-      const idx = j * ras.nx + i;
-      const c: Vec2 = [ras.x0 + (i + 0.5) * 0.5, ras.z0 + (j + 0.5) * 0.5];
-      // A hose point more than ~9 m off the target never wins: skip far cells cheaply.
-      if (Math.abs(dist2(c, target) - R) > 9) continue;
-      if (!ras.eval(idx)) continue;
-      const far = Math.max(0, dReg(c) - R);
-      cells.push({ c, idx, bound: far * 4 + Math.abs(dist2(c, target) - R) * 0.35 + (ras.street[idx] ? 0 : 0.8) + dist2(c, ctx.lot.gate) * 0.03 });
-    }
-  cells.sort((p, q) => p.bound - q.bound);
+  for (const sx of [-5.2, -2.6, 0, 2.6, 5.2]) for (const sz of [-1.4, 0, 1.4]) samples.push([sx, sz]);
+  // Outrigger pads may stand outside the lot, just never on the house.
+  const legs: Vec2[] = [
+    [1.8, -2.6],
+    [1.8, 2.6],
+    [-3.4, -2.6],
+    [-3.4, 2.6],
+  ];
+  const legOk = (p: Vec2) => !pointInPolygon(p, ctx.footprint.house);
   let pick: { c: Vec2; dir: Vec2; tip: Vec2 } | null = null;
-  let bestScore = Infinity;
-  for (const cell of cells) {
-    if (cell.bound >= bestScore) break;
-    const extra = (ras.street[cell.idx] ? 0 : 0.8) + dist2(cell.c, ctx.lot.gate) * 0.03;
-    for (let k = 0; k < N; k++) {
-      const a = (k / N) * Math.PI * 2;
-      const dir: Vec2 = [Math.cos(a), Math.sin(a)];
-      const tip: Vec2 = [cell.c[0] + dir[0] * R, cell.c[1] + dir[1] * R];
-      const score = dist2(tip, target) * 0.35 + extra;
-      if (score >= bestScore) continue;
-      const sc = score + dReg(tip) * 4;
-      if (sc >= bestScore) continue;
-      const nrm: Vec2 = [-dir[1], dir[0]];
-      if (!samples.every(([sx, sz]) => okAt([cell.c[0] + dir[0] * sx + nrm[0] * sz, cell.c[1] + dir[1] * sx + nrm[1] * sz]))) continue;
-      bestScore = sc;
-      pick = { c: cell.c, dir, tip };
+  // Two passes: hose within ~6.5 m of the target first, then anywhere.
+  for (const band of [6.5, 60]) {
+    if (pick) break;
+    // Cells sorted by a lower bound of their score (hose can be at best |d(c,target) - R| away).
+    const cells: Array<{ c: Vec2; idx: number; bound: number }> = [];
+    for (let j = 0; j < ras.nz; j += 2)
+      for (let i = 0; i < ras.nx; i += 2) {
+        const idx = j * ras.nx + i;
+        const c: Vec2 = [ras.x0 + (i + 0.5) * 0.5, ras.z0 + (j + 0.5) * 0.5];
+        if (Math.abs(dist2(c, target) - R) > band) continue;
+        if (!ras.eval(idx)) continue;
+        const far = Math.max(0, dReg(c) - R);
+        cells.push({ c, idx, bound: far * 4 + Math.abs(dist2(c, target) - R) * 0.35 + (ras.street[idx] ? 0 : 0.8) + dist2(c, ctx.lot.gate) * 0.03 });
+      }
+    cells.sort((p, q) => p.bound - q.bound);
+    let bestScore = Infinity;
+    for (const cell of cells) {
+      if (cell.bound >= bestScore) break;
+      const extra = (ras.street[cell.idx] ? 0 : 0.8) + dist2(cell.c, ctx.lot.gate) * 0.03;
+      for (let k = 0; k < N; k++) {
+        const a = (k / N) * Math.PI * 2;
+        const dir: Vec2 = [Math.cos(a), Math.sin(a)];
+        const tip: Vec2 = [cell.c[0] + dir[0] * R, cell.c[1] + dir[1] * R];
+        const score = dist2(tip, target) * 0.35 + extra;
+        if (score >= bestScore) continue;
+        const sc = score + dReg(tip) * 4;
+        if (sc >= bestScore) continue;
+        const nrm: Vec2 = [-dir[1], dir[0]];
+        if (!samples.every(([sx, sz]) => okAt([cell.c[0] + dir[0] * sx + nrm[0] * sz, cell.c[1] + dir[1] * sx + nrm[1] * sz]))) continue;
+        if (!legs.every(([sx, sz]) => legOk([cell.c[0] + dir[0] * sx + nrm[0] * sz, cell.c[1] + dir[1] * sx + nrm[1] * sz]))) continue;
+        bestScore = sc;
+        pick = { c: cell.c, dir, tip };
+      }
     }
   }
   if (!pick) {
@@ -1242,11 +1348,14 @@ export function pumpSpot(ctx: BuildContext, reg: Region, target: Vec2, ground: T
   }
   const gy = sampleGrid(ground, pick.c[0], pick.c[1]);
   const tip: Vec3 = [pick.tip[0], gy + PUMP_TIP[1], pick.tip[1]];
-  // Pour origin: the region point nearest the hose end.
+  // Pour origin: the region point nearest the hose end (nudged 25 cm inside its rect).
   let origin = target;
   let od = Infinity;
-  for (const r of reg.tiles(0.5)) {
-    const p: Vec2 = [(r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2];
+  for (const r of reg.rects()) {
+    const p: Vec2 = [
+      Math.min(Math.max(pick.tip[0], r.x0 + Math.min(0.25, (r.x1 - r.x0) / 2)), r.x1 - Math.min(0.25, (r.x1 - r.x0) / 2)),
+      Math.min(Math.max(pick.tip[1], r.z0 + Math.min(0.25, (r.z1 - r.z0) / 2)), r.z1 - Math.min(0.25, (r.z1 - r.z0) / 2)),
+    ];
     const d = dist2(p, pick.tip);
     if (d < od) {
       od = d;

@@ -13,7 +13,7 @@ import {
 import type { Fixture, FixtureKind, Vec2 } from '../house/types';
 import type { Part, StepDef } from '../engine/types';
 import type { BuildContext } from './context';
-import { boxesPart, fixtureModel, fixtureY, houseBounds, polyBounds, roomsOf } from './finish-kit';
+import { boxesPart, fixtureModel, houseBounds, polyBounds, roomsOf } from './finish-kit';
 import { line, roundCost } from './kit';
 
 const MODEL_OF: Partial<Record<FixtureKind, 'bed-double' | 'bed-single' | 'sofa' | 'armchair' | 'coffee-table' | 'dining-set' | 'tv' | 'wardrobe' | 'desk' | 'washer'>> = {
@@ -195,8 +195,6 @@ export function phaseHandover(ctx: BuildContext): StepDef[] {
         ),
       );
     }
-    const fy = fixtureY(ctx, { ...house.fixtures[0], level: 'entrance', y: undefined });
-    void fy;
     steps.push({
       id: 'p13-done',
       phase: 13,

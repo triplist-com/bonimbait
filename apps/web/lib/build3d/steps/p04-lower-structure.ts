@@ -35,6 +35,7 @@ import {
   wallFormParts,
   wallForms,
   wallMesh,
+  formGhosts,
   type BoxItem,
   type FaceEdge,
   type RodItem,
@@ -55,7 +56,7 @@ export function phaseLowerStructure(ctx: BuildContext): StepDef[] {
   const steps: StepDef[] = [];
 
   // ================================================================ retaining rebar
-  const mesh = wallMesh(cast, { spacing: 0.2, starter: 0.2, slabAbove: fr.above.lower, dV: 14, dH: 12 });
+  const mesh = wallMesh(cast, { spacing: 0.2, starter: 0.15, slabAbove: fr.above.lower, dV: 14, dH: 12 });
   const crewAt = (k: number): Vec3 => {
     const c = polygonCentroid(fpLower);
     const a = wallReg.empty ? c : (edgeInside(wallReg, fpLower)?.mid ?? c);
@@ -118,7 +119,7 @@ export function phaseLowerStructure(ctx: BuildContext): StepDef[] {
     ],
     costILS: roundCost(forms.m2 * PRICES.formworkM2),
     remove: { tags: ['p4-crew'] },
-    parts: wallFormParts('p4-retaining-forms', forms, ['p4-wall-forms', LVL]),
+    parts: wallFormParts('p4-retaining-forms', forms, ['p4-wall-forms', LVL], 0, 'none'),
     camera: wallCam(160, 58),
     view: { xray: false },
   });
@@ -157,8 +158,9 @@ export function phaseLowerStructure(ctx: BuildContext): StepDef[] {
     titleHe: 'יציקת קירות תומכים',
     materials: [line('בטון ב-30 עם מוסף אטימות', wc.m3 * 1.04, 'מ״ק', 1), line('משאבת בטון', 1, 'יום', 0), line('מערבלי בטון', Math.ceil((wc.m3 * 1.04) / 8), 'נסיעות', 0)],
     costILS: roundCost(wc.m3 * 1.04 * PRICES.concreteM3 + PRICES.pumpDay),
-    parts: pourParts,
-    camera: { bounds: pourBounds(wallPts, wallPump, ctx.y.pitFloor, y1 + 1), azimuth: 150, polar: 55 },
+    remove: { tags: ['p4-wall-forms'] },
+    parts: [...formGhosts('p4-retaining-pour:forms', wallFormParts('p4-retaining-forms', forms, []), 'p4-wall-ghost', [LVL]), ...pourParts],
+    camera: { bounds: boundsOf([...wallPts, [wallPump.tip[0], wallPump.tip[2]]], ctx.y.pitFloor, wallPump.tip[1] + 0.5, 1.2), azimuth: 140, polar: 56 },
     view: { xray: false },
   });
 
@@ -181,7 +183,7 @@ export function phaseLowerStructure(ctx: BuildContext): StepDef[] {
     titleHe: 'פירוק טפסות',
     materials: [line('פירוק תבניות קירות', forms.m2, 'מ״ר', 0), line('איטום חורי קשרים', plugs.length, 'יח׳', 0)],
     costILS: roundCost(plugs.length * 8),
-    remove: { tags: ['p4-wall-forms', 'p4-pump-walls'] },
+    remove: { tags: ['p4-wall-ghost', 'p4-pump-walls'] },
     parts: [
       {
         id: 'p4-retaining-strip:plugs',
@@ -204,7 +206,8 @@ export function phaseLowerStructure(ctx: BuildContext): StepDef[] {
   const drain: RodItem[] = [];
   let skinM2 = 0;
   const beamW = 0.3;
-  const footTop = ctx.y.lowerBeamTop - 0.27;
+  // Gravel bed up to the drain pipe's centerline (pipe half-embedded, still visible).
+  const footTop = ctx.y.pitFloor + 0.11;
   for (const e of soil) {
     const [b0, b1] = bandRange(e, 0.008, 0.014);
     bitumen.push(bandBox(e, b0, b1, 0.008, 0.014, y0 + 0.002, y1 - 0.06));
@@ -254,7 +257,7 @@ export function phaseLowerStructure(ctx: BuildContext): StepDef[] {
       { id: 'p4-waterproofing:drain', shape: { kind: 'rods', radius: 0.055, segments: 12, items: drain }, material: 'drain', color: '#D8B64A', tags: ['drainage', LVL], edges: false, anim: { type: 'rise', delay: 3.4, duration: 0.9, stagger: 0.15 } },
       { id: 'p4-waterproofing:holes', shape: { kind: 'rods', radius: 0.057, segments: 12, items: holes }, material: 'ink', color: '#7A6A2E', tags: ['drainage', LVL], edges: false, anim: { type: 'fade', delay: 4.0, duration: 0.5 } },
     ],
-    camera: wallCam(20, 50, 2.5),
+    camera: { ...wallCam(20, 47, 0.6), zoom: 0.85 },
     view: { groundXray: true, xray: false },
   });
 
@@ -416,7 +419,7 @@ export function phaseLowerStructure(ctx: BuildContext): StepDef[] {
   // ================================================================ columns
   const cols = fr.lowerCols;
   const colTop = (c: (typeof cols)[number]) => c.baseY + c.height;
-  const cages = columnCages(cols, fr.y.lowerTop, (c) => colTop(c), fr.above.lower, 0.2);
+  const cages = columnCages(cols, fr.y.lowerTop, (c) => colTop(c), fr.above.lower, 0.14);
   const colPts = cols.flatMap((c) => columnRect(c, 0.6));
   const colCam = (az: number) => ({ bounds: boundsOf([...colPts, ...fpLower], fr.y.lowerTop - 0.3, y1 + 0.5, 0.6), azimuth: az, polar: 55 });
   steps.push({
@@ -429,7 +432,7 @@ export function phaseLowerStructure(ctx: BuildContext): StepDef[] {
       line('חישוקים קוטר 8', cages.ties.length / 4, 'יח׳', 0),
     ],
     costILS: roundCost((cages.kg / 1000) * PRICES.rebarTon),
-    remove: { tags: ['p4-slab-machine'] },
+    remove: { tags: ['p4-slab-machine', 'pour-tiles'] },
     parts: [
       { id: 'p4-columns-rebar:bars', shape: { kind: 'rods', radius: 0.007, segments: 6, items: cages.bars }, material: 'rebar', tags: ['rebar', 'column-rebar', LVL], anim: { type: 'rise', duration: 0.7, stagger: fit(1.6, cages.bars.length, 0.05), order: 'x' } },
       { id: 'p4-columns-rebar:ties', shape: { kind: 'rods', radius: 0.004, segments: 4, items: cages.ties }, material: 'rebar', tags: ['rebar', 'column-rebar', LVL], anim: { type: 'grow', delay: 1.4, duration: 0.25, stagger: fit(2.4, cages.ties.length, 0.02), order: 'y' } },
@@ -441,18 +444,19 @@ export function phaseLowerStructure(ctx: BuildContext): StepDef[] {
   const toward = polygonCentroid(fpLower);
   const floorLower = (p: Vec2) => (slabReg.contains(p) ? fr.y.lowerTop : null);
   const cf = columnForms(cols, () => fr.y.lowerTop, colTop, floorLower, toward);
-  const colExit = { type: 'lift' as const, delay: 2.9, duration: 0.8 };
+  const colExit = 'none' as const;
+  let colFormParts: Part[] = [];
   steps.push({
     id: 'p4-columns-forms',
     phase: 4,
     titleHe: 'טפסות עמודים',
     materials: [line('תבניות עמודים', cf.m2, 'מ״ר', 0), line('מהדקי עמודים', cf.clamps.length / 4, 'יח׳', 0), line('תמיכות אנך', cf.braces.length, 'יח׳', 0)],
     costILS: roundCost(cf.m2 * PRICES.formworkM2),
-    parts: [
+    parts: (colFormParts = [
       { id: 'p4-columns-forms:ply', shape: { kind: 'boxes', items: cf.ply }, material: 'plywood', tags: ['formwork', 'p4-col-forms', LVL], anim: { type: 'drop', from: [0, 1.6, 0], duration: 0.6, stagger: fit(1.8, cf.ply.length, 0.08), order: 'x', ease: 'out' }, exit: colExit },
       { id: 'p4-columns-forms:clamps', shape: { kind: 'boxes', items: cf.clamps }, material: 'steel', tags: ['formwork', 'p4-col-forms', LVL], anim: { type: 'drop', from: [0, 0.6, 0], delay: 1.9, duration: 0.4, stagger: fit(1.4, cf.clamps.length, 0.02), order: 'y', ease: 'out' }, exit: colExit },
       { id: 'p4-columns-forms:braces', shape: { kind: 'rods', radius: 0.022, segments: 8, items: cf.braces }, material: 'pipeBlue', tags: ['formwork', 'p4-col-forms', LVL], anim: { type: 'rise', delay: 3.3, duration: 0.5, stagger: 0.08 }, exit: colExit },
-    ],
+    ]),
     camera: colCam(205),
     view: { xray: false },
   });
@@ -471,6 +475,7 @@ export function phaseLowerStructure(ctx: BuildContext): StepDef[] {
     costILS: roundCost(colM3 * 1.05 * PRICES.concreteM3 + 1500),
     remove: { tags: ['p4-col-forms'] },
     parts: [
+      ...formGhosts('p4-columns-pour:forms', colFormParts, 'p4-col-ghost', [LVL]),
       {
         id: 'p4-columns-pour:concrete',
         shape: { kind: 'boxes', items: colConcrete },

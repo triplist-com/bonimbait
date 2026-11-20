@@ -13,6 +13,8 @@ import { phaseSite } from './p01-site';
 import { phaseEarthworks } from './p02-earthworks';
 import { phaseFoundations } from './p03-foundations';
 import { phaseLowerStructure } from './p04-lower-structure';
+import { phaseLowerCeiling } from './p05-lower-ceiling';
+import { phaseEntranceStructure } from './p06-entrance-structure';
 import { phaseMasonry } from './p07-masonry';
 import { phaseRoof } from './p08-roof';
 import { phaseSystems } from './p09-systems';
@@ -20,11 +22,10 @@ import { phasePlaster } from './p10-plaster';
 import { phaseFinishes } from './p11-finishes';
 import { phaseLandscape } from './p12-landscape';
 import { phaseHandover } from './p13-handover';
-import { phasePreviewStub } from './zz-preview-stub';
 
 export type PhaseBuilder = (ctx: BuildContext) => StepDef[];
 
-export const PHASE_BUILDERS: PhaseBuilder[] = [phasePlan, phaseSite, phaseEarthworks, phaseFoundations, phaseLowerStructure, phaseMasonry, phaseRoof, phaseSystems, phasePlaster, phasePreviewStub, phaseFinishes, phaseLandscape, phaseHandover];
+export const PHASE_BUILDERS: PhaseBuilder[] = [phasePlan, phaseSite, phaseEarthworks, phaseFoundations, phaseLowerStructure, phaseLowerCeiling, phaseEntranceStructure, phaseMasonry, phaseRoof, phaseSystems, phasePlaster, phaseFinishes, phaseLandscape, phaseHandover];
 
 export function buildSteps(house: HouseModel): Step[] {
   const ctx = getContext(house);

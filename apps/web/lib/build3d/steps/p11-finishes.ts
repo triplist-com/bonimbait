@@ -37,7 +37,7 @@ import {
   type BoxItem,
   type OpeningGeo,
 } from './finish-kit';
-import { EXTRA_RATES, PRICES, line, roundCost } from './kit';
+import { PRICES, line, roundCost } from './kit';
 
 const FINISH_RATES = {
   parquetM2: 520,
@@ -45,7 +45,6 @@ const FINISH_RATES = {
   mirror: 900,
   rug: 1200,
 } as const;
-void EXTRA_RATES;
 
 const BOTH_LEVELS: ViewFlags = { ghostAbove: -0.45 };
 const ENTRANCE_VIEW: ViewFlags = { ghostAbove: 2.3 };
@@ -327,8 +326,7 @@ export function phaseFinishes(ctx: BuildContext): StepDef[] {
       for (const e of [-1, 1]) frames.push(wbox(wall, f, s + e * (w / 2 - 0.05), y0 + 0.1, y1 - 0.1, 0.1, fd));
       glass.push(wbox(wall, f, s, y0 + 0.1, y1 - 0.1, w - 0.2, 0.03));
       const inside = sideInRoom(ctx, wall, f, s, ['mamad']) || 1;
-      for (const [hs, atStart] of [[true, true], [false, false]] as const) {
-        void hs;
+      for (const atStart of [true, false]) {
         const lf = swing(win, atStart, 1.75, inside as 1 | -1, (w - 0.2) / 2 - 0.01, 0.06, y0 + 0.11, y1 - 0.11);
         steel.push({ at: lf.at, size: lf.size, rotY: lf.rotY });
       }
@@ -449,7 +447,6 @@ export function phaseFinishes(ctx: BuildContext): StepDef[] {
   {
     const st = house.stairs[0];
     const parts: Part[] = [];
-    let flightM = 0;
     if (st) {
       const fy0 = ctx.lower.floorY;
       const fy1 = ctx.entrance.floorY;
@@ -491,7 +488,6 @@ export function phaseFinishes(ctx: BuildContext): StepDef[] {
         addCore(xf, xf + d2, z2, w, yk(k));
       }
       risers.push({ at: [xe - 0.012, (yk(st.risers) + yk(st.risers - 1)) / 2, z2], size: [0.02, rise, w] });
-      flightM = n1 * t1 + (xL - xwEdge) + (xe - xL) + 2;
       parts.push(
         boxesPart('p11-stair-core', core, 'concrete', ['stair', 'level:lower', 'level:entrance'], { type: 'sequence', order: 'y', stagger: 0.07, duration: 0.3 }),
         boxesPart('p11-stair-treads', treads, 'parquet', ['stair', 'cladding', 'level:lower', 'level:entrance'], { type: 'sequence', order: 'y', delay: 0.5, stagger: 0.09, duration: 0.35 }),
@@ -529,7 +525,6 @@ export function phaseFinishes(ctx: BuildContext): StepDef[] {
       camera: { fit: 'parts', zoom: 1.5, azimuth: 330, polar: 52 },
       view: BOTH_LEVELS,
     });
-    void flightM;
   }
 
   // ===================================================================== kitchen
@@ -573,8 +568,6 @@ export function phaseFinishes(ctx: BuildContext): StepDef[] {
           uppers.push({ at: [cu[0], y + 1.45 + 0.35, cu[1]], size: [mod - 0.008, 0.7, 0.35], rotY: f.rotation });
           const sp = lz(lx, -d / 2 + 0.008);
           splash.push({ at: [sp[0], y + 0.9 + 0.275, sp[1]], size: [mod - 0.002, 0.55, 0.014], rotY: f.rotation });
-          const sg = lz(lx, -d / 2 + 0.3);
-          void sg;
         }
       }
       const toeC = lz(0, -0.01);
@@ -614,7 +607,6 @@ export function phaseFinishes(ctx: BuildContext): StepDef[] {
   {
     const fx = house.fixtures.filter((f) => f.kind === 'toilet' || f.kind === 'sink' || f.kind === 'shower');
     const parts: Part[] = [];
-    const mirrors: BoxItem[] = [];
     fx.forEach((f, i) => {
       const name = f.kind === 'toilet' ? 'toilet' : f.kind === 'sink' ? 'sink' : 'shower';
       parts.push(
@@ -623,7 +615,6 @@ export function phaseFinishes(ctx: BuildContext): StepDef[] {
           anim: { type: 'drop', from: [0, 1.4, 0], delay: i * 0.18, duration: 0.7, ease: 'bounce' },
         }, f.kind === 'shower' ? { height: 0 } : {}),
       );
-      void mirrors;
     });
     const baths = roomsOf(ctx, 'entrance', ['bath', 'wc']).length + roomsOf(ctx, 'lower', ['bath', 'wc']).length;
     steps.push({
