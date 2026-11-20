@@ -16,7 +16,11 @@ export const scale2 = (a: Vec2, s: number): Vec2 => [a[0] * s, a[1] * s];
 export const dot2 = (a: Vec2, b: Vec2) => a[0] * b[0] + a[1] * b[1];
 export const cross2 = (a: Vec2, b: Vec2) => a[0] * b[1] - a[1] * b[0];
 export const len2 = (a: Vec2) => Math.hypot(a[0], a[1]);
-export const dist2 = (a: Vec2, b: Vec2) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+export const dist2 = (a: Vec2, b: Vec2) => {
+  const dx = a[0] - b[0];
+  const dz = a[1] - b[1];
+  return Math.sqrt(dx * dx + dz * dz);
+};
 export const lerp2 = (a: Vec2, b: Vec2, t: number): Vec2 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
 export function norm2(a: Vec2): Vec2 {
   const l = len2(a) || 1;
@@ -160,26 +164,43 @@ export function polygonCentroid(p: Vec2[]): Vec2 {
 }
 
 export function pointInPolygon(pt: Vec2, poly: Vec2[]): boolean {
+  // Hot path (terrain grids, rasters): no destructuring / allocation.
+  const x = pt[0];
+  const z = pt[1];
   let inside = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const [xi, zi] = poly[i];
-    const [xj, zj] = poly[j];
-    if (zi > pt[1] !== zj > pt[1] && pt[0] < ((xj - xi) * (pt[1] - zi)) / (zj - zi) + xi) inside = !inside;
+  const n = poly.length;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const pi = poly[i];
+    const pj = poly[j];
+    const zi = pi[1];
+    const zj = pj[1];
+    if (zi > z !== zj > z) {
+      const xi = pi[0];
+      if (x < ((pj[0] - xi) * (z - zi)) / (zj - zi) + xi) inside = !inside;
+    }
   }
   return inside;
 }
 
 export function distanceToSegment(p: Vec2, a: Vec2, b: Vec2): number {
-  const ab = sub2(b, a);
-  const l2 = dot2(ab, ab);
-  const t = l2 > 0 ? Math.max(0, Math.min(1, dot2(sub2(p, a), ab) / l2)) : 0;
-  return dist2(p, [a[0] + ab[0] * t, a[1] + ab[1] * t]);
+  const abx = b[0] - a[0];
+  const abz = b[1] - a[1];
+  const l2 = abx * abx + abz * abz;
+  let t = l2 > 0 ? ((p[0] - a[0]) * abx + (p[1] - a[1]) * abz) / l2 : 0;
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  const dx = p[0] - a[0] - abx * t;
+  const dz = p[1] - a[1] - abz * t;
+  return Math.sqrt(dx * dx + dz * dz);
 }
 
 /** Distance to the polygon boundary. */
 export function distanceToEdges(p: Vec2, poly: Vec2[]): number {
   let d = Infinity;
-  for (let i = 0; i < poly.length; i++) d = Math.min(d, distanceToSegment(p, poly[i], poly[(i + 1) % poly.length]));
+  const n = poly.length;
+  for (let i = 0; i < n; i++) {
+    const s = distanceToSegment(p, poly[i], poly[i + 1 === n ? 0 : i + 1]);
+    if (s < d) d = s;
+  }
   return d;
 }
 
@@ -279,18 +300,22 @@ export function unionOutline(polys: Vec2[][], res = 0.05): Vec2[] {
   const W = Math.ceil((b.max[0] - x0) / res) + 3;
   const H = Math.ceil((b.max[1] - z0) / res) + 3;
   const filled = new Uint8Array(W * H);
-  const boxes = polys.map((p) => bbox2(p));
+  // Scanline fill (even-odd per polygon, same rule as pointInPolygon at cell centers).
+  const xs: number[] = [];
   for (let j = 0; j < H; j++) {
     const z = z0 + (j + 0.5) * res;
-    for (let i = 0; i < W; i++) {
-      const x = x0 + (i + 0.5) * res;
-      for (let k = 0; k < polys.length; k++) {
-        const bb = boxes[k];
-        if (x < bb.min[0] || x > bb.max[0] || z < bb.min[1] || z > bb.max[1]) continue;
-        if (pointInPolygon([x, z], polys[k])) {
-          filled[j * W + i] = 1;
-          break;
-        }
+    for (const poly of polys) {
+      xs.length = 0;
+      for (let i = 0, k = poly.length - 1; i < poly.length; k = i++) {
+        const zi = poly[i][1];
+        const zk = poly[k][1];
+        if (zi > z !== zk > z) xs.push(((poly[k][0] - poly[i][0]) * (z - zi)) / (zk - zi) + poly[i][0]);
+      }
+      xs.sort((a, b) => a - b);
+      for (let q = 0; q + 1 < xs.length; q += 2) {
+        const ia = Math.max(0, Math.ceil((xs[q] - x0) / res - 0.5));
+        const ib = Math.min(W - 1, Math.ceil((xs[q + 1] - x0) / res - 0.5) - 1);
+        for (let i = ia; i <= ib; i++) filled[j * W + i] = 1;
       }
     }
   }
@@ -411,9 +436,17 @@ export interface CutSpec {
 }
 
 export function excavate(ground: TerrainGrid, cuts: CutSpec[]): TerrainGrid {
+  const boxes = cuts.map((c) => bbox2(c.polygon));
   return mapGrid(ground, (x, z, h) => {
     let out = h;
-    for (const c of cuts) {
+    for (let k = 0; k < cuts.length; k++) {
+      const c = cuts[k];
+      // Distance to the bbox is a lower bound of the distance to the polygon: if even that
+      // leaves the cut above the ground here, skip the exact (costly) test.
+      const b = boxes[k];
+      const bx = Math.max(b.min[0] - x, 0, x - b.max[0]);
+      const bz = Math.max(b.min[1] - z, 0, z - b.max[1]);
+      if (c.y + Math.max(0, Math.sqrt(bx * bx + bz * bz) - c.margin) * c.slope >= out) continue;
       const d = distanceOutside([x, z], c.polygon);
       if (c.shield && d > c.shield.gap && signedDistance([x, z], c.shield.polygon) < c.shield.margin) continue;
       out = Math.min(out, c.y + Math.max(0, d - c.margin) * c.slope);

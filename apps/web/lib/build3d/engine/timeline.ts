@@ -133,7 +133,8 @@ export function getTimeline(house: HouseModel): Timeline {
     const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now();
     const steps = buildSteps(house);
     t = buildTimeline(steps);
-    t.buildMs += (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0;
+    // Total: step generation + flattening.
+    t.buildMs = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0;
     cache.set(house, t);
   }
   return t;

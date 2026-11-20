@@ -11,7 +11,8 @@ import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { Director, type Focus } from '@/lib/build3d/engine/runtime/director';
-import type { Timeline } from '@/lib/build3d/engine/timeline';
+import { getTimeline, type Timeline } from '@/lib/build3d/engine/timeline';
+import { house as sampleHouse } from '@/lib/build3d/house';
 import { getContext } from '@/lib/build3d/steps/context';
 import type { HouseModel } from '@/lib/build3d/house/types';
 
@@ -40,6 +41,15 @@ export interface StageProps {
 
 const DEG = Math.PI / 180;
 const FOV = 32;
+
+// The viewer chunk is prefetched while the landing's analysis animation plays: build the
+// (memoized) step timeline in idle time then, so the viewer opens without a build pause.
+if (typeof window !== 'undefined') {
+  const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+  const warm = () => void getTimeline(sampleHouse);
+  if (w.requestIdleCallback) w.requestIdleCallback(warm, { timeout: 3000 });
+  else window.setTimeout(warm, 400);
+}
 
 export default function Stage(props: StageProps) {
   return (
@@ -131,8 +141,8 @@ function Scene({ house, timeline, step, ghost, xray, autoRotate, resetTick, intr
     sun.shadow.bias = -0.00035;
     sun.shadow.normalBias = 0.035;
     sun.shadow.radius = 3;
-    const hemi = new THREE.HemisphereLight('#EEF3FA', '#CFC7B8', 0.95);
-    const fill = new THREE.DirectionalLight('#DDE8FF', 0.35);
+    const hemi = new THREE.HemisphereLight('#EEF3FA', '#CFC7B8', 1.05);
+    const fill = new THREE.DirectionalLight('#DDE8FF', 0.55);
     fill.position.copy(center).add(new THREE.Vector3(-sw.x * 40, 25, -sw.y * 40));
     fill.target.position.copy(center);
     // Dusk: low warm sun from the west.
@@ -145,7 +155,15 @@ function Scene({ house, timeline, step, ghost, xray, autoRotate, resetTick, intr
     invalidate();
   }, [lighting, invalidate]);
 
-  const applyDusk = (k: number) => {
+  // A deep link straight into a dusk step starts AT dusk: apply the current level once
+  // (the per-frame easing only runs while the level is moving).
+  useEffect(() => {
+    applyDusk(dusk.current);
+    invalidate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lights, director]);
+
+  function applyDusk(k: number) {
     const { sun, hemi, fill, center, sunDir, duskDir } = lights;
     const dir = sunDir.clone().lerp(duskDir, k).normalize();
     sun.position.copy(center).addScaledVector(dir, 60);
@@ -153,11 +171,11 @@ function Scene({ house, timeline, step, ghost, xray, autoRotate, resetTick, intr
     sun.intensity = 2.05 - 1.2 * k;
     hemi.color.set('#EEF3FA').lerp(new THREE.Color('#6C7BA8'), k);
     hemi.groundColor.set('#CFC7B8').lerp(new THREE.Color('#5A4636'), k);
-    hemi.intensity = 0.95 - 0.4 * k;
-    fill.intensity = 0.35 * (1 - k);
+    hemi.intensity = 1.05 - 0.45 * k;
+    fill.intensity = 0.55 * (1 - k);
     scene.environmentIntensity = 0.42 * (1 - 0.6 * k);
     director.lib.setDusk(k);
-  };
+  }
 
   // --- floor (shadow catcher + soft contact blob) ------------------------------
   const floor = useMemo(() => {

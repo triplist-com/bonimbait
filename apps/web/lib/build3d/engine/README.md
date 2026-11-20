@@ -76,9 +76,9 @@ Shapes (`engine/types.ts`), world meters:
 | `merge {shapes}` | several primitives → one mesh |
 | **`boxes {items:[{at,size,rotY?}]}`** · **`rods {radius, items:[{a,b,r?}]}`** · **`instances {of, items:[{at,rotY?,scale?}]}`** | **anything repeated** (blocks, tiles, rebar, props, pavers) — one draw call |
 | `terrain {grid, from?, ref?, baseY}` | ground variants; `from` morphs (anim `morph`) |
-| `drape {outline, grid, lift?}` | lawn / gravel / asphalt following the terrain |
+| `drape {outline, grid, lift?, cell?, holes?}` | lawn / gravel / asphalt following the terrain (`holes`: skip cells under paving) |
 | `lines {points}` | 1-px string lines |
-| `model {name, size?, seed?}` | `lib/build3d/models` (car, tree, sofa, pump-truck…); front = +X |
+| `model {name, size?, seed?, pose?}` | `lib/build3d/models` (car, tree, sofa, pump-truck…); front = +X. `pose` is model-specific: pump-truck `[x, y, z, stream]` = hose end in truck space + concrete stream length — use `pumpSpot()` + `pumpPart()` from `steps/structure-kit.ts` |
 
 Materials (`engine/palette.ts`): soil, soilCut, gravel, concrete (fresh→cured automatically), rebar, plywood,
 timber, block, plaster, stone, bitumen, roofWhite, glass, aluminum, porcelain, parquet, grass, pipeRed, pipeBlue,
@@ -113,7 +113,10 @@ polar is degrees from straight down (≈ 50 is a nice 3/4). Default frames the s
 
 `view: { xray?, ghostAbove?, groundXray?, ghostTags?, lighting? }`
 - `xray` (default auto: on when the step's parts are inside the house) — parts between the camera and the
-  new parts turn translucent. `ghostAbove: y` — everything above y turns translucent (interior work).
+  new parts (≥ 8 % of the sample rays; site clutter/machines: any ray) fade to 0.24. `ghostAbove: y` — parts
+  above y fade too, but only where they hide the work (far walls stay, the house keeps its shape).
+  Embedded steel and clutter (`rebar` material/tag, slab conduits/boxes, sleeves, void formers, spacers,
+  scaffolding) vanish instead of ghosting.
 - `groundXray` — terrain translucent (piles, sewer).
 - `ghostTags: ['p4-wall-forms']` — parts with these tags turn translucent during the step (see the rebar
   inside its forms).
@@ -125,7 +128,19 @@ The summary overlay (after the last step) sums the bills of materials by convent
 `'מ״ק'` and `nameHe` starts with `'בטון'` (concrete), unit `'טון'` with ברזל/זיון/חישוק/רשת in the name (rebar),
 unit `'יח׳'` with `'בלוק'` in the name (blocks). Months come from the sum of `durationDays` (22 working days/month).
 
+## Facade
+
+`steps/facade.ts` builds every exterior skin (render, stone, parapet copings, reveals) from the walls,
+columns and exposed slab edges — see its header. p10 uses it; other phases should not add exterior skins.
+
+## Rendering notes
+
+Parts with outlines push their faces back (`polygonOffset`) so the outline wins; parts without outlines
+(skins) do not, so the edges of what they cover never show through. Keep skins ≥ 5 mm proud of the face
+they cover (exterior render 28 mm, stone 36 mm, interior paint ≤ 23 mm).
+
 ## Performance
 
-Steps are built once (< 150 ms total). Use instanced shapes for repeats, keep per-step part counts modest,
+Steps are built once (≈ 120 ms cold in the dev browser; budget 150 ms); `Stage.tsx` also warms the
+memoized timeline in idle time while the landing's analysis plays. Use instanced shapes for repeats, keep per-step part counts modest,
 don't create geometry in loops of hundreds of `box` parts — use `boxes`.

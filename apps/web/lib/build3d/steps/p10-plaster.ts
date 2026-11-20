@@ -3,22 +3,20 @@
  * every interior wall face (removes `mep-in-wall`), Jerusalem-stone cladding and white
  * "שליכט" exterior render, scaffolding removal.
  *
- * Facade decision (typical for an Israeli private house): stone on the street-facing
- * (south) entrance-floor facade and on the recessed entry porch, full height; every other
- * entrance-floor facade gets a 90 cm stone plinth and white render above it; the lower
- * floor and the roof parapets are white render. Interior faces are the faces whose far side
- * lies inside the level footprint; retaining walls are never rendered on the soil side.
+ * Facade (steps/facade.ts, typical for an Israeli private house): stone on the street-facing
+ * (south) entrance-floor facade and the recessed entry porch, full height; a 90 cm stone plinth
+ * where the entrance floor stands on grade; white render everywhere else, incl. slab edges,
+ * columns, corners, both faces of the parapets (+ copings) and the window reveals. Interior
+ * faces are the faces whose far side lies inside the level footprint.
  */
 import { angleOfDir, bbox2, offsetPolygon, polygonSignedArea, sampleGrid, simplifyRing } from '../house/geometry';
-import type { Wall } from '../house/types';
 import type { CameraHint, Part, PrimitiveShape, StepDef, Vec2, Vec3 } from '../engine/types';
 import type { BuildContext } from './context';
 import { PRICES, line, roundCost } from './kit';
-import { boxesArea, faceInside, faceNormal, floorYOf, levelFloor, skinBoxes, stoneBoxes, wallsOfLevel, type BoxItem, type Face, type Lvl } from './envelope-kit';
+import { boxesArea, faceInside, floorYOf, skinBoxes, wallsOfLevel, type BoxItem, type Face, type Lvl } from './envelope-kit';
+import { facadeSkins } from './facade';
 
 const FACES: Face[] = [1, -1];
-const PORCH = new Set(['E-PN', 'E-PE', 'E-PS']);
-const PLINTH = 0.9;
 const BAY_L = 2.5;
 const TIER_H = 4.0;
 
@@ -138,33 +136,19 @@ export function phasePlaster(ctx: BuildContext): StepDef[] {
   };
 
   // ------------------------------------------------------------ stone cladding + exterior render
-  const entFp = ctx.footprint.entrance;
-  const away: Vec2 = [-ctx.lot.street.inward[0], -ctx.lot.street.inward[1]];
-  const stoneWalls = wallsOfLevel(ctx, 'entrance').filter((w) => w.role === 'exterior' || w.role === 'mamad');
-  const stoneGroups: BoxItem[][] = [[], [], []];
-  /** Faces already clad in stone and the height up to which, for the render step. */
-  const stoneTo = new Map<string, number>();
-  const key = (w: Wall, f: Face) => `${w.id}|${f}`;
-  stoneWalls.forEach((w, wi) => {
-    for (const face of FACES) {
-      if (faceInside(w, face, entFp)) continue;
-      const n = faceNormal(w, face);
-      const full = n[0] * away[0] + n[1] * away[1] > 0.5 || PORCH.has(w.id);
-      const yMax = full ? w.baseY + w.height : ctx.entrance.floorY + PLINTH;
-      const g = stoneBoxes(w, ctx.house.openings, ctx.entrance.floorY, face, 4100 + wi * 7 + (face === 1 ? 0 : 3), 3, w.baseY, yMax);
-      g.forEach((items, i) => stoneGroups[i].push(...items));
-      stoneTo.set(key(w, face), yMax);
-    }
-  });
-  const stoneArea = stoneGroups.reduce((s, g) => s + boxesArea(g), 0);
+  // Facade skins cover every exterior face (walls, columns, corners, slab edges): see facade.ts.
+  const fac = facadeSkins(ctx);
+  const stoneArea = fac.stoneArea;
   const stoneColors = ['#E9DABD', '#E1D0B0', '#D8C6A3'];
+  // Facade work is seen from outside: scaffolding fades to a ghost so the new skin reads.
+  const facadeView = { xray: false, ghostTags: ['scaffolding'] };
   const stoneStep: StepDef = {
     id: 'p10-stone-cladding',
     phase: 10,
     titleHe: 'חיפוי אבן',
     materials: [line('אבן ירושלמית לחיפוי', stoneArea, 'מ״ר', 0), line('דבק צמנטי ועוגני נירוסטה', stoneArea * 6, 'ק״ג', 0), line('אבני פינה', Math.round(stoneArea * 0.4), 'יח׳', 0)],
     costILS: roundCost(stoneArea * PRICES.stoneCladdingM2),
-    parts: stoneGroups.map((items, i) => ({
+    parts: fac.stone.map((items, i) => ({
       id: `p10-stone-cladding:stones-${i + 1}`,
       shape: { kind: 'boxes' as const, items },
       material: 'stone' as const,
@@ -173,30 +157,24 @@ export function phasePlaster(ctx: BuildContext): StepDef[] {
       edges: false,
       anim: { type: 'courses' as const, stagger: 0.1, duration: 0.3, ease: 'out' as const },
     })),
-    camera: { bounds: houseBounds(ctx, ctx.entrance.floorY - 0.3, ctx.roof.floorY, 1), polar: 48, azimuth: 20 },
-    view: { xray: false },
+    camera: { bounds: houseBounds(ctx, ctx.entrance.floorY - 0.5, ctx.roof.floorY + 0.5, 0.5), polar: 66, azimuth: 24 },
+    view: facadeView,
   };
 
-  const renderParts: Part[] = [];
-  let renderArea = 0;
-  const render = (lvl: 'lower' | 'entrance' | 'roof', walls: Wall[], both: boolean) => {
-    const fp = lvl === 'roof' ? ctx.footprint.house : ctx.footprint[lvl];
-    const items: BoxItem[] = [];
-    for (const w of walls) {
-      for (const face of FACES) {
-        if (!both && faceInside(w, face, fp)) continue;
-        const yMin = stoneTo.get(key(w, face));
-        const top = w.baseY + w.height;
-        if (yMin !== undefined && yMin >= top - 0.01) continue;
-        items.push(...skinBoxes(w, ctx.house.openings, levelFloor(ctx, w.level), face, { thickness: 0.025, yMin: yMin !== undefined ? yMin - 0.002 : undefined }));
-      }
-    }
-    renderArea += boxesArea(items);
-    if (items.length) renderParts.push(skinPart(`p10-plaster-exterior:${lvl}`, items, 'plaster', ['plaster-exterior', `level:${lvl}`], '#FAF8F2', renderParts.length * 1.2));
-  };
-  render('lower', wallsOfLevel(ctx, 'lower').filter((w) => w.role === 'exterior' || w.role === 'mamad'), false);
-  render('entrance', [...wallsOfLevel(ctx, 'entrance').filter((w) => w.role === 'exterior' || w.role === 'mamad'), ...wallsOfLevel(ctx, 'entrance').filter((w) => w.role === 'parapet')], false);
-  render('roof', wallsOfLevel(ctx, 'roof').filter((w) => w.role === 'parapet'), true);
+  const renderParts: Part[] = (['lower', 'entrance', 'roof'] as const)
+    .filter((b) => fac.render[b].length)
+    .map((b, i) => skinPart(`p10-plaster-exterior:${b}`, fac.render[b], 'plaster', ['plaster-exterior', `level:${b}`], '#FAF8F2', i * 1.2));
+  if (fac.reveals.length) renderParts.push(skinPart('p10-plaster-exterior:reveals', fac.reveals, 'plaster', ['plaster-exterior', 'reveals'], '#F6F3EC', 2.4));
+  if (fac.caps.length)
+    renderParts.push({
+      id: 'p10-plaster-exterior:copings',
+      shape: { kind: 'boxes', items: fac.caps },
+      material: 'plaster',
+      color: '#ECE7DD',
+      tags: ['plaster-exterior', 'coping', 'parapet'],
+      anim: { type: 'drop', from: [0, 0.6, 0], delay: 3.0, stagger: Math.min(0.06, 1.2 / fac.caps.length), duration: 0.4, ease: 'out' },
+    });
+  const renderArea = fac.renderArea;
   const exterior: StepDef = {
     id: 'p10-plaster-exterior',
     phase: 10,
@@ -204,8 +182,8 @@ export function phasePlaster(ctx: BuildContext): StepDef[] {
     materials: [line('שטח טיח חוץ ושליכט', renderArea, 'מ״ר', 0), line('שליכט לבן (צבע גמר)', renderArea * 3, 'ק״ג', 0), line('רשת זיגוג בפינות', renderArea * 0.1, 'מ״ר', 0)],
     costILS: roundCost(renderArea * PRICES.plasterExteriorM2),
     parts: renderParts,
-    camera: { bounds: houseBounds(ctx, ctx.lower.floorY, topY, 1), polar: 48, azimuth: 150 },
-    view: { xray: false },
+    camera: { bounds: houseBounds(ctx, ctx.lower.floorY, topY, 0.5), polar: 64, azimuth: 160 },
+    view: facadeView,
   };
 
   // ------------------------------------------------------------ scaffolding down

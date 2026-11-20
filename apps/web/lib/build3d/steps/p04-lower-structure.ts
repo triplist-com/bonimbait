@@ -25,6 +25,7 @@ import {
   gridPoints,
   pieceRect,
   pourBounds,
+  pumpPart,
   pumpSpot,
   rodLength,
   slabGrid,
@@ -126,7 +127,7 @@ export function phaseLowerStructure(ctx: BuildContext): StepDef[] {
 
   // ================================================================ retaining pour
   const wc = wallConcrete(cast);
-  const wallPump = pumpSpot(ctx, wallReg, polygonCentroid(wallPts), ctx.terrain.excavated, fr.backfill);
+  const wallPump = pumpSpot(ctx, wallReg, polygonCentroid(wallPts), ctx.terrain.excavated, fr.backfill, fr.y.wallTopLower);
   const pourParts: Part[] = [
     ...wc.extrudes.map(
       (e, i): Part => ({
@@ -147,7 +148,7 @@ export function phaseLowerStructure(ctx: BuildContext): StepDef[] {
       anim: { type: 'pour', delay: 1.4, duration: 2.4, stagger: 0.2 },
     });
   pourParts.push(
-    model('p4-retaining-pour:pump', 'pump-truck', wallPump.at, wallPump.rotY, {
+    pumpPart('p4-retaining-pour:pump', wallPump, {
       tags: ['machine', 'pump', 'p4-pump-walls'],
       anim: { type: 'slide', from: slideIn(ctx, 10), duration: 1.3 },
     }),
@@ -388,7 +389,7 @@ export function phaseLowerStructure(ctx: BuildContext): StepDef[] {
   });
 
   // ================================================================ slab pour + trowel
-  const slabPump = pumpSpot(ctx, slabReg, sc, backfill);
+  const slabPump = pumpSpot(ctx, slabReg, sc, backfill, backfill, fr.y.lowerTop);
   const pour = slabPourParts('p4-slab-pour', slabReg, () => fr.y.lowerBottom, () => fr.y.lowerTop, slabPump.origin, [LVL], { delay: 1.3, total: 4.2 });
   const trowelAt: Vec3 = [sc[0] - 1.5, fr.y.lowerTop, sc[1]];
   steps.push({
@@ -404,7 +405,7 @@ export function phaseLowerStructure(ctx: BuildContext): StepDef[] {
     costILS: roundCost(pour.m3 * 1.04 * PRICES.concreteM3 + PRICES.pumpDay + pour.area * STRUCT_RATES.trowelM2),
     parts: [
       ...pour.parts,
-      model('p4-slab-pour:pump', 'pump-truck', slabPump.at, slabPump.rotY, { tags: ['machine', 'pump', 'p4-slab-machine'], anim: { type: 'slide', from: slideIn(ctx, 10), duration: 1.3 } }),
+      pumpPart('p4-slab-pour:pump', slabPump, { tags: ['machine', 'pump', 'p4-slab-machine'], anim: { type: 'slide', from: slideIn(ctx, 10), duration: 1.3 } }),
       ...trowelParts('p4-slab-pour:trowel', trowelAt, 0, 5.6, [-2.8, 0, 0.6], ['p4-slab-machine', LVL]),
       model('p4-slab-pour:op', 'worker', [trowelAt[0] - 1.3, fr.y.lowerTop, trowelAt[2]], 0, {
         tags: ['machine', 'p4-slab-machine', LVL],

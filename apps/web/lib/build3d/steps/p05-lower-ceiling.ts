@@ -24,6 +24,7 @@ import {
   pieceRect,
   pourBounds,
   propParts,
+  pumpPart,
   pumpSpot,
   rodLength,
   slabGrid,
@@ -380,7 +381,7 @@ export function ceilingSteps(ctx: BuildContext, fr: StructureFrame, spec: Ceilin
 
   // ------------------------------------------------------------------ pour
   const target = polygonCentroid(outline);
-  const pump = pumpSpot(ctx, slab, target, fr.backfill);
+  const pump = pumpSpot(ctx, slab, target, fr.backfill, fr.backfill, (p) => spec.top(p));
   const pourRegions = spec.slabs.filter((r) => !r.empty);
   const pourParts: Part[] = [];
   let m3 = 0;
@@ -397,7 +398,7 @@ export function ceilingSteps(ctx: BuildContext, fr: StructureFrame, spec: Ceilin
   const crewTag = tag('pour-machine');
   const crewY = spec.top(pump.origin);
   pourParts.push(
-    model(`${stepId('pour')}:pump`, 'pump-truck', pump.at, pump.rotY, { tags: ['machine', 'pump', crewTag], anim: { type: 'slide', from: [-ctx.lot.street.inward[0] * 10, 0, -ctx.lot.street.inward[1] * 10], duration: 1.3 } }),
+    pumpPart(`${stepId('pour')}:pump`, pump, { tags: ['machine', 'pump', crewTag], anim: { type: 'slide', from: [-ctx.lot.street.inward[0] * 10, 0, -ctx.lot.street.inward[1] * 10], duration: 1.3 } }),
     model(`${stepId('pour')}:w1`, 'worker', [pump.origin[0] + 0.9, crewY, pump.origin[1] - 0.6], 0.8, { tags: ['machine', crewTag, ...spec.tags], shape: { kind: 'model', name: 'worker', seed: 31 }, anim: { type: 'drop', delay: 0.6, from: [0, 0.8, 0] } }),
     model(`${stepId('pour')}:w2`, 'worker', [pump.origin[0] - 1.2, crewY, pump.origin[1] + 0.8], 2.6, { tags: ['machine', crewTag, ...spec.tags], shape: { kind: 'model', name: 'worker', seed: 17 }, anim: { type: 'drop', delay: 0.8, from: [0, 0.8, 0] } }),
   );

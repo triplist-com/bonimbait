@@ -178,9 +178,12 @@ const C_CUT = new THREE.Color('#AE8F66');
 const C_ROCK = new THREE.Color('#B3A893');
 const C_TOP = new THREE.Color('#8F6E48');
 const C_CLAY = new THREE.Color('#B48F60');
-const C_DEEP = new THREE.Color('#CDB892');
-const C_BASE = new THREE.Color('#E6DCC8');
-const SKIRT_T = [0, 0.04, 0.1, 0.22, 0.45, 0.72, 1];
+const C_PLINTH = new THREE.Color('#EFE9DF');
+const C_PLINTH_LOW = new THREE.Color('#F4F0EA');
+/** Skirt rows: absolute depths (m) for the soil band, then fractions of the full depth. */
+const SKIRT_T = [0, 0.12, 0.3, 0.6, 1.0, 0.5, 1];
+const SKIRT_ABS = 5;
+const skirtDepth = (k: number, D: number, prev: number) => Math.min(D, Math.max(prev, k < SKIRT_ABS ? SKIRT_T[k] : SKIRT_T[k] * D));
 
 function terrainPass(grid: TerrainGrid, ref: TerrainGrid | undefined, baseY: number) {
   const { cols, rows, cell, origin, heights } = grid;
@@ -213,7 +216,8 @@ function terrainPass(grid: TerrainGrid, ref: TerrainGrid | undefined, baseY: num
       const hx = heights[r * cols + Math.min(cols - 1, c + 1)] - heights[r * cols + Math.max(0, c - 1)];
       const hz = heights[Math.min(rows - 1, r + 1) * cols + c] - heights[Math.max(0, r - 1) * cols + c];
       const slope = Math.hypot(hx, hz) / (2 * cell);
-      if (slope > 1.6) tmp.lerp(C_ROCK, Math.min(1, (slope - 1.6) / 2));
+      // Only real cut faces read as rock; graded banks stay soil-colored.
+      if (slope > 2.2) tmp.lerp(C_ROCK, Math.min(0.5, (slope - 2.2) / 3));
       col[i * 3] = tmp.r;
       col[i * 3 + 1] = tmp.g;
       col[i * 3 + 2] = tmp.b;
@@ -222,16 +226,19 @@ function terrainPass(grid: TerrainGrid, ref: TerrainGrid | undefined, baseY: num
   let k = nTop;
   for (const bi of border) {
     const top = heights[bi];
-    for (const t of SKIRT_T) {
-      const y = top + (baseY - top) * t;
+    let prevD = 0;
+    for (let si = 0; si < SKIRT_T.length; si++) {
+      prevD = skirtDepth(si, top - baseY, prevD);
+      const y = top - prevD;
       pos[k * 3] = pos[bi * 3];
       pos[k * 3 + 1] = y;
       pos[k * 3 + 2] = pos[bi * 3 + 2];
+      // Architectural-model plinth: a thin band of soil under the surface, then a light,
+      // almost-background base that fades toward the bottom (no tall walls of dirt).
       const d = top - y;
-      if (d < 0.35) tmp.copy(C_TOP).lerp(C_CLAY, d / 0.35);
-      else if (d < 2) tmp.copy(C_CLAY).lerp(C_DEEP, (d - 0.35) / 1.65);
-      else tmp.copy(C_DEEP);
-      tmp.lerp(C_BASE, Math.max(0, (t - 0.45) / 0.55) * 0.85);
+      if (d < 0.25) tmp.copy(C_TOP).lerp(C_CLAY, d / 0.25);
+      else if (d < 0.9) tmp.copy(C_CLAY).lerp(C_PLINTH, (d - 0.25) / 0.65);
+      else tmp.copy(C_PLINTH).lerp(C_PLINTH_LOW, Math.min(1, (d - 0.9) / 4));
       col[k * 3] = tmp.r;
       col[k * 3 + 1] = tmp.g;
       col[k * 3 + 2] = tmp.b;
@@ -336,6 +343,7 @@ export function buildDrape(s: DrapeShape): THREE.BufferGeometry {
         [x + cell, z + cell],
         [x, z + cell],
       ];
+      if (s.holes?.some((h) => sq.every((p) => pointInPolygon(p, h)))) continue;
       const inside = sq.every((p) => pointInPolygon(p, s.outline));
       if (inside) {
         pushTri(sq[0], sq[3], sq[1]);

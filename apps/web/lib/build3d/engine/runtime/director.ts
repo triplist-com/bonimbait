@@ -11,7 +11,7 @@ import { getContext } from '../../steps/context';
 import { ease } from '../anim';
 import type { CameraHint, Vec2 } from '../types';
 import { visibleAt, type Timeline, type TimelinePart } from '../timeline';
-import { GHOST_OPACITY, MaterialLibrary } from './materials';
+import { GHOST_OPACITY, MaterialLibrary, XRAY_OPACITY } from './materials';
 import { loadPlanTexture } from './geometry';
 import { buildPart, disposePart, materialKeyAt, type PartRT } from './part';
 
@@ -19,6 +19,27 @@ const APPEAR = 0.35;
 const VANISH = 0.3;
 const HIGHLIGHT_HOLD = 1.5;
 const GROUND_XRAY = 0.3;
+/**
+ * Parts cast into concrete (or pure clutter) that VANISH instead of turning translucent
+ * when the x-ray fades them: rebar, slab conduits and boxes, sleeves, void formers,
+ * spacers, scaffolding, the roof build-up layers. A ghosted slab full of steel reads as
+ * noise, not as a slab.
+ */
+const XRAY_HIDE = new Set([
+  'rebar',
+  'mep-ceiling',
+  'ceiling-box',
+  'sleeves',
+  'void-formers',
+  'spacers',
+  'scaffolding',
+  // Roof build-up: stacked translucent layers turn into a white haze; the slab alone shows the roof.
+  'screed',
+  'insulation',
+  'roof-membrane',
+  'roof-coat',
+  'roof-drain',
+]);
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -192,7 +213,7 @@ export class Director {
     if (!key) return;
     rt.matKey = key;
     const vc = rt.part.shape.kind === 'terrain';
-    const base = this.lib.get(key, rt.part.color, { vertexColors: vc });
+    const base = this.lib.get(key, rt.part.color, { vertexColors: vc, offset: rt.edges });
     for (const m of rt.meshes) {
       m.userData.base = base;
       if (m.userData.dyn) {
@@ -568,7 +589,7 @@ export class Director {
       if (rt.mode !== 'enter' || rt.anim.motion !== 'fade') rt.plan.material.uniforms.uOpacity.value = o;
       return;
     }
-    const key = o >= 0.995 ? (hl ? 'H' : 'S') : Math.abs(o - GHOST_OPACITY) < 0.004 ? 'G' : 'D';
+    const key = o >= 0.995 ? (hl ? 'H' : 'S') : Math.abs(o - GHOST_OPACITY) < 0.004 ? 'G' : Math.abs(o - XRAY_OPACITY) < 0.004 ? 'X' : 'D';
     if (key === rt.look.key && key !== 'D') return;
     rt.look.key = key;
     const lib = this.lib;
@@ -579,6 +600,7 @@ export class Director {
       if (key === 'S') mat = base;
       else if (key === 'H') mat = lib.highlightOf(base);
       else if (key === 'G') mat = lib.ghostOf(base);
+      else if (key === 'X') mat = lib.xrayOf(base);
       else {
         let dyn = m.userData.dyn as THREE.MeshStandardMaterial | undefined;
         if (!dyn) {
@@ -608,6 +630,7 @@ export class Director {
       if (key === 'S') l.material = inst ? lib.instEdge : lib.edge;
       else if (key === 'H') l.material = inst ? lib.instEdgeHighlight : lib.edgeHighlight;
       else if (key === 'G') l.material = inst ? lib.instEdgeGhost : lib.edgeGhost;
+      else if (key === 'X') l.material = inst ? lib.instEdgeXray : lib.edgeXray;
       else {
         let dyn = l.userData.dyn as THREE.Material | undefined;
         if (!dyn) {
@@ -647,36 +670,8 @@ export class Director {
     const above = this.xrayOn ? st.view?.ghostAbove : undefined;
     const groundX = !!st.view?.groundXray;
     const ghostTags = this.xrayOn ? st.view?.ghostTags : undefined;
-    const samples: THREE.Vector3[] = [];
-    if (occl) {
-      const tmp = new THREE.Matrix4();
-      for (const i of this.timeline.added[this.step] ?? []) {
-        const rt = this.rts[i];
-        if (!rt || rt.isGround) continue;
-        if (rt.inst) {
-          const n = rt.inst.count;
-          const stepI = Math.max(1, Math.floor(n / 24));
-          for (let k = 0; k < n; k += stepI) {
-            tmp.fromArray(rt.inst.base, k * 16).premultiply(rt.pivot.matrixWorld);
-            samples.push(new THREE.Vector3().setFromMatrixPosition(tmp));
-          }
-        } else {
-          const b = rt.box;
-          const c = b.getCenter(new THREE.Vector3());
-          samples.push(c);
-          const sx = (b.max.x - b.min.x) * 0.35;
-          const sz = (b.max.z - b.min.z) * 0.35;
-          for (const [dx, dz] of [
-            [-1, -1],
-            [1, -1],
-            [1, 1],
-            [-1, 1],
-          ])
-            samples.push(new THREE.Vector3(c.x + dx * sx, b.max.y - 0.02, c.z + dz * sz));
-        }
-      }
-    }
-    const cam = new THREE.Vector3().setFromMatrixPosition(camera.matrixWorld);
+    const samples = occl || above !== undefined ? this.xraySamples() : [];
+    const cam = this._cam.setFromMatrixPosition(camera.matrixWorld);
     const need = Math.max(1, Math.ceil(samples.length * 0.08));
     for (const rt of this.rts) {
       if (!rt || rt.mode === 'hidden' || rt.mode === 'ghost') continue;
@@ -684,9 +679,17 @@ export class Director {
       if (rt.tp.addedAt === this.step) target = 1;
       else if (rt.isGround) target = groundX ? GROUND_XRAY : 1;
       else if (rt.part.xray !== false) {
-        if (above !== undefined && rt.box.min.y >= above - 0.02) target = GHOST_OPACITY;
-        else if (ghostTags && rt.part.tags?.some((t) => ghostTags.includes(t))) target = GHOST_OPACITY;
-        else if (occl && samples.length && this.occludes(rt, cam, samples, need)) target = GHOST_OPACITY;
+        let fade = false;
+        const tags = rt.part.tags;
+        const hide = rt.part.material === 'rebar' || !!tags?.some((t) => XRAY_HIDE.has(t));
+        // ghostAbove: only what is above Y AND actually in front of the work fades, so the far
+        // walls keep the house readable instead of dissolving it. Embedded steel / roof layers
+        // above Y always go (their slab is faded or they are clutter).
+        if (above !== undefined && rt.box.min.y >= above - 0.02) fade = hide || !samples.length || this.occludes(rt, cam, samples, need);
+        else if (ghostTags && tags?.some((t) => ghostTags.includes(t))) target = GHOST_OPACITY;
+        // Site clutter (toilet, pole, machines) and steel fade as soon as they hide any of the work.
+        else if (occl && samples.length) fade = this.occludes(rt, cam, samples, hide || tags?.some((t) => t === 'site-temp' || t === 'machine') ? 1 : need);
+        if (fade) target = hide ? 0 : XRAY_OPACITY;
       }
       if (rt.xrayTarget !== target) {
         rt.xrayTarget = target;
@@ -694,6 +697,46 @@ export class Director {
       }
     }
   }
+
+  private _cam = new THREE.Vector3();
+
+  /** Points on the current step's parts that the x-ray keeps visible (cached per step). */
+  private xraySamples(): THREE.Vector3[] {
+    if (this.sampleStep === this.step && this.sampleCache) return this.sampleCache;
+    const samples: THREE.Vector3[] = [];
+    const tmp = new THREE.Matrix4();
+    for (const i of this.timeline.added[this.step] ?? []) {
+      const rt = this.rts[i];
+      if (!rt || rt.isGround) continue;
+      if (rt.inst) {
+        const n = rt.inst.count;
+        const stepI = Math.max(1, Math.floor(n / 24));
+        for (let k = 0; k < n; k += stepI) {
+          tmp.fromArray(rt.inst.base, k * 16).premultiply(rt.root.matrixWorld);
+          samples.push(new THREE.Vector3().setFromMatrixPosition(tmp));
+        }
+      } else {
+        const b = rt.box;
+        const c = b.getCenter(new THREE.Vector3());
+        samples.push(c);
+        const sx = (b.max.x - b.min.x) * 0.35;
+        const sz = (b.max.z - b.min.z) * 0.35;
+        for (const [dx, dz] of [
+          [-1, -1],
+          [1, -1],
+          [1, 1],
+          [-1, 1],
+        ])
+          samples.push(new THREE.Vector3(c.x + dx * sx, b.max.y - 0.02, c.z + dz * sz));
+      }
+    }
+    this.sampleStep = this.step;
+    this.sampleCache = samples;
+    return samples;
+  }
+
+  private sampleStep = -1;
+  private sampleCache: THREE.Vector3[] | null = null;
 
   private occludes(rt: PartRT, cam: THREE.Vector3, samples: THREE.Vector3[], need: number): boolean {
     const boxes = this.instanceBoxes(rt);
@@ -721,7 +764,7 @@ export class Director {
       const m = new THREE.Matrix4();
       const b = new THREE.Box3();
       for (let i = 0; i < n; i++) {
-        m.fromArray(rt.inst.base, i * 16).premultiply(rt.pivot.matrixWorld);
+        m.fromArray(rt.inst.base, i * 16).premultiply(rt.root.matrixWorld);
         b.copy(gb).applyMatrix4(m);
         a.set([b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z], i * 6);
       }

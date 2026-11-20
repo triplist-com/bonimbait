@@ -319,8 +319,9 @@ export function getContext(house: HouseModel): BuildContext {
     });
   });
 
-  const tipMin = piles.reduce((m, p) => Math.min(m, p.tipY), Infinity);
-  const baseY = Math.min(gridMin(natural) - 3, (isFinite(tipMin) ? tipMin : pitFloor) - 0.6);
+  // Bottom of the terrain "cake": a modest plinth under the lowest ground. Pile tips may sit
+  // below it; the cake has no bottom face, so they are never seen from above.
+  const baseY = Math.min(gridMin(natural), pitFloor) - 1.2;
 
   // --- free spots -----------------------------------------------------------------
   const lotInset = offsetPolygon(boundary, -0.7);

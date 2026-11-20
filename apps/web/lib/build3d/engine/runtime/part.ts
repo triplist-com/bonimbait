@@ -57,6 +57,8 @@ export interface PartRT {
   animate?: (t: number) => void;
   isGround: boolean;
   matKey?: MaterialKey;
+  /** Has outlines (its materials keep the polygon offset). */
+  edges: boolean;
   // --- dynamic state (director) ---
   mode: Mode;
   /** Director clock time the current transition started at. */
@@ -126,7 +128,7 @@ export function buildPart(tp: TimelinePart, lib: MaterialLibrary, house: HouseMo
     case 'rods':
     case 'instances': {
       const b = buildInstanced(s);
-      const mat = lib.get(part.material, part.color);
+      const mat = lib.get(part.material, part.color, { offset: edges });
       const mesh = new THREE.InstancedMesh(b.geometry, mat, b.count);
       mesh.instanceMatrix.array.set(b.matrices);
       mesh.instanceMatrix.needsUpdate = true;
@@ -170,7 +172,7 @@ export function buildPart(tp: TimelinePart, lib: MaterialLibrary, house: HouseMo
       break;
     }
     case 'drape':
-      addMesh(buildDrape(s), lib.get(part.material, part.color)).castShadow = false;
+      addMesh(buildDrape(s), lib.get(part.material, part.color, { offset: edges })).castShadow = false;
       break;
     case 'lines': {
       const g = new THREE.BufferGeometry();
@@ -194,7 +196,7 @@ export function buildPart(tp: TimelinePart, lib: MaterialLibrary, house: HouseMo
       break;
     }
     case 'model': {
-      const obj = createModel(s.name, { size: s.size, seed: s.seed, color: s.color ?? part.color });
+      const obj = createModel(s.name, { size: s.size, seed: s.seed, color: s.color ?? part.color, pose: s.pose });
       animate = obj.userData.animate as PartRT['animate'];
       pivot.add(obj);
       obj.traverse((o) => {
@@ -224,7 +226,7 @@ export function buildPart(tp: TimelinePart, lib: MaterialLibrary, house: HouseMo
       break;
     }
     default: {
-      addMesh(buildPrimitive(s), lib.get(part.material, part.color));
+      addMesh(buildPrimitive(s), lib.get(part.material, part.color, { offset: edges }));
     }
   }
 
@@ -265,6 +267,7 @@ export function buildPart(tp: TimelinePart, lib: MaterialLibrary, house: HouseMo
     animate,
     isGround,
     matKey: s.kind === 'model' || s.kind === 'plan' || s.kind === 'lines' ? undefined : part.material,
+    edges,
     mode: 'hidden',
     t0: 0,
     xrayTarget: 1,

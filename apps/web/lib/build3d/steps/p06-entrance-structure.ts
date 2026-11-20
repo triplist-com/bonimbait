@@ -24,6 +24,7 @@ import {
   gridPoints,
   pieceRect,
   pourBounds,
+  pumpPart,
   pumpSpot,
   rodLength,
   slabGrid,
@@ -103,7 +104,7 @@ export function phaseEntranceStructure(ctx: BuildContext): StepDef[] {
   });
 
   // ================================================================ ground slab pour
-  const gPump = pumpSpot(ctx, gradeReg, gc, fr.backfill);
+  const gPump = pumpSpot(ctx, gradeReg, gc, fr.backfill, fr.backfill, fr.y.gradeTop);
   const gPour = slabPourParts('p6-ground-slab-pour', gradeReg, () => fr.y.gradeBottom, () => fr.y.gradeTop, gPump.origin, [LVL], { delay: 1.3, total: 4.0 });
   const tAt: Vec3 = [gc[0] + 1.2, fr.y.gradeTop, gc[1] + 1.0];
   steps.push({
@@ -114,7 +115,7 @@ export function phaseEntranceStructure(ctx: BuildContext): StepDef[] {
     costILS: roundCost(gPour.m3 * 1.03 * PRICES.concreteM3 + PRICES.pumpDay + gPour.area * STRUCT_RATES.trowelM2),
     parts: [
       ...gPour.parts,
-      model('p6-ground-slab-pour:pump', 'pump-truck', gPump.at, gPump.rotY, { tags: ['machine', 'pump', 'p6-gs-machine'], anim: { type: 'slide', from: slide(10), duration: 1.3 } }),
+      pumpPart('p6-ground-slab-pour:pump', gPump, { tags: ['machine', 'pump', 'p6-gs-machine'], anim: { type: 'slide', from: slide(10), duration: 1.3 } }),
       ...trowelParts('p6-ground-slab-pour:trowel', tAt, 0.4, 5.5, [-2.6, 0, -0.8], ['p6-gs-machine', LVL]),
       model('p6-ground-slab-pour:op', 'worker', [tAt[0] - 1.2, fr.y.gradeTop, tAt[2] - 0.5], 0.4, {
         tags: ['machine', 'p6-gs-machine', LVL],
@@ -232,7 +233,7 @@ export function phaseEntranceStructure(ctx: BuildContext): StepDef[] {
       { id: 'p6-mamad-rebar:vents', shape: { kind: 'rods', radius: 0.055, segments: 14, items: ventRods }, material: 'galvanized', tags: ['mamad-sleeves', LVL], anim: { type: 'grow', delay: 4.6, duration: 0.4, stagger: 0.2 } },
     ],
     camera: mamCam(-40, 54),
-    view: { xray: false },
+    view: { xray: true },
   });
 
   // ================================================================ mamad forms
@@ -250,14 +251,14 @@ export function phaseEntranceStructure(ctx: BuildContext): StepDef[] {
       { id: 'p6-mamad-forms:blockouts', shape: { kind: 'boxes', items: blockouts }, material: 'plywood', color: '#D9A13F', tags: ['formwork', 'p6-mamad-forms', LVL], anim: { type: 'grow', delay: 0, duration: 0.5 }, exit: mExit },
     ],
     camera: mamCam(-30, 52),
-    view: { xray: false },
+    view: { xray: true },
   };
   steps.push(mFormStep);
 
   // ================================================================ mamad pour
   const mc = wallConcrete(mam);
   const mReg = Region.of(mam.map((p) => pieceRect(p)));
-  const mPump = pumpSpot(ctx, mReg, polygonCentroid(mamPts), fr.backfill);
+  const mPump = pumpSpot(ctx, mReg, polygonCentroid(mamPts), fr.backfill, fr.backfill, fr.y.wallTopEntrance);
   const mParts: Part[] = mc.extrudes.map((e, i) => ({
     id: `p6-mamad-pour:wall${i}`,
     shape: { kind: 'extrude', outline: e.outline, holes: e.holes, y0: e.y0, y1: e.y1 },
@@ -267,7 +268,7 @@ export function phaseEntranceStructure(ctx: BuildContext): StepDef[] {
   }));
   if (mc.boxes.length)
     mParts.push({ id: 'p6-mamad-pour:pieces', shape: { kind: 'boxes', items: mc.boxes }, material: 'concrete', tags: ['concrete', 'walls', 'mamad', LVL], anim: { type: 'pour', delay: 1.4, duration: 2.6, stagger: 0.25, order: 'y' } });
-  mParts.push(model('p6-mamad-pour:pump', 'pump-truck', mPump.at, mPump.rotY, { tags: ['machine', 'pump', 'p6-mamad-machine'], anim: { type: 'slide', from: slide(10), duration: 1.3 } }));
+  mParts.push(pumpPart('p6-mamad-pour:pump', mPump, { tags: ['machine', 'pump', 'p6-mamad-machine'], anim: { type: 'slide', from: slide(10), duration: 1.3 } }));
   steps.push({
     id: 'p6-mamad-pour',
     phase: 6,

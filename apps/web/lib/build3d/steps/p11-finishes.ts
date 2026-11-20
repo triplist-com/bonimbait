@@ -5,13 +5,14 @@
  */
 import {
   angleOfDir,
+  bbox2,
   offsetPolygon,
   pointInPolygon as pointInPoly,
   polygonArea,
   rng,
   wallPieces,
 } from '../house/geometry';
-import type { Part, PrimitiveShape, StepDef, Vec2, Vec3, ViewFlags } from '../engine/types';
+import type { CameraHint, Part, PrimitiveShape, StepDef, Vec2, Vec3, ViewFlags } from '../engine/types';
 import type { Fixture, Room, RoomKind } from '../house/types';
 import type { BuildContext } from './context';
 import {
@@ -47,6 +48,14 @@ const FINISH_RATES = {
 } as const;
 
 const BOTH_LEVELS: ViewFlags = { ghostAbove: -0.45 };
+
+/** Camera on the stair well (both flights) from above, with a few meters of the floor around it. */
+function stairCam(ctx: BuildContext): CameraHint {
+  const st = ctx.house.stairs[0];
+  if (!st) return { fit: 'house' };
+  const b = bbox2(st.footprint);
+  return { bounds: { min: [b.min[0] - 2.5, ctx.lower.floorY, b.min[1] - 2.5], max: [b.max[0] + 2.5, ctx.entrance.floorY + 1, b.max[1] + 2.5] }, azimuth: 25, polar: 40 };
+}
 const ENTRANCE_VIEW: ViewFlags = { ghostAbove: 2.3 };
 
 /** Rooms that get a dropped gypsum ceiling (ducts / wet rooms). */
@@ -275,7 +284,9 @@ export function phaseFinishes(ctx: BuildContext): StepDef[] {
             ]
           : []),
       ],
-      camera: { fit: 'house', azimuth: 25, polar: 58, zoom: 0.92 },
+      camera: { fit: 'house', azimuth: 25, polar: 62, zoom: 0.92 },
+      // Facade work: nothing to see through.
+      view: { xray: false },
     });
   }
 
@@ -522,7 +533,8 @@ export function phaseFinishes(ctx: BuildContext): StepDef[] {
       materials: [line('חיפוי מדרגות (משטח וקופינג)', (st?.risers ?? 19) * 1.0, 'מ״א', 0), line('מעקה זכוכית מחוסמת + מאחז יד', railM, 'מ״א', 1), line('דבק ופרופילי קצה', 38, 'מ׳', 0)],
       costILS: roundCost((st?.risers ?? 19) * 1.0 * FINISH_RATES.stairClad * 0.4 + railM * PRICES.glassRailingM),
       parts,
-      camera: { fit: 'parts', zoom: 1.5, azimuth: 330, polar: 52 },
+      // The U-stair spans both floors: seen from above, around its well, with what hides it faded.
+      camera: stairCam(ctx),
       view: BOTH_LEVELS,
     });
   }
@@ -598,7 +610,8 @@ export function phaseFinishes(ctx: BuildContext): StepDef[] {
       materials: [line('מטבח כולל ארונות ושיש', linear, 'מ״א', 1), line('אי מטבח עם שרפרפים', 1, 'יח׳', 0), line('ארונות עליונים', uppers.length, 'יח׳', 0)],
       costILS: roundCost(linear * PRICES.kitchenLinearM),
       parts,
-      camera: { bounds: { min: [4.6, 0, 9.4], max: [11, 3, 16.2] }, azimuth: 20, polar: 52 },
+      // Looking down into the kitchen over its walls (roof lifted), not through the facade.
+      camera: { bounds: { min: [4.6, 0, 9.4], max: [11, 3, 16.2] }, azimuth: 20, polar: 40 },
       view: ENTRANCE_VIEW,
     });
   }

@@ -22,7 +22,12 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
 export type V3 = [number, number, number];
-export type Opts = { size?: [number, number, number]; seed?: number; color?: string };
+/**
+ * `pose`: model-specific pose parameters (meters, model frame). pump-truck: [x, y, z(, stream)] =
+ * hose end in truck space (front +X); the boom slews and unfolds to put the hose there, and
+ * `stream` draws that many meters of concrete falling from the hose.
+ */
+export type Opts = { size?: [number, number, number]; seed?: number; color?: string; pose?: number[] };
 
 /** Shared palette (SPEC §6 plus equipment colors). */
 export const P = {

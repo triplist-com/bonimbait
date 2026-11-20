@@ -44,7 +44,7 @@ function build(name: ModelName, o: Opts): Template {
  * Create a model. Meters, origin bottom-center, front faces +X. With `opts.size` the model is scaled
  * non-uniformly to that [x, y, z] box (a 0 entry keeps the natural size on that axis).
  */
-export function createModel(name: ModelName, opts: { size?: [number, number, number]; seed?: number; color?: string } = {}): Object3D {
+export function createModel(name: ModelName, opts: Opts = {}): Object3D {
   const builder = BUILDERS[name];
   if (!builder) throw new Error(`Unknown model: ${name}`);
   let tpl: Template;

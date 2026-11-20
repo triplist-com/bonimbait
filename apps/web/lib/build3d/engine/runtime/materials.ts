@@ -8,6 +8,8 @@ import { ACCENT, INK, PALETTE } from '../palette';
 import type { MaterialKey } from '../types';
 
 export const GHOST_OPACITY = 0.13;
+/** Occluders faded by the automatic x-ray: lighter than the ghost preview so the house keeps its shape. */
+export const XRAY_OPACITY = 0.24;
 const EDGE_OPACITY = 0.42;
 
 type Std = THREE.MeshStandardMaterial;
@@ -17,6 +19,7 @@ const isStd = (m: THREE.Material): m is Std => (m as Std).isMeshStandardMaterial
 export class MaterialLibrary {
   private base = new Map<string, Std>();
   private ghosts = new Map<string, THREE.Material>();
+  private xrays = new Map<string, THREE.Material>();
   private highlights = new Map<string, THREE.Material>();
   private highlightList: Std[] = [];
   private level = -1;
@@ -28,16 +31,20 @@ export class MaterialLibrary {
 
   readonly edge = new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity: EDGE_OPACITY, depthWrite: false });
   readonly edgeGhost = new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity: 0.1, depthWrite: false });
+  /** Outlines of x-ray-faded occluders: faint, so a faded roof build-up does not read as a grid. */
+  readonly edgeXray = new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity: 0.05, depthWrite: false });
   readonly edgeHighlight = new THREE.LineBasicMaterial({ color: ACCENT, transparent: true, opacity: 0.95, depthWrite: false });
 
   /** Instanced-edge shader materials (instanceMatrix attribute shared with the mesh). */
   readonly instEdge = makeInstancedEdgeMaterial(INK, EDGE_OPACITY);
   readonly instEdgeGhost = makeInstancedEdgeMaterial(INK, 0.1);
+  readonly instEdgeXray = makeInstancedEdgeMaterial(INK, 0.05);
   readonly instEdgeHighlight = makeInstancedEdgeMaterial(ACCENT, 0.95);
 
   /** Palette material (shared). `color` overrides the palette color. */
-  get(key: MaterialKey, color?: string, opts: { vertexColors?: boolean; side?: THREE.Side } = {}): Std {
-    const id = `${key}|${color ?? ''}|${opts.vertexColors ? 'v' : ''}|${opts.side ?? 0}`;
+  get(key: MaterialKey, color?: string, opts: { vertexColors?: boolean; side?: THREE.Side; offset?: boolean } = {}): Std {
+    const offset = opts.offset ?? true;
+    const id = `${key}|${color ?? ''}|${opts.vertexColors ? 'v' : ''}|${opts.side ?? 0}|${offset ? 'o' : ''}`;
     let m = this.base.get(id);
     if (!m) {
       const spec = PALETTE[key];
@@ -51,8 +58,10 @@ export class MaterialLibrary {
         depthWrite: opacity >= 1,
         vertexColors: !!opts.vertexColors,
         side: opts.side ?? (opacity < 1 ? THREE.DoubleSide : THREE.FrontSide),
-        // Push faces back a hair so outlines win the depth test (no z-fighting).
-        polygonOffset: true,
+        // Push faces back a hair so outlines win the depth test (no z-fighting). Parts without
+        // outlines (skins: render, stone, paint) stay put, or edges BEHIND them show through
+        // at grazing angles.
+        polygonOffset: offset,
         polygonOffsetFactor: 1,
         polygonOffsetUnits: 1,
       });
@@ -67,19 +76,28 @@ export class MaterialLibrary {
     return m;
   }
 
-  /** Translucent "ghost" variant of any material (future preview / x-ray). */
+  /** Translucent "ghost" variant of any material (future preview). */
   ghostOf(m: THREE.Material): THREE.Material {
-    let g = this.ghosts.get(m.uuid);
+    return this.translucent(m, this.ghosts, GHOST_OPACITY);
+  }
+
+  /** Translucent variant for x-ray occluders (a bit more present than the ghost preview). */
+  xrayOf(m: THREE.Material): THREE.Material {
+    return this.translucent(m, this.xrays, XRAY_OPACITY);
+  }
+
+  private translucent(m: THREE.Material, cache: Map<string, THREE.Material>, opacity: number): THREE.Material {
+    let g = cache.get(m.uuid);
     if (!g) {
       g = m.clone();
       g.transparent = true;
-      g.opacity = Math.min(GHOST_OPACITY, m.opacity);
+      g.opacity = Math.min(opacity, m.opacity);
       g.depthWrite = false;
       if (isStd(g)) {
         g.emissive.copy(isStd(m) ? m.emissive : g.emissive);
         g.side = THREE.FrontSide;
       }
-      this.ghosts.set(m.uuid, g);
+      cache.set(m.uuid, g);
     }
     return g;
   }
@@ -116,18 +134,22 @@ export class MaterialLibrary {
     if (Math.abs(level - this.dusk) < 0.002) return;
     this.dusk = level;
     for (const m of this.duskList) m.emissiveIntensity = level * 1.6;
-    this.ghosts.forEach((g, uuid) => {
-      const src = this.duskList.find((m) => m.uuid === uuid);
-      if (src && isStd(g)) g.emissiveIntensity = src.emissiveIntensity;
-    });
+    for (const cache of [this.ghosts, this.xrays])
+      cache.forEach((g, uuid) => {
+        const src = this.duskList.find((m) => m.uuid === uuid);
+        if (src && isStd(g)) g.emissiveIntensity = src.emissiveIntensity;
+      });
   }
 
   dispose() {
     this.base.forEach((m) => m.dispose());
     this.ghosts.forEach((m) => m.dispose());
+    this.xrays.forEach((m) => m.dispose());
     this.highlights.forEach((m) => m.dispose());
     this.edge.dispose();
     this.edgeGhost.dispose();
+    this.edgeXray.dispose();
+    this.instEdgeXray.dispose();
     this.edgeHighlight.dispose();
     this.instEdge.dispose();
     this.instEdgeGhost.dispose();

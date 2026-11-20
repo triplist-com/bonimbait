@@ -9,6 +9,7 @@ import {
   angleOfDir,
   dist2,
   distanceOutside,
+  distanceToEdges,
   distanceToSegment,
   mapGrid,
   pointInPolygon,
@@ -1153,16 +1154,19 @@ export function slabPourParts(
 }
 
 // ---------------------------------------------------------------------------
-// Pump truck placement (the model's boom points forward, fixed pose)
+// Pump truck placement: the truck parks (street first), the boom slews and unfolds
+// so the hose hangs right over the pour start (models/equipment.ts pumpTruck pose).
 // ---------------------------------------------------------------------------
 
-/**
- * Hose end relative to the truck origin (front +X), mirrors models/equipment.ts pumpTruck():
- * boom pivot (-2.8, 2.05), segments L = [5, 4.5, 4, 3.2] at A = [1.1, 0.55, 0.1, -0.2] rad,
- * end hose 2.5 m. Kept analytic so steps stay three.js-free.
- */
+/** Mirrors models/equipment.ts (kept analytic so steps stay three.js-free). */
+const PUMP_PIVOT_X = -2.8;
+const PUMP_REACH: [number, number] = [4.5, 19.5];
+/** Hose end height above the pour surface (the concrete stream fills the gap). */
+const PUMP_DROP = 1.1;
+
+/** Hose end for the default (unposed) model, relative to the truck origin. */
 export const PUMP_TIP: Vec3 = (() => {
-  const L = [5, 4.5, 4, 3.2];
+  const L = [6.2, 5.6, 5, 4];
   const A = [1.1, 0.55, 0.1, -0.2];
   let x = 0;
   let y = 0;
@@ -1170,7 +1174,7 @@ export const PUMP_TIP: Vec3 = (() => {
     x += Math.cos(A[i]) * l;
     y += Math.sin(A[i]) * l;
   });
-  return [-2.8 + x, 2.05 + y - 2.5, 0];
+  return [PUMP_PIVOT_X + x, 2.05 + y - 2.5, 0];
 })();
 
 export interface PumpSpot {
@@ -1178,8 +1182,10 @@ export interface PumpSpot {
   rotY: number;
   /** Hose end (world). */
   tip: Vec3;
-  /** Where the pour starts (nearest point of the target region under the hose). */
+  /** Where the pour starts (region point under the hose). */
   origin: Vec2;
+  /** Model pose: hose end in truck space + concrete stream length (models/kit.ts Opts.pose). */
+  pose: number[];
 }
 
 const bboxOf = (poly: Vec2[], grow: number) => {
@@ -1210,8 +1216,21 @@ interface StandRaster {
 }
 const standCache = new WeakMap<TerrainGrid, StandRaster>();
 
-function standRaster(ctx: BuildContext, ground: TerrainGrid): StandRaster {
-  const hit = standCache.get(ground);
+/** Ground-independent part of the stand raster (street / lot / house / site items), per context. */
+interface StandBase {
+  x0: number;
+  z0: number;
+  nx: number;
+  nz: number;
+  /** 255 = not evaluated, 0 = never, 1 = street (ok), 2 = lot (ok if the ground allows). */
+  kind: Uint8Array;
+  street: Uint8Array;
+  eval: (idx: number) => number;
+}
+const baseCache = new WeakMap<BuildContext, StandBase>();
+
+function standBase(ctx: BuildContext): StandBase {
+  const hit = baseCache.get(ctx);
   if (hit) return hit;
   const lay = siteLayout(ctx);
   const house = ctx.footprint.house;
@@ -1223,54 +1242,87 @@ function standRaster(ctx: BuildContext, ground: TerrainGrid): StandRaster {
   const z0 = Math.min(...zs) - 1;
   const nx = Math.ceil((Math.max(...xs) + 1 - x0) / 0.5);
   const nz = Math.ceil((Math.max(...zs) + 1 - z0) / 0.5);
-  const ok = new Uint8Array(nx * nz).fill(255);
+  const kind = new Uint8Array(nx * nz).fill(255);
   const st = new Uint8Array(nx * nz);
   const keep = [
     { at: lay.container, r: 3.6 },
-    { at: lay.toilet, r: 1.3 },
+    { at: lay.toilet, r: 1.6 },
     { at: lay.spoil, r: 2.8 },
-    { at: lay.sign, r: 0.6 },
-    { at: lay.pole, r: 0.6 },
+    { at: lay.sign, r: 0.8 },
+    { at: lay.pole, r: 0.9 },
   ];
   const hb = bboxOf(house, 0.8);
   const lb = bboxOf(ctx.lot.boundary, 0.01);
+  const lbWide = bboxOf(ctx.lot.boundary, 1.5);
+  const sb = bboxOf(street.length ? street : [[0, 0]], 3.4);
+  const evalCell = (idx: number): number => {
+    const v = kind[idx];
+    if (v !== 255) return v;
+    const i = idx % nx;
+    const j = (idx - i) / nx;
+    const p: Vec2 = [x0 + (i + 0.5) * 0.5, z0 + (j + 0.5) * 0.5];
+    let onStreet = false;
+    if (inBox(p, sb)) for (let k = 0; k < street.length - 1 && !onStreet; k++) onStreet = distanceToSegment(p, street[k], street[k + 1]) < 3.3;
+    st[idx] = onStreet ? 1 : 0;
+    const inLot = inBox(p, lb) && pointInPolygon(p, ctx.lot.boundary);
+    let res = onStreet ? 1 : inLot ? 2 : 0;
+    // The sidewalk strip along the lot (p00-plan) is no place for a truck body.
+    if (res === 1 && !inLot && inBox(p, lbWide) && distanceToEdges(p, ctx.lot.boundary) < 1.4) res = 0;
+    if (res === 1 && inLot) res = 2;
+    const nearHouse = res && inBox(p, hb);
+    if (nearHouse && pointInPolygon(p, house)) res = 0;
+    for (let k = 0; res && nearHouse && k < house.length; k++) if (distanceToSegment(p, house[k], house[(k + 1) % house.length]) < 0.7) res = 0;
+    if (res && keep.some((q) => dist2(q.at, p) < q.r)) res = 0;
+    kind[idx] = res;
+    return res;
+  };
+  const r: StandBase = { x0, z0, nx, nz, kind, street: st, eval: evalCell };
+  baseCache.set(ctx, r);
+  return r;
+}
+
+function standRaster(ctx: BuildContext, ground: TerrainGrid): StandRaster {
+  const hit = standCache.get(ground);
+  if (hit) return hit;
+  const base = standBase(ctx);
+  const { x0, z0, nx, nz } = base;
+  const ok = new Uint8Array(nx * nz).fill(255);
   const evalCell = (idx: number): boolean => {
     const v = ok[idx];
     if (v !== 255) return v === 1;
-    const i = idx % nx;
-    const j = Math.floor(idx / nx);
-    const p: Vec2 = [x0 + (i + 0.5) * 0.5, z0 + (j + 0.5) * 0.5];
-    let onStreet = false;
-    for (let k = 0; k < street.length - 1 && !onStreet; k++) onStreet = distanceToSegment(p, street[k], street[k + 1]) < 3.3;
-    st[idx] = onStreet ? 1 : 0;
-    let res = true;
-    const nearHouse = inBox(p, hb);
-    if (nearHouse && pointInPolygon(p, house)) res = false;
-    for (let k = 0; res && nearHouse && k < house.length; k++) if (distanceToSegment(p, house[k], house[(k + 1) % house.length]) < 0.7) res = false;
-    if (res && keep.some((q) => dist2(q.at, p) < q.r)) res = false;
-    if (res && !onStreet) {
-      if (!inBox(p, lb) || !pointInPolygon(p, ctx.lot.boundary)) res = false;
-      // Not in the pit / low garden: at least near the entrance platform and not deeply cut.
-      else {
-        const g = sampleGrid(ground, p[0], p[1]);
-        res = g > ctx.y.platform - 0.3 && g > sampleGrid(ctx.terrain.natural, p[0], p[1]) - 1.2;
-      }
+    const k = base.eval(idx);
+    let res = k === 1;
+    if (k === 2) {
+      // In the lot: not in the pit / low garden — near the entrance platform and not deeply cut.
+      const i = idx % nx;
+      const j = (idx - i) / nx;
+      const x = x0 + (i + 0.5) * 0.5;
+      const z = z0 + (j + 0.5) * 0.5;
+      const g = sampleGrid(ground, x, z);
+      res = g > ctx.y.platform - 0.3 && g > sampleGrid(ctx.terrain.natural, x, z) - 1.2;
     }
     ok[idx] = res ? 1 : 0;
     return res;
   };
-  const r: StandRaster = { x0, z0, nx, nz, ok, street: st, eval: evalCell };
+  const r: StandRaster = { x0, z0, nx, nz, ok, street: base.street, eval: evalCell };
   standCache.set(ground, r);
   return r;
 }
 
 /**
- * Best pump-truck stand for a pour: truck body (10.4 × 3 m) and outriggers on the
- * street or open, un-excavated lot ground, clear of the house and site items; boom
- * facing the target; hose end as close as possible to the region (then the target).
+ * Best pump-truck stand for a pour: truck body (10.4 × 3 m) and outriggers on the street
+ * or open, un-excavated lot ground, clear of the house and site items, preferably parked
+ * along the street. The boom slews/unfolds (reach 4.5–15 m) so the hose hangs over the
+ * region point nearest the truck, ~1 m above `pourTop` (the concrete surface there).
  */
-export function pumpSpot(ctx: BuildContext, reg: Region, target: Vec2, ground: TerrainGrid, stand: TerrainGrid = ground): PumpSpot {
-  const R = PUMP_TIP[0];
+export function pumpSpot(
+  ctx: BuildContext,
+  reg: Region,
+  target: Vec2,
+  ground: TerrainGrid,
+  stand: TerrainGrid = ground,
+  pourTop: number | ((p: Vec2) => number) = 0,
+): PumpSpot {
   const ras = standRaster(ctx, stand);
   const cellAt = (p: Vec2) => {
     const i = Math.floor((p[0] - ras.x0) / 0.5);
@@ -1281,21 +1333,27 @@ export function pumpSpot(ctx: BuildContext, reg: Region, target: Vec2, ground: T
     const k = cellAt(p);
     return k >= 0 && ras.eval(k);
   };
+  const rects = reg.rects();
   const bx0 = reg.xs[0];
   const bx1 = reg.xs[reg.nx];
   const bz0 = reg.zs[0];
   const bz1 = reg.zs[reg.nz];
-  const edges = reg.edges();
-  const dReg = (p: Vec2) => {
-    if (reg.contains(p)) return 0;
-    const dx = Math.max(bx0 - p[0], 0, p[0] - bx1);
-    const dz = Math.max(bz0 - p[1], 0, p[1] - bz1);
-    if (dx > 0 || dz > 0) return Math.hypot(dx, dz);
-    let d = Infinity;
-    for (const e of edges) d = Math.min(d, distanceToSegment(p, e.a, e.b));
-    return d;
+  /** Region point nearest q, kept 0.4 m inside its rect (where the hose aims). */
+  const aimFor = (q: Vec2): Vec2 => {
+    let best: Vec2 = target;
+    let bd = Infinity;
+    for (const r of rects) {
+      const mx = Math.min(0.4, (r.x1 - r.x0) / 2);
+      const mz = Math.min(0.4, (r.z1 - r.z0) / 2);
+      const p: Vec2 = [Math.min(Math.max(q[0], r.x0 + mx), r.x1 - mx), Math.min(Math.max(q[1], r.z0 + mz), r.z1 - mz)];
+      const d = (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2;
+      if (d < bd) {
+        bd = d;
+        best = p;
+      }
+    }
+    return best;
   };
-  const N = 28;
   const samples: Vec2[] = [];
   for (const sx of [-5.2, -2.6, 0, 2.6, 5.2]) for (const sz of [-1.4, 0, 1.4]) samples.push([sx, sz]);
   // Outrigger pads may stand outside the lot, just never on the house.
@@ -1305,64 +1363,77 @@ export function pumpSpot(ctx: BuildContext, reg: Region, target: Vec2, ground: T
     [-3.4, -2.6],
     [-3.4, 2.6],
   ];
-  const legOk = (p: Vec2) => !pointInPolygon(p, ctx.footprint.house);
-  let pick: { c: Vec2; dir: Vec2; tip: Vec2 } | null = null;
-  // Two passes: hose within ~6.5 m of the target first, then anywhere.
-  for (const band of [6.5, 60]) {
-    if (pick) break;
-    // Cells sorted by a lower bound of their score (hose can be at best |d(c,target) - R| away).
-    const cells: Array<{ c: Vec2; idx: number; bound: number }> = [];
-    for (let j = 0; j < ras.nz; j += 2)
-      for (let i = 0; i < ras.nx; i += 2) {
-        const idx = j * ras.nx + i;
-        const c: Vec2 = [ras.x0 + (i + 0.5) * 0.5, ras.z0 + (j + 0.5) * 0.5];
-        if (Math.abs(dist2(c, target) - R) > band) continue;
-        if (!ras.eval(idx)) continue;
-        const far = Math.max(0, dReg(c) - R);
-        cells.push({ c, idx, bound: far * 4 + Math.abs(dist2(c, target) - R) * 0.35 + (ras.street[idx] ? 0 : 0.8) + dist2(c, ctx.lot.gate) * 0.03 });
-      }
-    cells.sort((p, q) => p.bound - q.bound);
-    let bestScore = Infinity;
-    for (const cell of cells) {
-      if (cell.bound >= bestScore) break;
-      const extra = (ras.street[cell.idx] ? 0 : 0.8) + dist2(cell.c, ctx.lot.gate) * 0.03;
-      for (let k = 0; k < N; k++) {
-        const a = (k / N) * Math.PI * 2;
-        const dir: Vec2 = [Math.cos(a), Math.sin(a)];
-        const tip: Vec2 = [cell.c[0] + dir[0] * R, cell.c[1] + dir[1] * R];
-        const score = dist2(tip, target) * 0.35 + extra;
-        if (score >= bestScore) continue;
-        const sc = score + dReg(tip) * 4;
-        if (sc >= bestScore) continue;
-        const nrm: Vec2 = [-dir[1], dir[0]];
-        if (!samples.every(([sx, sz]) => okAt([cell.c[0] + dir[0] * sx + nrm[0] * sz, cell.c[1] + dir[1] * sx + nrm[1] * sz]))) continue;
-        if (!legs.every(([sx, sz]) => legOk([cell.c[0] + dir[0] * sx + nrm[0] * sz, cell.c[1] + dir[1] * sx + nrm[1] * sz]))) continue;
-        bestScore = sc;
-        pick = { c: cell.c, dir, tip };
-      }
+  const sDir = ctx.lot.street.dir;
+  const headings: Vec2[] = [sDir, [-sDir[0], -sDir[1]]];
+  for (let k = 0; k < 8; k++) headings.push([Math.cos((k * Math.PI) / 4), Math.sin((k * Math.PI) / 4)]);
+  const reachMax = PUMP_REACH[1];
+  let pick: { c: Vec2; dir: Vec2; aim: Vec2; score: number } | null = null;
+  // Candidate cells (every other raster cell within reach), cheapest base score first so the
+  // search can stop as soon as no remaining cell can beat the pick.
+  const cands: Array<{ c: Vec2; base: number; inLot: boolean }> = [];
+  for (let j = 0; j < ras.nz; j += 2)
+    for (let i = 0; i < ras.nx; i += 2) {
+      const c: Vec2 = [ras.x0 + (i + 0.5) * 0.5, ras.z0 + (j + 0.5) * 0.5];
+      const dxb = Math.max(bx0 - c[0], 0, c[0] - bx1);
+      const dzb = Math.max(bz0 - c[1], 0, c[1] - bz1);
+      if (Math.hypot(dxb, dzb) > reachMax + 3) continue;
+      const idx = j * ras.nx + i;
+      if (!ras.eval(idx)) continue;
+      // Parked on the street (not in the front yard), parallel to the kerb, near the gate.
+      const inLot = pointInPolygon(c, ctx.lot.boundary);
+      cands.push({ c, inLot, base: (ras.street[idx] ? 0 : 1.2) + (inLot ? 0.6 : 0) + dist2(c, ctx.lot.gate) * 0.03 });
+    }
+  cands.sort((p, q) => p.base - q.base);
+  for (const { c, base, inLot } of cands) {
+    if (pick && base >= pick.score) break;
+    for (const dir of headings) {
+      const align = 1 - Math.abs(dir[0] * sDir[0] + dir[1] * sDir[1]);
+      if (pick && base + align >= pick.score) continue;
+      const pv: Vec2 = [c[0] + dir[0] * PUMP_PIVOT_X, c[1] + dir[1] * PUMP_PIVOT_X];
+      // Lower bound of the reach (distance to the region's bbox) before the exact aim.
+      const dLB = Math.hypot(Math.max(bx0 - pv[0], 0, pv[0] - bx1), Math.max(bz0 - pv[1], 0, pv[1] - bz1));
+      if (dLB > reachMax || (pick && base + align + dLB * 0.03 >= pick.score)) continue;
+      const aim = aimFor(pv);
+      const d = dist2(pv, aim);
+      if (d < PUMP_REACH[0] || d > reachMax) continue;
+      const score = base + align + d * 0.03 + dist2(aim, target) * 0.04;
+      if (pick && score >= pick.score) continue;
+      const nrm: Vec2 = [-dir[1], dir[0]];
+      const body = samples.map(([sx, sz]): Vec2 => [c[0] + dir[0] * sx + nrm[0] * sz, c[1] + dir[1] * sx + nrm[1] * sz]);
+      if (!body.every(okAt)) continue;
+      // A truck on the street stays on the street (never straddles the site fence).
+      if (!inLot && body.some((p) => pointInPolygon(p, ctx.lot.boundary))) continue;
+      if (!legs.every(([sx, sz]) => !pointInPolygon([c[0] + dir[0] * sx + nrm[0] * sz, c[1] + dir[1] * sx + nrm[1] * sz], ctx.footprint.house))) continue;
+      pick = { c, dir, aim, score };
     }
   }
   if (!pick) {
     const lay = siteLayout(ctx);
-    pick = { c: lay.truck, dir: ctx.lot.street.inward, tip: add2(lay.truck, scale2(ctx.lot.street.inward, R)) };
+    const dir = ctx.lot.street.inward;
+    pick = { c: lay.truck, dir, aim: aimFor(lay.truck), score: 0 };
   }
   const gy = sampleGrid(ground, pick.c[0], pick.c[1]);
-  const tip: Vec3 = [pick.tip[0], gy + PUMP_TIP[1], pick.tip[1]];
-  // Pour origin: the region point nearest the hose end (nudged 25 cm inside its rect).
-  let origin = target;
-  let od = Infinity;
-  for (const r of reg.rects()) {
-    const p: Vec2 = [
-      Math.min(Math.max(pick.tip[0], r.x0 + Math.min(0.25, (r.x1 - r.x0) / 2)), r.x1 - Math.min(0.25, (r.x1 - r.x0) / 2)),
-      Math.min(Math.max(pick.tip[1], r.z0 + Math.min(0.25, (r.z1 - r.z0) / 2)), r.z1 - Math.min(0.25, (r.z1 - r.z0) / 2)),
-    ];
-    const d = dist2(p, pick.tip);
-    if (d < od) {
-      od = d;
-      origin = p;
-    }
-  }
-  return { at: [pick.c[0], gy, pick.c[1]], rotY: angleOfDir(pick.dir), tip, origin };
+  const top = typeof pourTop === 'function' ? pourTop(pick.aim) : pourTop;
+  const tip: Vec3 = [pick.aim[0], top + PUMP_DROP, pick.aim[1]];
+  // World → truck space (front +X = dir, +Z = (dir.z, -dir.x) rotated, see rotY = angleOfDir).
+  const wx = tip[0] - pick.c[0];
+  const wz = tip[2] - pick.c[1];
+  const lx = wx * pick.dir[0] + wz * pick.dir[1];
+  const lz = -wx * pick.dir[1] + wz * pick.dir[0];
+  return { at: [pick.c[0], gy, pick.c[1]], rotY: angleOfDir(pick.dir), tip, origin: pick.aim, pose: [lx, tip[1] - gy, lz, PUMP_DROP - 0.04] };
+}
+
+/** The pump-truck model part for a PumpSpot (boom posed over the pour, concrete stream on). */
+export function pumpPart(id: string, pump: PumpSpot, extra: Partial<Part> = {}): Part {
+  return {
+    id,
+    shape: { kind: 'model', name: 'pump-truck', pose: pump.pose },
+    material: 'white',
+    position: pump.at,
+    rotationY: pump.rotY,
+    ...extra,
+    tags: ['model', ...(extra.tags ?? [])],
+  };
 }
 
 /** Bounds covering a region and the pump truck, for pour camera hints. */
@@ -1540,8 +1611,9 @@ export function structureFrame(ctx: BuildContext): StructureFrame {
   const roofBottom = roofTop - (roof?.thickness ?? 0.25);
 
   // --- backfill: behind the retaining walls + under the entrance ground slab (up to the
-  // void formers) + around the entrance platform up to min(natural, finished). The lower
-  // pit on the garden side stays open until landscaping.
+  // void formers) + the whole working space around the lower floor and the entrance
+  // platform up to min(natural, finished): the garden side ends at the lower floor level,
+  // so the house stands in clean ground (no open pit) until landscaping.
   const fpLower = ctx.footprint.lower;
   const gradePoly = grade?.outline ?? [];
   const stairs = h.stairs.map((s) => s.footprint);
@@ -1553,7 +1625,6 @@ export function structureFrame(ctx: BuildContext): StructureFrame {
     if (near && pointInPolygon(p, fpLower)) return e;
     if (near && stairs.some((s) => pointInPolygon(p, s))) return e;
     if (near && gradePoly.length && pointInPolygon(p, gradePoly)) return Math.max(e, voidBottom);
-    if (e < ctx.y.platform - 0.05) return e;
     let target = Math.min(sampleGrid(natural, x, z), sampleGrid(finished, x, z));
     if (near && distanceOutside(p, ctx.footprint.house) < 0.6) target = Math.min(target, gradeTop - 0.04);
     return Math.max(e, target);

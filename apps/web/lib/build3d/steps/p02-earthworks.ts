@@ -130,7 +130,7 @@ export function phaseEarthworks(ctx: BuildContext): StepDef[] {
         anim: { type: 'slide', from: [3.5, 0, 0], duration: 3.2, ease: 'inOut' },
       }),
     ] as Part[],
-    camera: { bounds: pitBounds(ctx, 1.5), polar: 50, azimuth: 36 },
+    camera: { bounds: pitBounds(ctx, 1.5), polar: 50, azimuth: 36, zoom: 1.25 },
     view: { xray: false },
   };
 

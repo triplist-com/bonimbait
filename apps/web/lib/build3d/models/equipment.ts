@@ -235,7 +235,51 @@ export function mixerTruck(): Group {
   return root;
 }
 
-export function pumpTruck(): Group {
+/** Boom geometry (mirrored in steps/structure-kit.ts pumpSpot, which stays three.js-free). */
+export const PUMP_PIVOT: [number, number] = [-2.8, 2.05];
+export const PUMP_SECTIONS = [6.2, 5.6, 5, 4];
+export const PUMP_HOSE = 2.5;
+/** Unfold pattern: section i is at angle a + b * K[i] (b = how much the boom arches). */
+const PUMP_K = [1, 0.45, 0, -0.3];
+
+/** Section angles that put the boom end at (X, Y) relative to the pivot (Gauss-Newton, clamped). */
+function pumpAngles(X: number, Y: number): number[] {
+  let a = 0.1;
+  let b = 1.0;
+  const L = PUMP_SECTIONS;
+  for (let it = 0; it < 40; it++) {
+    let x = 0;
+    let y = 0;
+    let xa = 0;
+    let xb = 0;
+    let ya = 0;
+    let yb = 0;
+    for (let i = 0; i < L.length; i++) {
+      const A = a + b * PUMP_K[i];
+      const c = Math.cos(A) * L[i];
+      const s = Math.sin(A) * L[i];
+      x += c;
+      y += s;
+      xa -= s;
+      xb -= s * PUMP_K[i];
+      ya += c;
+      yb += c * PUMP_K[i];
+    }
+    const ex = X - x;
+    const ey = Y - y;
+    if (ex * ex + ey * ey < 1e-6) break;
+    const det = xa * yb - xb * ya;
+    if (Math.abs(det) < 1e-9) break;
+    const da = (ex * yb - xb * ey) / det;
+    const db = (xa * ey - ex * ya) / det;
+    const k = Math.min(1, 0.35 / Math.max(Math.abs(da), Math.abs(db), 1e-9));
+    a = Math.min(1.3, Math.max(-1.3, a + da * k));
+    b = Math.min(2.0, Math.max(0.12, b + db * k));
+  }
+  return PUMP_K.map((k) => a + b * k);
+}
+
+export function pumpTruck(o: Opts = {}): Group {
   const root = new Group();
   const a = new Acc();
   a.bx(10, 0.3, 1.2, P.dark, 0, 0.75, 0);
@@ -257,14 +301,26 @@ export function pumpTruck(): Group {
   }
   root.add(a.build());
 
+  // Pose: hose end at pose[0..2] (truck space) → slew + unfold; default = the folded-out show pose.
+  const [px, pz] = PUMP_PIVOT;
+  let slew = 0;
+  let A = [1.1, 0.55, 0.1, -0.2];
+  const pose = o.pose;
+  if (pose && pose.length >= 3) {
+    const dx = pose[0] - px;
+    const dz = pose[2];
+    slew = Math.atan2(-dz, dx);
+    A = pumpAngles(Math.hypot(dx, dz), pose[1] + PUMP_HOSE - pz);
+  }
   const boom = new Group();
-  boom.position.set(-2.8, 2.05, 0);
+  boom.position.set(px, pz, 0);
+  boom.rotation.y = slew;
   const b = new Acc();
-  const L = [5, 4.5, 4, 3.2];
-  const A = [1.1, 0.55, 0.1, -0.2];
+  // Turret under the boom (slews with it).
+  b.cyl(0.55, 0.65, 0.5, P.yellow, [0, -0.2, 0], undefined, 14);
   let x = 0;
   let y = 0;
-  L.forEach((len, i) => {
+  PUMP_SECTIONS.forEach((len, i) => {
     const w = 0.5 - i * 0.05;
     b.box(len, w, w * 0.9, i % 2 ? '#E3A800' : P.yellow, [x + (Math.cos(A[i]) * len) / 2, y + (Math.sin(A[i]) * len) / 2, 0], [0, 0, A[i]]);
     b.cyl(0.17, 0.17, 0.62, P.dark, [x, y, 0], [Math.PI / 2, 0, 0], 10);
@@ -273,16 +329,16 @@ export function pumpTruck(): Group {
     y += Math.sin(A[i]) * len;
   });
   b.cyl(0.12, 0.12, 0.5, P.dark, [x, y, 0], [Math.PI / 2, 0, 0], 8);
-  b.cyl(0.09, 0.09, 2.5, '#1E2125', [x, y - 1.25, 0], undefined, 8);
+  b.cyl(0.09, 0.09, PUMP_HOSE, '#1E2125', [x, y - PUMP_HOSE / 2, 0], undefined, 8);
+  const stream = pose && pose.length >= 4 ? pose[3] : 0;
+  if (stream > 0.05) b.cyl(0.07, 0.11, stream, '#8E9196', [x, y - PUMP_HOSE - stream / 2, 0], undefined, 10);
   boom.add(b.build());
   const tip = new Object3D();
-  tip.position.set(x, y - 2.5, 0);
+  tip.position.set(x, y - PUMP_HOSE, 0);
   boom.add(tip);
   root.add(boom);
+  // No idle animation: a pouring boom holds still over the pour.
   root.userData.parts = { boom, tip };
-  root.userData.animate = (t: number): void => {
-    boom.rotation.y = 0.07 * Math.sin(t * 0.35);
-  };
   return root;
 }
 

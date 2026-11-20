@@ -124,8 +124,10 @@ export function phaseHandover(ctx: BuildContext): StepDef[] {
       materials: [line('מיטות וארונות', fx.filter((f) => ['bed-double', 'bed-single', 'wardrobe'].includes(f.kind)).length, 'יח׳', 0), line('ספות, שולחנות ושולחן אוכל', fx.filter((f) => ['sofa', 'armchair', 'coffee-table', 'dining-table'].includes(f.kind)).length, 'יח׳', 0), line('מכונת כביסה ומייבש', 2, 'יח׳', 0)],
       costILS: roundCost(95000),
       parts,
-      camera: { bounds: houseBounds(ctx, ctx.lower.floorY, 3.2), polar: 50 },
-      view: { ghostAbove: -0.45 },
+      // Entrance floor seen from above with the roof lifted off (the lower floor's furniture
+      // shows through its garden windows); fading both floors at once dissolves the house.
+      camera: { bounds: houseBounds(ctx, -0.3, 3.2), polar: 54, azimuth: 20 },
+      view: { ghostAbove: 2.3 },
     });
   }
 

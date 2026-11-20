@@ -64,6 +64,28 @@ Each agent appends to its own section (newest entry on top within the section). 
 - Step author B (envelope & systems): phases 7-10 done (20 steps: p7 x6, p8 x5, p9 x4, p10 x5). Files `steps/p07-masonry.ts`, `p08-roof.ts`, `p09-systems.ts`, `p10-plaster.ts`, shared `envelope-kit.ts` (block laying + lintel cut-outs, wall skins, stone courses, nearest-wall/Manhattan routing, roof cell grid with 3% fall to 4 drains). Registered in `steps/index.ts` after phaseFoundations/structure. Facades: stone full-height on the south/street side and entry porch, 90 cm stone plinth + white render elsewhere on the entrance floor, render on lower floor and parapets. Tags per STEPS.md (`mep-in-wall`, `mep-under-floor`, `duct`, `roof-membrane`, `scaffolding`, `plaster-interior`, ...). Known simplifications: pipes cross walls in floor/ceiling runs; terrace parapets (concrete in the model) are laid as blocks; at last check the roof slab (p6) was not yet registered so roof layers float.
 
 ## QA
+- **Integrator pass (final quality)** — issue list + statuses in `docs/build3d/QA.md`; shots `data/build3d-shots/qa/before/` vs `qa/after/`
+  (all 86 steps settled at 1440×900 + mid frames; `data/tools/pw/qa-all.mjs`, contact sheets `montage.mjs`).
+  - Facades: new `steps/facade.ts` (raster of exterior walls/columns/slab edges → outdoor flood → runs per owner) covers
+    every exterior face incl. slab edges, corners, columns, both parapet faces + copings and window reveals; stone full height
+    on the street side + porch, plinth only where the entrance floor is on grade. Skins without outlines no longer use
+    `polygonOffset` (block edges showed through the render). Brighter fill/hemisphere light on shaded facades.
+  - Pump truck: `pose` on the model (slew + unfold to a hose point, no sway, concrete stream); `pumpSpot` parks on the road
+    parallel to the kerb (never on the sidewalk/across the fence) and aims over the pour start; `pumpPart()` in every pour.
+  - X-ray: occluder-only `ghostAbove`, 0.24 occluder opacity, faint x-ray outlines, embedded steel / roof build-up /
+    scaffolding vanish instead of ghosting; site clutter fades as soon as it hides the work; better cameras for windows,
+    stairs, kitchen, furniture, mamad, stone/render (scaffolding ghosted).
+  - Terrain: backfill closes the working-space pit; light model plinth (base −7.15, 25 cm soil band), road + sidewalk; lawn
+    holes under paving; softer rock tint. Dusk applied on deep links. Mixer removed with the piles.
+  - Build time: 118–122 ms cold in the dev browser (was ~255–280); timeline also prewarmed in idle time from `Stage.tsx`.
+  - STEPS.md has 86 ids (not 87); `tests/build3d/timeline.test.ts` checks order, pump reach, facade coverage, build time.
+  - Engine API additions (README): `model.pose`, `drape.holes`, x-ray semantics, facade note.
+  - Needs (UX): Summary pops ~span+1.8 s into p13-done and hides the dusk orbit — consider ~6 s (or a "skip to summary" chip).
+- **UX polish pass (UX polisher).** Mobile (390x844, 360x740) and tablet (768x1024) verified with headless shots in `data/build3d-shots/ux/` (scripts `data/tools/pw/ux-landing.mjs`, `ux-viewer.mjs`, `ux-perf.mjs`). Landing: shorter hero + tighter drop zone so the sample button is above the fold at 360x740, touch-specific drop-zone copy. Viewer mobile: sheet peek fits header only (body hidden when collapsed), full-width thumb-sized prev/play/next row, 2-line titles, solid sheet background, safe-area insets, compact brand chip below 430 px, 40 px toolbar buttons. Desktop: card scroll fade, `ltr` step counter, current-phase label under the scrubber, hover tooltip with phase + step, focus rings, autoplay = animation + 2.4-3.6 s reading (scales with text) and pauses on orbit/wheel/click. Summary finale redone (brand header, confetti, count-up numbers, both CTAs). Phase names shown as "קומה תחתונה: שלד" (UI-only conversion of the engine's dash, `phaseLabel` in format.ts).
+- Numbers: real totals from the built timeline (86 steps, 362 days, ~2.25M ILS, concrete 184 m3, rebar 10.4 t, blocks 5,060) hardcoded in `lib/build3d/content/totals.ts` and used by the analysis animation and the finale. `tests/build3d/totals.test.ts` recomputes from the timeline and fails if they drift > 6 %. The old landing heuristic and "87 steps" are gone (timeline has 86).
+- Hebrew proofreading of `lib/build3d/content/**` + landing/viewer strings (kondit -> יתדות, וודאו -> ודאו, זו הרצפה, gender/agreement fixes, p12-garden is now lawn/gravel/beds/trees only; p12-site-walls owns the grading). vitest `tests/build3d` green, tsc and lint clean for build3d.
+- Sanity on `/3d/`: FCP ~100-250 ms localhost, CLS ~0, no console errors/warnings, no horizontal scroll at any tested width.
+- Open: the Summary's 125 m3 recap line in p6-strip-all (step data, not mine) is excluded from the concrete total to avoid double counting; materials use both `מ״א` and `מ׳` for meters across steps.
 
 ## Content
 - `apps/web/lib/build3d/content/`: `index.ts` (PHASES, STEP_CONTENT, SUMMARY, re-exports PRICES), `prices.ts`, `steps-a.ts` (phases 0-6), `steps-b.ts` (7-13), `types.ts`, `content.test.ts`. All 87 STEPS.md ids covered; ~362 working days (~16.7 months); video hrefs are `/video/<youtube_id>/`, all verified against videos.json.

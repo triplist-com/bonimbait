@@ -421,7 +421,8 @@ export function phaseLandscape(ctx: BuildContext): StepDef[] {
       if (poly.length < 3) continue;
       parts.push({
         id: `p12-lawn-${k}`,
-        shape: { kind: 'drape', outline: poly, grid: finished, lift: 0.02, cell: 0.5 },
+        // No lawn under paving / steps (it peeked out between the treads).
+        shape: { kind: 'drape', outline: poly, grid: finished, lift: 0.02, cell: 0.25, holes: hardAreas.map((o) => offsetPolygon(o.outline, 0.12)) },
         material: 'grass',
         tags: ['garden', 'lawn', 'level:site'],
         anim: { type: 'fade', duration: 1.8 },

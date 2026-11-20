@@ -21,6 +21,7 @@ import type { CameraHint, Part, PrimitiveShape, StepDef, Vec2, Vec3 } from '../e
 import type { Beam, BuildContext, Pile } from './context';
 import { PRICES, helix, line, model, rebarKg, roundCost } from './kit';
 import { siteLayout } from './p01-site';
+import { Region, pumpPart, pumpSpot } from './structure-kit';
 
 const COVER = 0.05;
 
@@ -206,7 +207,8 @@ export function phaseFoundations(ctx: BuildContext): StepDef[] {
       line('קורות עץ לחיזוק', soldiers.length, 'יח׳', 0),
     ],
     costILS: roundCost(formM2 * PRICES.formworkM2),
-    remove: { tags: ['holes'] },
+    // The pile mixer leaves when the piles are done.
+    remove: { tags: ['holes'], ids: ['mixer-pile'] },
     parts: [
       {
         id: 'gb-forms-boards',
@@ -299,14 +301,21 @@ export function phaseFoundations(ctx: BuildContext): StepDef[] {
 
   // ---------------------------------------------------------------- pour beams
   const gbM3 = beams.reduce((s, b) => s + dist2(b.a, b.b) * b.w * b.depth, 0);
-  const pumpAt = lay.truck;
+  // Pump: parked on the street, hose over the nearest grade beam (the pour starts there).
+  const beamPolys = beams.map((b): Vec2[] => {
+    const f = wallFrame(b);
+    const n: Vec2 = [f.normal[0] * (b.w / 2), f.normal[1] * (b.w / 2)];
+    return [add2(b.a, n), add2(b.b, n), sub2(b.b, n), sub2(b.a, n)];
+  });
+  const gbPump = pumpSpot(ctx, Region.of(beamPolys), polygonCentroid(ctx.footprint.house), excavated, excavated, (p) =>
+    pointInPolygon(p, ctx.footprint.lower) ? ctx.y.lowerBeamTop : ctx.y.entranceBeamTop,
+  );
   const gbPour: StepDef = {
     id: 'p3-gradebeam-pour',
     phase: 3,
     titleHe: 'יציקת קורות יסוד',
     materials: [line('בטון ב-30 לקורות יסוד', gbM3, 'מ״ק', 1), line('משאבת בטון', 1, 'יום', 0)],
     costILS: roundCost(gbM3 * PRICES.concreteM3 + PRICES.pumpDay),
-    remove: { ids: ['mixer-pile'] },
     parts: [
       {
         id: 'gb-concrete',
@@ -320,9 +329,9 @@ export function phaseFoundations(ctx: BuildContext): StepDef[] {
         },
         material: 'concrete',
         tags: ['concrete', 'grade-beams'],
-        anim: { type: 'pour', delay: 1.2, stagger: Math.min(0.16, 2.6 / Math.max(1, beams.length)), duration: 1.0, order: 'near', origin: ctx.lot.gate },
+        anim: { type: 'pour', delay: 1.2, stagger: Math.min(0.16, 2.6 / Math.max(1, beams.length)), duration: 1.0, order: 'near', origin: gbPump.origin },
       },
-      model('pump-gb', 'pump-truck', [pumpAt[0], ctx.heightAt(pumpAt[0], pumpAt[1], excavated), pumpAt[1]], lay.truckRot, {
+      pumpPart('pump-gb', gbPump, {
         tags: ['machine', 'pump'],
         anim: { type: 'slide', from: [-ctx.lot.street.inward[0] * 10, 0, -ctx.lot.street.inward[1] * 10], duration: 1.3 },
       }),

@@ -216,11 +216,15 @@ export function instanceSlots(points: Vec3[], a: NormAnim): Float32Array {
 /** Seconds from step start until this part's entry animation is complete. */
 export function partSpan(p: Part): number {
   const a = normalizeAnim(p);
-  const pts = instancePoints(p);
   let maxSlot = 0;
-  if (pts && a.stagger > 0) {
-    const s = instanceSlots(pts, a);
-    for (let i = 0; i < s.length; i++) maxSlot = Math.max(maxSlot, s[i]);
+  const s = p.shape;
+  const n = s.kind === 'boxes' || s.kind === 'instances' || s.kind === 'rods' ? s.items.length : 0;
+  if (n && a.stagger > 0) {
+    if (a.order === 'courses') {
+      // Rank-ordered slots end at n - 1; course slots end at (#courses - 1) + 0.7.
+      const slots = instanceSlots(instancePoints(p) as Vec3[], a);
+      for (let i = 0; i < slots.length; i++) maxSlot = Math.max(maxSlot, slots[i]);
+    } else maxSlot = n - 1;
   }
   return a.delay + a.duration + maxSlot * a.stagger;
 }

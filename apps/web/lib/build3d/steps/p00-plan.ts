@@ -21,6 +21,36 @@ function ribbon(pl: Vec2[], half: number): Vec2[] {
   return [...left, ...right.reverse()];
 }
 
+/** Polyline shifted sideways by d (left normal of its direction). */
+function shiftLine(pl: Vec2[], d: number): Vec2[] {
+  return pl.map((p, i) => {
+    const a = pl[Math.max(0, i - 1)];
+    const b = pl[Math.min(pl.length - 1, i + 1)];
+    const dx = b[0] - a[0];
+    const dz = b[1] - a[1];
+    const l = Math.hypot(dx, dz) || 1;
+    return [p[0] - (dz / l) * d, p[1] + (dx / l) * d] as Vec2;
+  });
+}
+
+/** Sidewalk slabs between the lot edge and the road (side = +1/-1: lot side of the street polyline). */
+export function sidewalk(ctx: BuildContext, street: Vec2[]) {
+  const probe = shiftLine(street, 2)[Math.floor(street.length / 2)];
+  const side = pointInPolygon(probe, ctx.lot.boundary) || Math.hypot(probe[0] - ctx.lot.center[0], probe[1] - ctx.lot.center[1]) < Math.hypot(street[Math.floor(street.length / 2)][0] - ctx.lot.center[0], street[Math.floor(street.length / 2)][1] - ctx.lot.center[1]) ? 1 : -1;
+  const mid = shiftLine(street, side * 2.3);
+  const slabs: Array<{ at: [number, number, number]; size: [number, number, number]; rotY: number }> = [];
+  for (let i = 0; i < mid.length - 1; i++) {
+    const a = mid[i];
+    const b = mid[i + 1];
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (L < 0.05) continue;
+    const c: Vec2 = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    const h = ctx.heightAt(c[0], c[1]);
+    slabs.push({ at: [c[0], h + 0.02, c[1]], size: [L + 0.04, 0.26, 1.3], rotY: Math.atan2(-(b[1] - a[1]), b[0] - a[0]) });
+  }
+  return { side, slabs };
+}
+
 export function phasePlan(ctx: BuildContext): StepDef[] {
   const { natural, baseY } = ctx.terrain;
   const parts: Part[] = [
@@ -40,20 +70,32 @@ export function phasePlan(ctx: BuildContext): StepDef[] {
     },
   ];
 
-  // The street, clipped to the terrain extent so it lies on the cake.
+  // The street + a sidewalk along the lot, clipped to the terrain extent so they lie on the cake.
   const street = ctx.house.site.street;
   if (street && street.length >= 2) {
     const tb = gridBounds(natural);
-    const poly = clipPolygonToRect(ribbon(street, 3.5), tb.min, tb.max);
-    if (poly.length >= 3 && polygonArea(poly) > 4) {
+    const walk = sidewalk(ctx, street);
+    const road = clipPolygonToRect(ribbon(shiftLine(street, -walk.side * 1.6), 3.2), tb.min, tb.max);
+    if (road.length >= 3 && polygonArea(road) > 4) {
       parts.push({
         id: 'street',
-        shape: { kind: 'drape', outline: poly, grid: natural, lift: 0.05, cell: 0.5 },
+        shape: { kind: 'drape', outline: road, grid: natural, lift: 0.05, cell: 0.5 },
         material: 'asphalt',
         tags: ['ground', 'street'],
         anim: 'none',
       });
     }
+    const items = walk.slabs.filter((b) => b.at[0] > tb.min[0] + 0.3 && b.at[0] < tb.max[0] - 0.3 && b.at[2] > tb.min[1] + 0.3 && b.at[2] < tb.max[1] - 0.3);
+    if (items.length)
+      parts.push({
+        id: 'sidewalk',
+        shape: { kind: 'boxes', items },
+        material: 'white',
+        color: '#DCD8D0',
+        tags: ['ground', 'street', 'sidewalk'],
+        castShadow: false,
+        anim: 'none',
+      });
   }
 
   // Scrub and rocks dotting the natural lot (cleared in p1-clearing).

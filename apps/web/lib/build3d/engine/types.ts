@@ -126,6 +126,8 @@ export interface DrapeShape {
   lift?: number;
   /** Sampling cell (m). Default 0.5. */
   cell?: number;
+  /** Areas left out (e.g. lawn under paving): cells fully inside a hole are skipped. */
+  holes?: Vec2[][];
 }
 
 /** 1-px line segments (string lines, survey marks). `points` are pairs. */
@@ -192,6 +194,8 @@ export interface ModelShape {
   size?: Vec3;
   seed?: number;
   color?: string;
+  /** Model-specific pose (see lib/build3d/models/kit.ts Opts.pose), e.g. the pump-truck hose end. */
+  pose?: number[];
 }
 
 export type InstancedShape = BoxesShape | RodsShape | InstancesShape;
