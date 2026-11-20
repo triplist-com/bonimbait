@@ -13,7 +13,7 @@ interface LandingProps {
 
 const STEPS = [
   { n: '1', title: 'מעלים תוכנית', text: 'קובץ PDF של תוכנית ההגשה, ישר מהדפדפן.' },
-  { n: '2', title: 'הבינה קוראת אותה', text: 'קירות, פתחים, חדרים, מידות וכמויות, בכמה שניות.' },
+  { n: '2', title: 'הבינה המלאכותית קוראת אותה', text: 'קירות, פתחים, חדרים, מידות וכמויות, תוך כמה שניות.' },
   { n: '3', title: 'רואים את הבית נבנה', text: 'מהמגרש החשוף ועד הבית המרוהט, שלב אחר שלב.' },
 ];
 
@@ -46,22 +46,22 @@ export default function Landing({ onStart }: LandingProps) {
         </Link>
       </header>
 
-      <section className="relative z-10 mx-auto grid max-w-6xl items-center gap-6 px-5 pb-10 pt-4 sm:px-8 lg:grid-cols-[1.05fr_1fr] lg:gap-10 lg:pb-16 lg:pt-10">
+      <section className="relative z-10 mx-auto grid max-w-6xl items-center gap-3 px-5 pb-8 pt-1 sm:gap-6 sm:px-8 lg:grid-cols-[1.05fr_1fr] lg:gap-10 lg:pb-16 lg:pt-10">
         <div>
           <span className="inline-flex items-center gap-2 rounded-full bg-[#E61559]/10 px-3 py-1 text-xs font-bold text-[#E61559]">
             <span className="h-1.5 w-1.5 rounded-full bg-[#E61559]" /> הדגמה חיה · תלת-ממד
           </span>
-          <h1 className="mt-4 text-[2.5rem] font-black leading-[1.08] tracking-tight sm:text-6xl">
+          <h1 className="mt-3 text-[2.25rem] font-black leading-[1.08] tracking-tight sm:text-6xl">
             מתוכנית לבית<span className="text-[#E61559]"> —</span>
             <br />
             צעד אחר צעד
           </h1>
-          <p className="mt-4 max-w-xl text-base leading-relaxed text-[#231F20]/75 sm:text-lg">
+          <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-[#231F20]/75 sm:mt-4 sm:text-lg">
             מעלים את תוכנית ההגשה ורואים כל שלב בבנייה בתלת-ממד: יסודות, ברזל, בטון, בלוקים, מערכות וגמרים.
             כמו חוברת הרכבה, רק לבית שלכם.
           </p>
 
-          <div className="mt-7 max-w-xl">
+          <div className="mt-5 max-w-xl sm:mt-7">
             <DropZone onFile={handleFile} busy={checking} />
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <button
@@ -72,14 +72,14 @@ export default function Landing({ onStart }: LandingProps) {
                 נסו עם תוכנית לדוגמה
                 <span aria-hidden>←</span>
               </button>
-              <span className="text-sm text-[#231F20]/55">תוכנית מגרש 43, בלי להעלות כלום</span>
+              <span className="text-sm text-[#231F20]/60">תוכנית מגרש 43, בלי להעלות קובץ</span>
             </div>
 
             {notice && (
               <div role="alert" className="mt-4 rounded-2xl border border-[#E61559]/25 bg-white p-4 shadow-sm">
                 <p className="font-semibold leading-relaxed">
-                  {notice === 'unsupported' && 'בגרסת ההדגמה ניתן לנתח רק את תוכנית מגרש 43 — רוצים לראות אותה?'}
-                  {notice === 'not-pdf' && 'צריך קובץ PDF של תוכנית. בגרסת ההדגמה ניתן לנתח רק את תוכנית מגרש 43 — רוצים לראות אותה?'}
+                  {notice === 'unsupported' && 'בגרסת ההדגמה ניתן לנתח רק את תוכנית מגרש 43. רוצים לראות אותה?'}
+                  {notice === 'not-pdf' && 'צריך קובץ PDF של תוכנית. בגרסת ההדגמה ניתן לנתח רק את תוכנית מגרש 43. רוצים לראות אותה?'}
                   {notice === 'unreadable' && 'לא הצלחנו לקרוא את הקובץ. אפשר לנסות שוב, או לראות את תוכנית מגרש 43.'}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -95,7 +95,7 @@ export default function Landing({ onStart }: LandingProps) {
           </div>
         </div>
 
-        <div className="relative order-first mx-auto h-[230px] w-full max-w-md sm:h-[300px] lg:order-none lg:h-[460px] lg:max-w-none">
+        <div className="relative order-first mx-auto h-[150px] w-full max-w-md min-[400px]:h-[170px] sm:h-[300px] lg:order-none lg:h-[460px] lg:max-w-none">
           <HeroVisual className="absolute inset-0" />
         </div>
       </section>

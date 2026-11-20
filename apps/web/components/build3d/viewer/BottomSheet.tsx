@@ -72,14 +72,15 @@ export default function BottomSheet({
   return (
     <div
       ref={ref}
-      className="pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex flex-col rounded-t-[22px] border-t border-white/70 bg-white/92 shadow-[0_-12px_40px_-12px_rgba(35,31,32,0.28)] backdrop-blur-xl transition-[height] duration-300 ease-out"
+      className="pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex flex-col rounded-t-[22px] border-t border-white/70 bg-white/[0.97] shadow-[0_-12px_40px_-12px_rgba(35,31,32,0.28)] backdrop-blur-xl transition-[height] duration-300 ease-out"
       style={{ height: peek, paddingBottom: 'env(safe-area-inset-bottom)' }}
+      data-snap={snap}
     >
-      <div className="shrink-0 cursor-grab touch-none px-4 pt-2" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
-        <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-[#d8d1ca]" />
+      <div className="shrink-0 cursor-grab touch-none px-4 pt-1" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
+        <div className="mx-auto mb-1 flex h-5 w-16 items-center justify-center" role="button" aria-label={snap === 0 ? 'הרחבת הכרטיס' : 'כיווץ הכרטיס'}><span className="h-1.5 w-10 rounded-full bg-[#cfc7bf]" /></div>
         {header}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 pt-3">{children}</div>
+      <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6 pt-3 ${snap === 0 ? 'invisible' : ''}`}>{children}</div>
     </div>
   );
 }

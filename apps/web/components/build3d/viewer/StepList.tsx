@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { PHASES } from '@/lib/build3d/engine/phases';
 import type { Timeline } from '@/lib/build3d/engine/timeline';
+import { phaseLabel } from './format';
 
 /** Phases with their steps; current step highlighted and kept in view. */
 export default function StepList({ timeline, step, onSelect }: { timeline: Timeline; step: number; onSelect: (i: number) => void }) {
@@ -25,8 +26,8 @@ export default function StepList({ timeline, step, onSelect }: { timeline: Timel
               >
                 {ph.phase}
               </span>
-              {info.nameHe}
-              <span className="ms-auto font-medium text-[#a19a94]">{ph.last - ph.first + 1}</span>
+              {phaseLabel(info.nameHe)}
+              <span className="ms-auto font-medium text-[#a19a94]" title="מספר שלבים">{ph.last === ph.first ? 'שלב אחד' : `${ph.last - ph.first + 1} שלבים`}</span>
             </h3>
             <ol className="flex flex-col">
               {timeline.steps.slice(ph.first, ph.last + 1).map((st, k) => {
@@ -38,7 +39,7 @@ export default function StepList({ timeline, step, onSelect }: { timeline: Timel
                       ref={isCur ? cur : undefined}
                       onClick={() => onSelect(i)}
                       aria-current={isCur ? 'step' : undefined}
-                      className={`group relative flex w-full items-center gap-2.5 rounded-lg py-1.5 pe-2 ps-3 text-start text-[13.5px] leading-snug transition ${
+                      className={`group relative flex w-full items-center gap-2.5 rounded-lg py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E61559] sm:py-1.5 pe-2 ps-3 text-start text-[13.5px] leading-snug transition ${
                         isCur ? 'bg-white font-bold text-[#231F20] shadow-[0_2px_10px_-4px_rgba(35,31,32,0.25)]' : 'text-[#4d4749] hover:bg-white/60'
                       }`}
                     >

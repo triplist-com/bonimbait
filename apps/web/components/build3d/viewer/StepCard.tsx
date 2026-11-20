@@ -3,7 +3,7 @@
 import { CalendarDays, HardHat, Lightbulb, PlayCircle, Search, ShieldCheck, Wallet } from 'lucide-react';
 import type { Step } from '@/lib/build3d/engine/types';
 import { phaseInfo } from '@/lib/build3d/engine/phases';
-import { fmtDays, fmtILS, fmtInt, fmtNum } from './format';
+import { FOCUS, fmtDays, fmtILS, fmtInt, fmtNum, phaseLabel } from './format';
 
 export interface StepCardProps {
   step: Step;
@@ -18,17 +18,17 @@ export interface StepCardProps {
 export function StepHeader({ step, index, total }: Pick<StepCardProps, 'step' | 'index' | 'total'>) {
   const ph = phaseInfo(step.phase);
   return (
-    <div className="flex items-center gap-2 text-[13px] font-medium text-[#5b5557]">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] font-medium text-[#5b5557]">
       <span className="tabular-nums">
         שלב <span className="text-[#231F20] font-extrabold">{index + 1}</span> מתוך {total}
       </span>
-      <span className="text-[#c9c3bd]">·</span>
+      <span aria-hidden className="text-[#c9c3bd]">·</span>
       <span
         className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-semibold"
         style={{ background: `${ph.color}1f`, color: ph.color }}
       >
         <span className="h-1.5 w-1.5 rounded-full" style={{ background: ph.color }} />
-        {ph.nameHe}
+        {phaseLabel(ph.nameHe)}
       </span>
     </div>
   );
@@ -46,15 +46,15 @@ export default function StepCard({ step, index, total, cumCost, cumDays, hideHea
         </div>
         <div className="min-w-0 pt-0.5">
           <StepHeader step={step} index={index} total={total} />
-          <h2 className="mt-1 text-[22px] font-extrabold leading-tight tracking-[-0.01em] text-[#231F20]">{step.titleHe}</h2>
+          <h2 className="mt-1 text-balance break-words text-[22px] font-extrabold leading-tight tracking-[-0.01em] text-[#231F20]">{step.titleHe}</h2>
         </div>
       </div>
 
-      {step.descHe && <p className="text-[15px] leading-[1.7] text-[#3d3739]">{step.descHe}</p>}
+      {step.descHe && <p className="text-pretty text-[15px] leading-[1.7] text-[#3d3739]">{step.descHe}</p>}
 
       {step.materials.length > 0 && (
         <section>
-          <h3 className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[#8a8385]">חומרים וכמויות</h3>
+          <h3 className="mb-2 text-[12px] font-bold text-[#8a8385]">חומרים וכמויות</h3>
           <ul className="flex flex-wrap gap-1.5">
             {step.materials.map((m) => (
               <li
@@ -116,10 +116,10 @@ export default function StepCard({ step, index, total, cumCost, cumDays, hideHea
             href={v.href}
             target="_blank"
             rel="noreferrer"
-            className="group flex items-center gap-2 rounded-xl px-2 py-1.5 text-[14px] text-[#231F20] transition hover:bg-[#fbf3f6]"
+            className={`group flex items-center gap-2 rounded-xl px-2 py-1.5 text-[14px] text-[#231F20] transition hover:bg-[#fbf3f6] ${FOCUS}`}
           >
             <PlayCircle size={18} className="shrink-0 text-[#E61559]" />
-            <span className="truncate group-hover:text-[#C80F4C]">{v.titleHe}</span>
+            <span className="line-clamp-2 min-w-0 leading-snug group-hover:text-[#C80F4C]">{v.titleHe}</span>
           </a>
         ))}
         {step.searchQuery && (
@@ -127,7 +127,7 @@ export default function StepCard({ step, index, total, cumCost, cumDays, hideHea
             href={`/search/?q=${encodeURIComponent(step.searchQuery)}`}
             target="_blank"
             rel="noreferrer"
-            className="mt-1 inline-flex items-center justify-center gap-2 rounded-xl border border-[#E61559]/25 bg-white px-3 py-2 text-[14px] font-semibold text-[#C80F4C] transition hover:border-[#E61559]/60 hover:bg-[#fff7fa]"
+            className={`mt-1 inline-flex items-center justify-center gap-2 rounded-xl border border-[#E61559]/25 bg-white px-3 py-2 text-[14px] font-semibold text-[#C80F4C] transition hover:border-[#E61559]/60 hover:bg-[#fff7fa] ${FOCUS}`}
           >
             <Search size={16} />
             לסרטונים בנושא

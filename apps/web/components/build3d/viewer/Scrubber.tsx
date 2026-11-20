@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { PHASES } from '@/lib/build3d/engine/phases';
 import type { Timeline } from '@/lib/build3d/engine/timeline';
+import { phaseLabel } from './format';
 
 /**
  * RTL timeline: step 1 at the right. Phase-colored segments, a tick per step,
@@ -31,9 +32,11 @@ export default function Scrubber({
   };
   const pct = (i: number) => (i / n) * 100;
   const hoverStep = hover !== null ? timeline.steps[hover] : null;
+  const curPhase = timeline.phases.find((p) => step >= p.first && step <= p.last);
+  const hoverPhase = hover !== null ? timeline.phases.find((p) => hover >= p.first && hover <= p.last) : undefined;
 
   return (
-    <div className="relative w-full select-none" style={{ touchAction: 'none' }}>
+    <div className={`relative w-full select-none ${thin ? '' : 'pb-3.5'}`} style={{ touchAction: 'none' }}>
       <div
         ref={ref}
         role="slider"
@@ -43,7 +46,7 @@ export default function Scrubber({
         aria-valuenow={step + 1}
         aria-valuetext={`שלב ${step + 1}: ${timeline.steps[step]?.titleHe ?? ''}`}
         tabIndex={0}
-        className={`group relative w-full cursor-pointer ${thin ? 'h-6' : 'h-8'}`}
+        className={`group relative w-full cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E61559] focus-visible:ring-offset-2 focus-visible:ring-offset-white ${thin ? 'h-8' : 'h-8'}`}
         onPointerDown={(e) => {
           (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
           setDrag(true);
@@ -55,6 +58,7 @@ export default function Scrubber({
           if (drag && i !== step) onSeek(i);
         }}
         onPointerUp={() => setDrag(false)}
+        onPointerCancel={() => setDrag(false)}
         onPointerLeave={() => {
           setHover(null);
         }}
@@ -90,13 +94,32 @@ export default function Scrubber({
           style={{ right: `${pct(step + 0.5)}%` }}
         />
       </div>
-      {hoverStep && hover !== null && (
+      {!thin && curPhase && (
         <div
-          className="pointer-events-none absolute bottom-full mb-2 translate-x-1/2 whitespace-nowrap rounded-lg bg-[#231F20] px-2.5 py-1 text-[12px] font-medium text-white shadow-lg"
-          style={{ right: `${pct(hover + 0.5)}%` }}
+          aria-hidden
+          className="pointer-events-none absolute bottom-0 whitespace-nowrap text-[11.5px] font-bold leading-none"
+          style={{
+            right: `clamp(0%, ${pct((curPhase.first + curPhase.last + 1) / 2)}%, 100%)`,
+            transform: 'translateX(50%)',
+            color: PHASES[curPhase.phase].color,
+          }}
         >
-          <span className="opacity-70">שלב {hover + 1} · </span>
-          {hoverStep.titleHe}
+          {phaseLabel(PHASES[curPhase.phase].nameHe)}
+        </div>
+      )}
+      {hoverStep && hover !== null && hoverPhase && (
+        <div
+          className="pointer-events-none absolute bottom-full z-10 mb-2 flex max-w-[260px] translate-x-1/2 flex-col items-start gap-0.5 rounded-lg bg-[#231F20] px-2.5 py-1.5 text-[12px] font-medium text-white shadow-lg"
+          style={{ right: `clamp(60px, ${pct(hover + 0.5)}%, calc(100% - 60px))` }}
+        >
+          <span className="flex items-center gap-1.5 text-[11px] font-bold" style={{ color: '#fff' }}>
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: PHASES[hoverPhase.phase].color }} />
+            {phaseLabel(PHASES[hoverPhase.phase].nameHe)}
+          </span>
+          <span className="whitespace-normal leading-snug">
+            <span className="opacity-70">שלב {hover + 1} · </span>
+            {hoverStep.titleHe}
+          </span>
         </div>
       )}
     </div>

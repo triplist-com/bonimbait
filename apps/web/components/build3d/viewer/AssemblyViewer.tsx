@@ -21,6 +21,7 @@ import StepList from './StepList';
 import Scrubber from './Scrubber';
 import BottomSheet from './BottomSheet';
 import Summary from './Summary';
+import { FOCUS } from './format';
 
 export interface AssemblyViewerProps {
   initialStep?: number;
@@ -30,7 +31,7 @@ export interface AssemblyViewerProps {
 
 const DAY_BG = 'linear-gradient(180deg, #E4EDF5 0%, #F1F2F0 42%, #F6F2EC 72%, #F2ECE3 100%)';
 const DUSK_BG = 'linear-gradient(180deg, #2E3A58 0%, #6E5A72 38%, #C98F78 70%, #E8C8A4 100%)';
-const PEEK = 206;
+const PEEK = 198;
 
 function readUrlStep(): number | undefined {
   if (typeof window === 'undefined') return undefined;
@@ -106,7 +107,9 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
       setPlaying(false);
       return;
     }
-    const ms = Math.max(4200, (timeline.span[step] + 2.6) * 1000) + (introRunning ? 3000 : 0);
+    // Animation + a reading pause that scales with the text (about 2.4 to 3.6 s).
+    const read = Math.min(3600, Math.max(2400, (timeline.steps[step].descHe?.length ?? 0) * 14));
+    const ms = Math.max(3800, timeline.span[step] * 1000 + 800 + read) + (introRunning ? 3000 : 0);
     const t = window.setTimeout(() => go(step + 1, true), ms);
     return () => window.clearTimeout(t);
   }, [playing, step, n, timeline, go, introRunning]);
@@ -188,13 +191,13 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
   );
 
   const nav = (big: boolean) => (
-    <div className="flex items-center gap-1.5">
+    <div className={`flex items-center gap-1.5 ${big ? '' : 'w-full'}`}>
       <button
         onClick={() => goRel(-1)}
         disabled={step === 0}
         aria-label="השלב הקודם"
         title="השלב הקודם (→)"
-        className={`grid place-items-center rounded-full border border-[#e7e0d9] bg-white text-[#231F20] transition hover:bg-[#f7f3ef] disabled:opacity-35 ${big ? 'h-11 w-11' : 'h-10 w-10'}`}
+        className={`grid shrink-0 place-items-center rounded-full border border-[#e7e0d9] bg-white text-[#231F20] transition hover:bg-[#f7f3ef] disabled:opacity-35 ${FOCUS} ${big ? 'h-11 w-11' : 'h-12 w-12'}`}
       >
         <ChevronRight size={20} />
       </button>
@@ -202,7 +205,7 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
         onClick={() => setPlaying((p) => !p)}
         aria-label={playing ? 'עצירה' : 'הפעלה אוטומטית'}
         title={playing ? 'עצירה (רווח)' : 'הפעלה אוטומטית (רווח)'}
-        className={`grid place-items-center rounded-full bg-[#231F20] text-white transition hover:bg-black ${big ? 'h-11 w-11' : 'h-10 w-10'}`}
+        className={`grid shrink-0 place-items-center rounded-full bg-[#231F20] text-white transition hover:bg-black ${FOCUS} ${big ? 'h-11 w-11' : 'h-12 w-12'}`}
       >
         {playing ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="-me-0.5" />}
       </button>
@@ -211,7 +214,7 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
         disabled={step === n - 1}
         aria-label="השלב הבא"
         title="השלב הבא (←)"
-        className={`flex items-center gap-1 rounded-full bg-[#E61559] font-bold text-white shadow-[0_8px_18px_-8px_rgba(230,21,89,0.9)] transition hover:bg-[#cf0f4e] disabled:opacity-40 ${big ? 'h-11 pe-3 ps-4 text-[15px]' : 'h-10 pe-2.5 ps-3.5 text-[14px]'}`}
+        className={`flex items-center justify-center gap-1 rounded-full bg-[#E61559] font-bold text-white shadow-[0_8px_18px_-8px_rgba(230,21,89,0.9)] transition hover:bg-[#cf0f4e] disabled:opacity-40 ${FOCUS} ${big ? 'h-11 pe-3 ps-4 text-[15px]' : 'h-12 flex-1 pe-3 ps-4 text-[16px]'}`}
       >
         הבא
         <ChevronLeft size={19} />
@@ -224,6 +227,7 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
       <div className="absolute inset-0" style={{ background: DAY_BG }} />
       <div className="absolute inset-0 transition-opacity duration-[1600ms]" style={{ background: DUSK_BG, opacity: dusk ? 1 : 0 }} />
 
+      <div className="absolute inset-0" onPointerDownCapture={() => setPlaying(false)} onWheelCapture={() => setPlaying(false)}>
       <Stage
         house={house}
         timeline={timeline}
@@ -238,24 +242,26 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
         lighting={dusk ? 'dusk' : 'day'}
         onIntroDone={onIntroDone}
       />
+      </div>
 
       {/* Top bar */}
       <header
-        className={`pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 p-3 transition-all duration-700 sm:p-4 ${ui ? 'opacity-100' : '-translate-y-3 opacity-0'}`}
+        className={`pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 p-3 transition-all duration-700 sm:p-4 pt-[max(0.75rem,env(safe-area-inset-top))] ${ui ? 'opacity-100' : '-translate-y-3 opacity-0'}`}
       >
         <a
           href="/"
-          className="pointer-events-auto flex items-center gap-2.5 rounded-2xl bg-white/85 py-1.5 pe-3.5 ps-1.5 shadow-[0_6px_24px_-10px_rgba(35,31,32,0.3)] backdrop-blur-xl"
+          aria-label="בונים בית, לאתר הראשי"
+          className="pointer-events-auto flex items-center gap-2.5 rounded-2xl bg-white/[0.85] py-1.5 pe-1.5 ps-1.5 min-[430px]:pe-3.5 shadow-[0_6px_24px_-10px_rgba(35,31,32,0.3)] backdrop-blur-xl"
         >
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#E61559] text-white">
             <House size={19} strokeWidth={2.4} />
           </span>
-          <span className="leading-tight">
+          <span className="hidden whitespace-nowrap leading-tight min-[430px]:block">
             <span className="block text-[15px] font-black tracking-[-0.01em]">בונים בית</span>
-            <span className="block text-[11.5px] font-medium text-[#8a8385]">מתוכנית לבית</span>
+            <span className="block text-[11.5px] font-medium text-[#6d6668]">מתוכנית לבית</span>
           </span>
         </a>
-        <div className="pointer-events-auto flex items-center gap-0.5 rounded-2xl bg-white/85 p-1 shadow-[0_6px_24px_-10px_rgba(35,31,32,0.3)] backdrop-blur-xl">
+        <div className="pointer-events-auto flex items-center gap-0.5 rounded-2xl bg-white/[0.85] p-1 shadow-[0_6px_24px_-10px_rgba(35,31,32,0.3)] backdrop-blur-xl">
           {toggles}
         </div>
       </header>
@@ -267,11 +273,12 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
             className={`absolute bottom-[100px] right-4 top-[76px] z-10 transition-all duration-700 ${ui ? 'opacity-100' : 'translate-x-6 opacity-0'}`}
             style={{ width: cardW }}
           >
-            <div className="h-full overflow-y-auto overscroll-contain rounded-3xl border border-white/70 bg-white/88 p-5 shadow-[0_18px_50px_-18px_rgba(35,31,32,0.35)] backdrop-blur-xl [scrollbar-width:thin]">
+            <div tabIndex={0} aria-label="פרטי השלב" className="h-full overflow-y-auto overscroll-contain rounded-3xl border border-white/70 bg-white/90 p-5 pb-8 shadow-[0_18px_50px_-18px_rgba(35,31,32,0.35)] backdrop-blur-xl [scrollbar-width:thin]">
               <div key={step} className="animate-slide-up">
                 <StepCard step={cur} index={step} total={n} cumCost={timeline.cumCostILS[step]} cumDays={timeline.cumDays[step]} />
               </div>
             </div>
+            <div aria-hidden className="pointer-events-none absolute inset-x-px bottom-px h-9 rounded-b-3xl bg-gradient-to-t from-white to-transparent" />
           </aside>
 
           {/* Steps list (end side) */}
@@ -285,14 +292,14 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
 
           {/* Bottom bar */}
           <footer
-            className={`absolute bottom-4 left-4 right-4 z-10 flex items-center gap-4 rounded-2xl border border-white/70 bg-white/88 px-3 py-2.5 shadow-[0_18px_50px_-18px_rgba(35,31,32,0.35)] backdrop-blur-xl transition-all duration-700 ${ui ? 'opacity-100' : 'translate-y-4 opacity-0'}`}
+            className={`absolute bottom-4 left-4 right-4 z-10 flex items-center gap-4 rounded-2xl border border-white/70 bg-white/[0.88] px-3 py-2.5 shadow-[0_18px_50px_-18px_rgba(35,31,32,0.35)] backdrop-blur-xl transition-all duration-700 ${ui ? 'opacity-100' : 'translate-y-4 opacity-0'}`}
           >
             {nav(true)}
             <div className="min-w-0 flex-1 px-1">
               <Scrubber timeline={timeline} step={step} onSeek={(i) => go(i)} />
             </div>
             <div className="shrink-0 ps-1 text-[13px] font-semibold tabular-nums text-[#5b5557]">
-              {step + 1} <span className="text-[#b3aca6]">/</span> {n}
+              <span dir="ltr">{step + 1} <span className="text-[#b3aca6]">/</span> {n}</span>
             </div>
           </footer>
         </>
@@ -304,13 +311,13 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
             <BottomSheet
               peek={PEEK}
               header={
-                <div className="flex flex-col gap-2.5">
+                <div className="flex flex-col gap-1.5">
                   <div className="min-w-0">
                     <StepHeader step={cur} index={step} total={n} />
-                    <h2 className="mt-0.5 truncate text-[19px] font-extrabold leading-tight">{cur.titleHe}</h2>
+                    <h2 className="mt-0.5 line-clamp-2 text-[18px] font-extrabold leading-tight">{cur.titleHe}</h2>
                   </div>
                   <Scrubber timeline={timeline} step={step} onSeek={(i) => go(i)} thin />
-                  <div className="flex items-center justify-between">{nav(false)}</div>
+                  {nav(false)}
                 </div>
               }
             >
@@ -323,12 +330,12 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
             <div className="absolute inset-0 z-30 flex animate-fade-in" onClick={() => setListOpen(false)}>
               <div className="absolute inset-0 bg-[#231F20]/30" />
               <aside
-                className="relative ms-0 h-full w-[86%] max-w-[360px] animate-sheet-in-right overflow-y-auto bg-[#F7F4F0] p-3 pt-4 shadow-2xl"
+                className="relative ms-0 h-full w-[86%] max-w-[360px] animate-sheet-in-right overflow-y-auto bg-[#F7F4F0] p-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="mb-2 flex items-center justify-between px-2">
                   <span className="text-[16px] font-extrabold">כל השלבים</span>
-                  <button aria-label="סגירה" className="rounded-full p-2 hover:bg-white" onClick={() => setListOpen(false)}>
+                  <button aria-label="סגירה" className={`rounded-full p-2.5 hover:bg-white ${FOCUS}`} onClick={() => setListOpen(false)}>
                     <X size={18} />
                   </button>
                 </div>
@@ -367,7 +374,7 @@ function ToolButton({ label, active, onClick, children }: { label: string; activ
       aria-label={label}
       aria-pressed={active}
       title={label}
-      className={`grid h-9 w-9 place-items-center rounded-xl transition ${
+      className={`grid h-10 w-10 place-items-center rounded-xl transition sm:h-9 sm:w-9 ${FOCUS} ${
         active ? 'bg-[#E61559] text-white shadow-[0_4px_12px_-4px_rgba(230,21,89,0.8)]' : 'text-[#4d4749] hover:bg-[#f3eee9]'
       }`}
     >

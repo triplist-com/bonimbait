@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { PlanOverlay, ViewportId } from '@/lib/build3d/house/types';
+import { BUILD_TOTALS } from '@/lib/build3d/content/totals';
+import type { ViewportId } from '@/lib/build3d/house/types';
 import { overlay } from './overlayData';
 import Counter from './Counter';
 
@@ -34,12 +35,8 @@ const STAGES: StageDef[] = [
 const S = Object.fromEntries(STAGES.map((s, i) => [s.id, i])) as Record<string, number>;
 const RAIL_STAGES = STAGES.slice(0, -1);
 
-/** Rough, labelled-as-estimate quantities derived from the built area. */
-function quantities(o: PlanOverlay) {
-  const concrete = Math.round(o.stats.builtAreaM2 * 0.45);
-  return { concrete, rebar: +(concrete * 0.09).toFixed(1), blocks: Math.round(o.stats.builtAreaM2 * 32) };
-}
-const PLANNED_STEPS = 87; // docs/build3d/STEPS.md
+const q = { concrete: Math.round(BUILD_TOTALS.concreteM3), rebar: BUILD_TOTALS.rebarT, blocks: BUILD_TOTALS.blocks };
+const PLANNED_STEPS = BUILD_TOTALS.steps;
 
 function union(boxes: BBox[]): BBox {
   return [
@@ -184,7 +181,6 @@ export default function Analysis({ onReveal, onDone }: AnalysisProps) {
   const camTransition = `transform ${camMs}ms cubic-bezier(0.65, 0, 0.25, 1)`;
   const toScreen = (x: number, y: number) => `translate(${(x * cam.s + cam.tx).toFixed(1)}px, ${(y * cam.s + cam.ty).toFixed(1)}px)`;
 
-  const q = quantities(o);
   const instant = skipped || reduced;
   const handoff = stage >= S.handoff;
   const tilt = handoff && !reduced;

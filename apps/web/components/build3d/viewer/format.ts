@@ -14,5 +14,11 @@ export function fmtMonths(days: number): string {
   // ~22 working days a month.
   const m = days / 22;
   if (m < 1) return `${fmtInt(days)} ימי עבודה`;
-  return `כ-${fmtNum(Math.round(m * 2) / 2)} חודשי עבודה`;
+  return `כ-${fmtNum(Math.round(m * 2) / 2)} חודשים`;
 }
+
+/** Phase names from the engine use a dash ("קומה תחתונה — שלד"); the UI writes them with a colon. */
+export const phaseLabel = (name: string) => name.replace(' — ', ': ');
+
+/** Shared focus ring for icon buttons. */
+export const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E61559] focus-visible:ring-offset-2 focus-visible:ring-offset-white';
