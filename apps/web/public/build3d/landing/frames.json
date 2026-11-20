@@ -1,0 +1,11 @@
+[
+  { "src": "/build3d/landing/f01-plan.webp", "labelHe": "התוכנית על המגרש", "step": 1 },
+  { "src": "/build3d/landing/f02-excavation.webp", "labelHe": "חפירה", "step": 5 },
+  { "src": "/build3d/landing/f03-rebar.webp", "labelHe": "ברזל לקורות היסוד", "step": 11 },
+  { "src": "/build3d/landing/f04-pour.webp", "labelHe": "יציקת תקרה", "step": 43 },
+  { "src": "/build3d/landing/f05-skeleton.webp", "labelHe": "השלד", "step": 44 },
+  { "src": "/build3d/landing/f06-blocks.webp", "labelHe": "בנייה בבלוקים", "step": 46 },
+  { "src": "/build3d/landing/f07-cladding.webp", "labelHe": "חיפוי אבן וטיח", "step": 64 },
+  { "src": "/build3d/landing/f08-day.webp", "labelHe": "הבית מוכן", "step": 85 },
+  { "src": "/build3d/landing/f09-dusk.webp", "labelHe": "ערב ראשון בבית", "step": 86 }
+]

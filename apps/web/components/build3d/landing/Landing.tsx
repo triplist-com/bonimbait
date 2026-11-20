@@ -46,7 +46,7 @@ export default function Landing({ onStart }: LandingProps) {
         </Link>
       </header>
 
-      <section className="relative z-10 mx-auto grid max-w-6xl items-center gap-3 px-5 pb-8 pt-1 sm:gap-6 sm:px-8 lg:grid-cols-[1.05fr_1fr] lg:gap-10 lg:pb-16 lg:pt-10">
+      <section className="relative z-10 mx-auto grid max-w-6xl items-center gap-3 px-5 pb-8 pt-1 sm:gap-6 sm:px-8 lg:grid-cols-[1fr_1.3fr] lg:gap-10 lg:pb-16 lg:pt-10">
         <div>
           <span className="inline-flex items-center gap-2 rounded-full bg-[#E61559]/10 px-3 py-1 text-xs font-bold text-[#E61559]">
             <span className="h-1.5 w-1.5 rounded-full bg-[#E61559]" /> הדגמה חיה · תלת-ממד
@@ -95,7 +95,7 @@ export default function Landing({ onStart }: LandingProps) {
           </div>
         </div>
 
-        <div className="relative order-first mx-auto h-[150px] w-full max-w-md min-[400px]:h-[170px] sm:h-[300px] lg:order-none lg:h-[460px] lg:max-w-none">
+        <div className="relative order-first mx-auto aspect-[16/9] w-full max-w-md sm:aspect-[16/10] sm:max-w-2xl lg:order-none lg:max-w-none">
           <HeroVisual className="absolute inset-0" />
         </div>
       </section>

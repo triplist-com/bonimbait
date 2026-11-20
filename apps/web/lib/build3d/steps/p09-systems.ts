@@ -248,7 +248,8 @@ function plumbing(ctx: BuildContext): StepDef {
     ],
     costILS: roundCost(points * PRICES.plumbingPoint * 0.6),
     parts,
-    camera: { bounds: houseBounds(ctx, ctx.lower.floorY, ctx.entrance.floorY + 3.1), polar: 58 },
+    // Steeper, a little closer: look down into the rooms (roof lifted) so the runs in the walls read.
+    camera: { bounds: houseBounds(ctx, ctx.lower.floorY, ctx.entrance.floorY + 3.1), polar: 46, zoom: 0.9 },
     view: { xray: true, ghostAbove: ctx.roof.floorY - 0.3 },
   };
 }
@@ -506,7 +507,7 @@ function electrical(ctx: BuildContext): StepDef {
     ],
     costILS: roundCost(points * PRICES.electricalPoint + 9000),
     parts,
-    camera: { bounds: houseBounds(ctx, ctx.lower.floorY, ctx.entrance.floorY + ceilE), polar: 58 },
+    camera: { bounds: houseBounds(ctx, ctx.lower.floorY, ctx.entrance.floorY + ceilE), polar: 46, zoom: 0.9 },
     view: { xray: true, ghostAbove: ctx.roof.floorY - 0.3 },
   };
 }
@@ -616,7 +617,8 @@ function airConditioning(ctx: BuildContext): StepDef {
     ],
     costILS: roundCost(units * 3.5 * PRICES.acSystemPerTon + grilles * 350),
     parts,
-    camera: { bounds: houseBounds(ctx, ctx.lower.floorY, ctx.entrance.floorY + 3.1), polar: 58 },
+    // Steeper, a little closer: look down into the rooms (roof lifted) so the runs in the walls read.
+    camera: { bounds: houseBounds(ctx, ctx.lower.floorY, ctx.entrance.floorY + 3.1), polar: 46, zoom: 0.9 },
     view: { xray: true, ghostAbove: ctx.roof.floorY - 0.3 },
   };
 }

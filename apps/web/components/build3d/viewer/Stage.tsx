@@ -41,6 +41,17 @@ export interface StageProps {
 
 const DEG = Math.PI / 180;
 const FOV = 32;
+/** Step-requested slow orbit (rad/s). */
+const ORBIT_SPEED = 0.1;
+/** Dusk sun: degrees to the camera's left of its azimuth, and elevation (long shadows). */
+const DUSK_SUN_AZ = 58;
+const DUSK_SUN_EL = 13;
+const DAY_SUN = new THREE.Color('#FFF7EE');
+const DAY_SKY = new THREE.Color('#EEF3FA');
+const DAY_GROUND = new THREE.Color('#CFC7B8');
+const DUSK_SUN = new THREE.Color('#FFD1A0');
+const DUSK_SKY = new THREE.Color('#93ABDD');
+const DUSK_GROUND = new THREE.Color('#5E4A3B');
 
 // The viewer chunk is prefetched while the landing's analysis animation plays: build the
 // (memoized) step timeline in idle time then, so the viewer opens without a build pause.
@@ -85,6 +96,8 @@ function Scene({ house, timeline, step, ghost, xray, autoRotate, resetTick, intr
   const stepOrbit = useRef(0);
   const duskTarget = useRef(lighting === 'dusk' ? 1 : 0);
   const dusk = useRef(duskTarget.current);
+  /** Dev-only capture hooks: freeze the camera (no orbit) or advance the orbit by sim seconds. */
+  const dbg = useRef({ freeze: false, orbitBy: (secs: number) => void secs });
 
   // --- environment (soft reflections / fill) --------------------------------
   useEffect(() => {
@@ -101,7 +114,13 @@ function Scene({ house, timeline, step, ghost, xray, autoRotate, resetTick, intr
 
   useEffect(() => {
     // Debug handle for headless checks (dev only).
-    if (process.env.NODE_ENV !== 'production') (window as unknown as { __b3d?: unknown }).__b3d = { director, controls, introState, gl, scene, camera };
+    if (process.env.NODE_ENV !== 'production') {
+      dbg.current.orbitBy = (secs: number) => {
+        const c = controls.current;
+        if (c) c.azimuthAngle += secs * ORBIT_SPEED;
+      };
+      (window as unknown as { __b3d?: unknown }).__b3d = { director, controls, introState, gl, scene, camera, stage: dbg.current };
+    }
     director.onChange = () => invalidate();
     return () => {
       director.onChange = undefined;
@@ -123,7 +142,6 @@ function Scene({ house, timeline, step, ghost, xray, autoRotate, resetTick, intr
     })();
     const sAz = front - 62 * DEG;
     const sw = new THREE.Vector2(Math.sin(sAz), Math.cos(sAz));
-    const south = new THREE.Vector2(Math.sin(front), Math.cos(front));
     const sunDir = new THREE.Vector3(sw.x, 1.12, sw.y).normalize();
     const sun = new THREE.DirectionalLight('#FFF7EE', 2.05);
     sun.position.copy(center).addScaledVector(sunDir, 60);
@@ -145,10 +163,16 @@ function Scene({ house, timeline, step, ghost, xray, autoRotate, resetTick, intr
     const fill = new THREE.DirectionalLight('#DDE8FF', 0.55);
     fill.position.copy(center).add(new THREE.Vector3(-sw.x * 40, 25, -sw.y * 40));
     fill.target.position.copy(center);
-    // Dusk: low warm sun from the west.
-    const duskDir = new THREE.Vector3(sw.x * 1.6 - south.y * 0.6, 0.45, sw.y * 1.6 + south.x * 0.6).normalize();
-    return { sun, hemi, fill, center, radius, sunDir, duskDir };
+    return { sun, hemi, fill, center, radius, sunDir };
   }, [ctx, mobile]);
+
+  // Dusk backdrop: a full-screen gradient drawn first (deep blue overhead → amber horizon glow
+  // on the sun side). Opaque at dusk, so it replaces the page's CSS gradient behind the canvas.
+  const sky = useMemo(() => makeSky(), []);
+  useEffect(() => () => {
+    sky.geometry.dispose();
+    sky.material.dispose();
+  }, [sky]);
 
   useEffect(() => {
     duskTarget.current = lighting === 'dusk' ? 1 : 0;
@@ -163,18 +187,39 @@ function Scene({ house, timeline, step, ghost, xray, autoRotate, resetTick, intr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lights, director]);
 
+  const _dir = useMemo(() => new THREE.Vector3(), []);
+  const _duskDir = useMemo(() => new THREE.Vector3(), []);
+  const _sunScreen = useMemo(() => new THREE.Vector3(), []);
+
+  /**
+   * Golden hour: a low warm sun raking in from the camera's front-left (it follows the
+   * camera's azimuth, like a turntable under studio light, so every orbit frame has a lit
+   * facade and a cool shaded one with long shadows), a cool blue sky fill, less environment.
+   */
   function applyDusk(k: number) {
-    const { sun, hemi, fill, center, sunDir, duskDir } = lights;
-    const dir = sunDir.clone().lerp(duskDir, k).normalize();
-    sun.position.copy(center).addScaledVector(dir, 60);
-    sun.color.set('#FFF7EE').lerp(new THREE.Color('#FF9A55'), k);
-    sun.intensity = 2.05 - 1.2 * k;
-    hemi.color.set('#EEF3FA').lerp(new THREE.Color('#6C7BA8'), k);
-    hemi.groundColor.set('#CFC7B8').lerp(new THREE.Color('#5A4636'), k);
-    hemi.intensity = 1.05 - 0.45 * k;
+    const { sun, hemi, fill, center, sunDir } = lights;
+    const az = (controls.current?.azimuthAngle ?? director.frontAzimuth + 35 * DEG) - DUSK_SUN_AZ * DEG;
+    const el = DUSK_SUN_EL * DEG;
+    _duskDir.set(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
+    const dir = _dir.copy(sunDir).lerp(_duskDir, k).normalize();
+    sun.position.copy(center).addScaledVector(dir, 70);
+    sun.color.copy(DAY_SUN).lerp(DUSK_SUN, k);
+    sun.intensity = 2.05 + (2.6 - 2.05) * k;
+    hemi.color.copy(DAY_SKY).lerp(DUSK_SKY, k);
+    hemi.groundColor.copy(DAY_GROUND).lerp(DUSK_GROUND, k);
+    hemi.intensity = 1.05 - 0.22 * k;
     fill.intensity = 0.55 * (1 - k);
-    scene.environmentIntensity = 0.42 * (1 - 0.6 * k);
-    director.lib.setDusk(k);
+    scene.environmentIntensity = 0.42 * (1 - 0.55 * k);
+    gl.toneMappingExposure = 1 + 0.06 * k;
+    const u = sky.material.uniforms;
+    u.uLevel.value = k;
+    // Where the sun sits on screen (the warm glow follows it).
+    _sunScreen.copy(camera.position).addScaledVector(_duskDir, 1000).project(camera);
+    (u.uSun.value as THREE.Vector2).set(THREE.MathUtils.clamp(_sunScreen.x, -2.2, 2.2), -0.55);
+    (u.uAspect as { value: number }).value = size.width / Math.max(1, size.height);
+    sky.visible = k > 0.003;
+    floor.visible = k < 0.6;
+    director.setDusk(k);
   }
 
   // --- floor (shadow catcher + soft contact blob) ------------------------------
@@ -296,7 +341,7 @@ function Scene({ house, timeline, step, ghost, xray, autoRotate, resetTick, intr
       if (Math.abs(dusk.current - duskTarget.current) < 0.002) dusk.current = duskTarget.current;
       applyDusk(dusk.current);
       busy = true;
-    }
+    } else if (dusk.current > 0.001) applyDusk(dusk.current); // the dusk sun follows the camera
     if (introState.current === 'hold' && director.introPhase() === 'glide' && c) {
       introState.current = 'glide';
       c.smoothTime = 1.15;
@@ -308,8 +353,8 @@ function Scene({ house, timeline, step, ghost, xray, autoRotate, resetTick, intr
       onIntroDone?.();
     }
     const orbiting = stepOrbit.current > 0 && performance.now() > stepOrbit.current;
-    if ((autoplayRotate.current || orbiting) && c) {
-      c.azimuthAngle += dt * (orbiting && !autoplayRotate.current ? 0.1 : 0.14);
+    if ((autoplayRotate.current || orbiting) && c && !dbg.current.freeze) {
+      c.azimuthAngle += dt * (orbiting && !autoplayRotate.current ? ORBIT_SPEED : 0.14);
     }
     // Build the rest of the timeline in small idle slices.
     if (prebuilding.current && !busy) prebuilding.current = director.prebuild(4);
@@ -318,6 +363,7 @@ function Scene({ house, timeline, step, ghost, xray, autoRotate, resetTick, intr
 
   return (
     <>
+      <primitive object={sky} />
       <primitive object={lights.hemi} />
       <primitive object={lights.sun} />
       <primitive object={lights.sun.target} />
@@ -351,4 +397,63 @@ function Scene({ house, timeline, step, ghost, xray, autoRotate, resetTick, intr
       />
     </>
   );
+}
+
+/** Full-screen dusk gradient (drawn first, no depth): deep blue overhead, amber low on the sun side. */
+function makeSky() {
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      uLevel: { value: 0 },
+      uSun: { value: new THREE.Vector2(-0.6, -0.55) },
+      uAspect: { value: 1.6 },
+      uTop: { value: new THREE.Color('#0C1838') },
+      uMid: { value: new THREE.Color('#2F4B80') },
+      uLow: { value: new THREE.Color('#A98597') },
+      uHorizon: { value: new THREE.Color('#F4A660') },
+    },
+    vertexShader: /* glsl */ `
+      varying vec2 vNdc;
+      void main() {
+        vNdc = position.xy * 2.0;
+        gl_Position = vec4(position.xy * 2.0, 1.0, 1.0);
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform float uLevel;
+      uniform vec2 uSun;
+      uniform float uAspect;
+      uniform vec3 uTop;
+      uniform vec3 uMid;
+      uniform vec3 uLow;
+      uniform vec3 uHorizon;
+      varying vec2 vNdc;
+      void main() {
+        float y = vNdc.y * 0.5 + 0.5;
+        vec3 c = mix(uLow, uMid, smoothstep(0.18, 0.66, y));
+        c = mix(c, uTop, smoothstep(0.6, 1.05, y));
+        // Amber horizon glow low in the frame, reaching higher on the sun side.
+        vec2 d = (vNdc - uSun) * vec2(uAspect * 0.45, 0.85);
+        float g = exp(-dot(d, d) * 1.1);
+        float band = 1.0 - smoothstep(0.0, 0.42 + 0.22 * g, y);
+        c = mix(c, uHorizon, clamp(band * (0.55 + 0.45 * g) + g * 0.25, 0.0, 1.0));
+        gl_FragColor = vec4(c, uLevel);
+        #include <colorspace_fragment>
+      }`,
+    depthTest: false,
+    depthWrite: false,
+    transparent: false,
+    blending: THREE.CustomBlending,
+    blendSrc: THREE.SrcAlphaFactor,
+    blendDst: THREE.OneMinusSrcAlphaFactor,
+    blendSrcAlpha: THREE.OneFactor,
+    blendDstAlpha: THREE.OneMinusSrcAlphaFactor,
+    toneMapped: false,
+  });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
+  mesh.frustumCulled = false;
+  mesh.renderOrder = -1e6;
+  mesh.visible = false;
+  mesh.castShadow = false;
+  mesh.receiveShadow = false;
+  mesh.name = 'dusk-sky';
+  return mesh;
 }

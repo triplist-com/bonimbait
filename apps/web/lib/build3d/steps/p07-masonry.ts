@@ -108,8 +108,11 @@ export function phaseMasonry(ctx: BuildContext): StepDef[] {
     ],
     costILS: roundCost(lo.area * PRICES.blockWallM2),
     parts: [blocksPart('p7-blocks-lower:blocks', lo, ['blocks', 'blocks-exterior', 'level:lower'])],
-    camera: { bounds: boundsOfWalls(lowerExt, ctx.lower.floorY - 0.2, lowerTop + 0.2, 1.5), polar: 52 },
-    view: { xray: true, groundXray: true, ghostAbove: lowerTop - 0.05 },
+    // The lower floor's block walls face the garden (back and sides): watch them rise from the
+    // garden side, under the entrance slab, with nothing faded (an x-ray through the slab and the
+    // ground showed steel, piles and leftovers instead of the blocks).
+    camera: { bounds: boundsOfWalls(lowerExt, ctx.lower.floorY - 0.2, lowerTop + 0.2, 1.2), azimuth: 200, polar: 64, zoom: 0.95 },
+    view: { xray: false },
   };
 
   // ------------------------------------------------------------ exterior, entrance

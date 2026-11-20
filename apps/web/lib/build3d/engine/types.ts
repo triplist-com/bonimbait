@@ -292,6 +292,13 @@ export interface Part {
   idle?: boolean;
   /** Base opacity < 1 for permanently translucent parts (poly sheet). */
   opacity?: number;
+  /**
+   * Dusk glow (engine/runtime/glow.ts). `glassLit` parts glow as lit windows by default;
+   * `light` parts glow only when this is set. halo: billboard size per lamp (m, long
+   * lamps get one every ~0.8 m); pool: radius of a light pool on the ground `drop` m below
+   * the lamp's center.
+   */
+  glow?: { halo?: number; pool?: number; drop?: number; k?: number };
 }
 
 /** A line in the step's bill of materials ("IKEA parts list"). */

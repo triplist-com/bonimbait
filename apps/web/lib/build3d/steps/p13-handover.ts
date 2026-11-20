@@ -170,6 +170,8 @@ export function phaseHandover(ctx: BuildContext): StepDef[] {
         tags: ['lighting', 'level:site'],
         edges: false,
         castShadow: false,
+        highlight: false,
+        glow: { halo: 1.1, pool: 1.8, drop: 0.08 },
         anim: { type: 'sequence', stagger: 0.25, duration: 0.8 },
       });
     const pg = house.outdoor.find((o) => o.kind === 'pergola');
@@ -180,7 +182,7 @@ export function phaseHandover(ctx: BuildContext): StepDef[] {
         const f = wallFrame({ a, b });
         return { at: [m[0], pg.y - 0.27, m[1]] as [number, number, number], size: [f.length, 0.02, 0.035] as [number, number, number], rotY: f.rotY };
       });
-      parts.push(boxesPart('p13-pergola-led', strips, 'light', ['lighting', 'level:site'], { type: 'fade', delay: 0.4, duration: 1.4 }, { edges: false, castShadow: false }));
+      parts.push(boxesPart('p13-pergola-led', strips, 'light', ['lighting', 'level:site'], { type: 'fade', delay: 0.4, duration: 1.4 }, { edges: false, castShadow: false, highlight: false, glow: { halo: 1.0 } }));
     }
     // Terrace edge glow.
     const ter = house.rooms.find((r) => r.kind === 'terrace');
@@ -193,7 +195,7 @@ export function phaseHandover(ctx: BuildContext): StepDef[] {
           'light',
           ['lighting', 'level:entrance'],
           { type: 'fade', delay: 0.8, duration: 1.2 },
-          { edges: false, castShadow: false },
+          { edges: false, castShadow: false, highlight: false, glow: { halo: 0.9, k: 0.8 } },
         ),
       );
     }

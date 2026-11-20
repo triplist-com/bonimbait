@@ -1,6 +1,7 @@
 'use client';
 
-import { Boxes, CalendarDays, Hammer, House, ListChecks, RotateCcw, Wallet, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Boxes, CalendarDays, ChevronUp, Hammer, House, ListChecks, RotateCcw, Wallet, X } from 'lucide-react';
 import { SUMMARY } from '@/lib/build3d/content';
 import { BUILD_TOTALS as t } from '@/lib/build3d/content/totals';
 import type { Timeline } from '@/lib/build3d/engine/timeline';
@@ -17,8 +18,92 @@ const PIECES = Array.from({ length: 28 }, (_, i) => ({
   rot: (i * 47) % 360,
 }));
 
-/** Finale card: the totals are the hardcoded whole-house numbers (lib/build3d/content/totals.ts). */
-export default function Summary({ timeline, onRestart, onClose }: { timeline: Pick<Timeline, 'steps'>; onRestart: () => void; onClose: () => void }) {
+/** The viewer mounts the finale ~span + 1.8 s into the last step; the dusk orbit starts 1.4 s in. */
+const MOUNT_AFTER_SPAN_S = 1.8;
+const ORBIT_START_S = 1.4;
+/** Let the orbit play this long before the bar slides in, so it never hides the money shot. */
+const ORBIT_BEFORE_BAR_S = 5;
+
+type SummaryProps = {
+  timeline: Pick<Timeline, 'steps'> & Partial<Pick<Timeline, 'span'>>;
+  onRestart: () => void;
+  onClose: () => void;
+};
+
+/**
+ * Finale: a slim bar ("הבית מוכן! · 16 חודשים · ₪2.25M · הצגת סיכום") slides in once the dusk
+ * orbit has played ~5 s and expands into the full card on click (Esc / ✕ / backdrop collapse it
+ * back to the bar). The totals are the hardcoded whole-house numbers (lib/build3d/content/totals.ts).
+ */
+export default function Summary({ timeline, onRestart, onClose }: SummaryProps) {
+  const [view, setView] = useState<'wait' | 'bar' | 'open'>('wait');
+
+  useEffect(() => {
+    const span = timeline.span?.[timeline.steps.length - 1] ?? 2;
+    const ms = Math.max(300, (ORBIT_START_S + ORBIT_BEFORE_BAR_S - (span + MOUNT_AFTER_SPAN_S)) * 1000);
+    const id = window.setTimeout(() => setView((v) => (v === 'wait' ? 'bar' : v)), ms);
+    return () => window.clearTimeout(id);
+  }, [timeline]);
+
+  useEffect(() => {
+    if (view !== 'open') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setView('bar');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [view]);
+
+  if (view === 'wait') return null;
+  if (view === 'bar') return <SummaryBar onOpen={() => setView('open')} onClose={onClose} />;
+  return <SummaryCard steps={timeline.steps.length} onRestart={onRestart} onCollapse={() => setView('bar')} />;
+}
+
+/** Compact finale bar: desktop centered under the 3D view (beside the step card), mobile above the sheet. */
+function SummaryBar({ onOpen, onClose }: { onOpen: () => void; onClose: () => void }) {
+  const months = Math.round(t.days / 22);
+  const millions = (t.costILS / 1e6).toFixed(2);
+  return (
+    <div
+      data-b3d-summary
+      className="pointer-events-none absolute inset-x-3 bottom-[calc(208px+env(safe-area-inset-bottom))] z-30 flex animate-slide-up justify-center sm:bottom-[100px] sm:end-4 sm:start-[calc(clamp(320px,30vw,392px)+32px)]"
+    >
+      <div className="pointer-events-auto flex max-w-full items-center gap-0.5 rounded-2xl border border-white/15 bg-[#231F20]/[0.88] p-1.5 text-white shadow-[0_18px_44px_-14px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+        <button
+          onClick={onOpen}
+          aria-label="הבית מוכן! הצגת סיכום הבנייה"
+          className={`flex min-w-0 items-center gap-1.5 rounded-xl py-1 pe-1 ps-2 text-start transition hover:bg-white/[0.06] sm:gap-2.5 sm:ps-2 ${FOCUS} focus-visible:ring-offset-[#231F20]`}
+        >
+          <span className="hidden h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#E61559] min-[400px]:grid">
+            <House size={17} strokeWidth={2.4} />
+          </span>
+          <span className="flex min-w-0 items-center gap-1 whitespace-nowrap text-[13.5px] min-[400px]:gap-1.5 sm:gap-2 sm:text-[15px]">
+            <span className="font-black">הבית מוכן!</span>
+            <span aria-hidden className="text-white/40">·</span>
+            <span className="font-semibold text-white/85">{months} חודשים</span>
+            <span aria-hidden className="hidden text-white/40 min-[380px]:inline">·</span>
+            <bdi dir="ltr" className="hidden font-semibold tabular-nums text-white/85 min-[380px]:inline">
+              ₪{millions}M
+            </bdi>
+          </span>
+          <span className="ms-0.5 inline-flex shrink-0 items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[13px] font-bold text-[#231F20] sm:ms-1 sm:px-3 sm:text-[14px]">
+            הצגת סיכום
+            <ChevronUp size={15} strokeWidth={2.6} />
+          </span>
+        </button>
+        <button
+          onClick={onClose}
+          aria-label="סגירת הסיכום"
+          className={`grid h-9 w-8 shrink-0 place-items-center rounded-xl text-white/60 transition hover:bg-white/10 hover:text-white sm:w-9 ${FOCUS} focus-visible:ring-offset-[#231F20]`}
+        >
+          <X size={16} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SummaryCard({ steps, onRestart, onCollapse }: { steps: number; onRestart: () => void; onCollapse: () => void }) {
   const stats: Array<{ label: string; icon: React.ReactNode; node: React.ReactNode }> = [
     { label: 'משך הבנייה', icon: <CalendarDays size={16} />, node: fmtMonths(t.days) },
     {
@@ -40,12 +125,15 @@ export default function Summary({ timeline, onRestart, onClose }: { timeline: Pi
       ),
     },
     { label: 'בלוקים', icon: <Boxes size={16} />, node: <Counter value={t.blocks} active durationMs={1300} /> },
-    { label: 'שלבי עבודה', icon: <ListChecks size={16} />, node: <Counter value={timeline.steps.length} active durationMs={900} /> },
+    { label: 'שלבי עבודה', icon: <ListChecks size={16} />, node: <Counter value={steps} active durationMs={900} /> },
     { label: 'עלות משוערת', icon: <Wallet size={16} />, node: fmtILS(t.costILS) },
   ];
   return (
     <div
       className="pointer-events-auto absolute inset-0 z-30 grid place-items-center overflow-y-auto bg-[#231F20]/35 p-4 backdrop-blur-[3px] animate-fade-in"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCollapse();
+      }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="b3d-summary-title"
@@ -61,7 +149,7 @@ export default function Summary({ timeline, onRestart, onClose }: { timeline: Pi
       </div>
       <div className="relative my-auto w-full max-w-[560px] overflow-hidden rounded-[28px] bg-white shadow-[0_30px_80px_-20px_rgba(35,31,32,0.5)] animate-scale-in">
         <div className="relative px-6 pb-7 pt-6 text-white sm:px-8" style={{ background: 'linear-gradient(135deg,#F0306F 0%,#E61559 45%,#B80E45 100%)' }}>
-          <button onClick={onClose} aria-label="סגירה" className={`absolute end-3 top-3 rounded-full p-2 text-white/80 hover:bg-white/15 hover:text-white ${FOCUS}`}>
+          <button onClick={onCollapse} aria-label="סגירה" className={`absolute end-3 top-3 rounded-full p-2 text-white/80 hover:bg-white/15 hover:text-white ${FOCUS}`}>
             <X size={18} />
           </button>
           <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-[#E61559] shadow-lg">

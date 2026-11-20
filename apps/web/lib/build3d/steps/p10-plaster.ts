@@ -42,6 +42,9 @@ function houseBounds(ctx: BuildContext, y0: number, y1: number, grow = 2): Camer
   return { min: [b.min[0] - grow, y0, b.min[1] - grow], max: [b.max[0] + grow, y1, b.max[1] + grow] };
 }
 
+/** Fresh interior plaster before paint. */
+const FRESH_PLASTER = '#D3CABC';
+
 const skinPart = (id: string, items: BoxItem[], material: Part['material'], tags: string[], color?: string, delay = 0): Part => ({
   id,
   shape: { kind: 'boxes', items },
@@ -121,7 +124,8 @@ export function phasePlaster(ctx: BuildContext): StepDef[] {
       for (const face of FACES) if (faceInside(w, face, fp)) items.push(...skinBoxes(w, ctx.house.openings, floorYOf(ctx, lvl), face, { thickness: 0.025 }));
     }
     interiorArea += boxesArea(items);
-    interiorParts.push(skinPart(`p10-plaster-interior:${lvl}`, items, 'plaster', ['plaster-interior', `level:${lvl}`], undefined, li * 1.5));
+    // Fresh gypsum/cement plaster reads light grey-beige (not white-on-white); p11-paint turns it warm white.
+    interiorParts.push(skinPart(`p10-plaster-interior:${lvl}`, items, 'plaster', ['plaster-interior', `level:${lvl}`], FRESH_PLASTER, li * 1.5));
   });
   const plasterInterior: StepDef = {
     id: 'p10-plaster-interior',
@@ -182,7 +186,8 @@ export function phasePlaster(ctx: BuildContext): StepDef[] {
     materials: [line('שטח טיח חוץ ושליכט', renderArea, 'מ״ר', 0), line('שליכט לבן (צבע גמר)', renderArea * 3, 'ק״ג', 0), line('רשת זיגוג בפינות', renderArea * 0.1, 'מ״ר', 0)],
     costILS: roundCost(renderArea * PRICES.plasterExteriorM2),
     parts: renderParts,
-    camera: { bounds: houseBounds(ctx, ctx.lower.floorY, topY, 0.5), polar: 64, azimuth: 160 },
+    // The garden facade (both storeys get render) at a 3/4 angle, eye a little above the roof.
+    camera: { bounds: houseBounds(ctx, ctx.lower.floorY, topY - 0.6, 0.5), polar: 68, azimuth: 208, zoom: 0.94 },
     view: facadeView,
   };
 

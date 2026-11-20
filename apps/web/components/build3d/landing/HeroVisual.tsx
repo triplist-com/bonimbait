@@ -1,68 +1,118 @@
-/** Isometric line-drawing house that assembles itself (pure SVG + CSS, no WebGL, no JS). */
+'use client';
 
-const U = 26;
-const proj = (x: number, y: number, z: number): [number, number] => [(x - z) * 0.866 * U, (x + z) * 0.5 * U - y * U];
-const pt = (p: [number, number]) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`;
+import { useEffect, useState } from 'react';
+import frames from '@/public/build3d/landing/frames.json';
+import { BUILD_TOTALS } from '@/lib/build3d/content/totals';
 
-interface Part {
-  x: number; z: number; y: number; w: number; d: number; h: number;
-  top: string; left: string; right: string;
+/**
+ * Landing hero: real renders of the house going up, one fixed camera, crossfading
+ * from the plan on the lot to the finished house at dusk. Frames come from
+ * `data/tools/pw/cine-hero.mjs`; `-800.webp` twins are for phones.
+ */
+
+interface Frame {
+  src: string;
+  labelHe: string;
+  step: number;
 }
 
-const PARTS: Part[] = [
-  { x: 0, z: 0, y: 0, w: 8, d: 6, h: 0.3, top: '#E9E2D3', left: '#D8CFBC', right: '#CBC1AC' }, // lot / ground
-  { x: 1, z: 1, y: 0.3, w: 6, d: 4, h: 0.45, top: '#D4D6D9', left: '#B9BCC0', right: '#A8ABB0' }, // foundations
-  { x: 1, z: 1, y: 0.75, w: 6, d: 4, h: 2.15, top: '#F4F1EB', left: '#E8E3DA', right: '#DAD4C8' }, // lower walls
-  { x: 0.8, z: 0.8, y: 2.9, w: 6.4, d: 4.4, h: 0.3, top: '#D4D6D9', left: '#B9BCC0', right: '#A8ABB0' }, // slab
-  { x: 1.6, z: 1.3, y: 3.2, w: 4.4, d: 3, h: 1.9, top: '#FAF8F4', left: '#EFEAE1', right: '#E1DBCE' }, // upper walls
-  { x: 1.3, z: 1, y: 5.1, w: 5, d: 3.6, h: 0.28, top: '#FFFFFF', left: '#F0C5D3', right: '#E61559' }, // roof
-  { x: 6.3, z: 1.6, y: 0.75, w: 1.4, d: 2.2, h: 0.18, top: '#C9A979', left: '#B38F5E', right: '#9D7B4D' }, // deck
-];
+const FRAMES = frames as Frame[];
+const LAST = FRAMES.length - 1;
+const STEP_MS = 1700;
+const HOLD_LAST_MS = 3600;
+const FADE_MS = 700;
 
-function Box({ p, i }: { p: Part; i: number }) {
-  const { x, z, y, w, d, h } = p;
-  const top = [proj(x, y + h, z), proj(x + w, y + h, z), proj(x + w, y + h, z + d), proj(x, y + h, z + d)];
-  const left = [proj(x, y + h, z + d), proj(x + w, y + h, z + d), proj(x + w, y, z + d), proj(x, y, z + d)];
-  const right = [proj(x + w, y + h, z), proj(x + w, y + h, z + d), proj(x + w, y, z + d), proj(x + w, y, z)];
-  return (
-    <g className="b3d-hv" style={{ animationDelay: `${i * 0.7}s` }}>
-      <polygon points={right.map(pt).join(' ')} fill={p.right} />
-      <polygon points={left.map(pt).join(' ')} fill={p.left} />
-      <polygon points={top.map(pt).join(' ')} fill={p.top} />
-      <g fill="none" stroke="#231F20" strokeWidth={1.3} strokeLinejoin="round" opacity={0.85}>
-        <polygon points={top.map(pt).join(' ')} />
-        <polyline points={[left[0], left[3], left[2], right[3]].map(pt).join(' ')} />
-        <polyline points={[left[1], left[2]].map(pt).join(' ')} />
-      </g>
-    </g>
-  );
-}
-
-const corners = PARTS.flatMap((p) => [proj(p.x, p.y, p.z), proj(p.x + p.w, p.y, p.z + p.d), proj(p.x, p.y + p.h, p.z), proj(p.x + p.w, p.y + p.h, p.z), proj(p.x, p.y, p.z + p.d), proj(p.x + p.w, p.y, p.z)]);
-const minX = Math.min(...corners.map((c) => c[0])) - 20;
-const maxX = Math.max(...corners.map((c) => c[0])) + 20;
-const minY = Math.min(...corners.map((c) => c[1])) - 40;
-const maxY = Math.max(...corners.map((c) => c[1])) + 20;
+const small = (src: string) => src.replace(/\.webp$/, '-800.webp');
 
 export default function HeroVisual({ className }: { className?: string }) {
+  const [idx, setIdx] = useState(0);
+  const [ready, setReady] = useState(false);
+  const [still, setStill] = useState(false);
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setStill(true);
+      setIdx(LAST);
+      return;
+    }
+    // Start the sequence only once every frame is decoded, so no step flashes blank.
+    let cancelled = false;
+    Promise.all(
+      FRAMES.map(
+        (f) =>
+          new Promise<void>((resolve) => {
+            const img = new Image();
+            img.srcset = `${small(f.src)} 800w, ${f.src} 1600w`;
+            img.sizes = '(min-width: 1024px) 50vw, 100vw';
+            img.src = f.src;
+            img.decode().then(resolve, resolve);
+          }),
+      ),
+    ).then(() => !cancelled && setReady(true));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!ready || still) return;
+    const t = setTimeout(() => setIdx((i) => (i === LAST ? 0 : i + 1)), idx === LAST ? HOLD_LAST_MS : STEP_MS);
+    return () => clearTimeout(t);
+  }, [idx, ready, still]);
+
+  const cur = FRAMES[idx];
+
   return (
     <div className={className} aria-hidden>
-      <svg viewBox={`${minX} ${minY} ${maxX - minX} ${maxY - minY}`} className="h-full w-full" style={{ overflow: 'visible' }}>
-        <defs>
-          <filter id="b3d-hv-shadow" x="-20%" y="-20%" width="140%" height="160%">
-            <feDropShadow dx="0" dy="14" stdDeviation="14" floodColor="#231F20" floodOpacity="0.12" />
-          </filter>
-        </defs>
-        <g filter="url(#b3d-hv-shadow)">
-          {PARTS.map((p, i) => (
-            <Box key={i} p={p} i={i} />
-          ))}
-        </g>
-      </svg>
+      <div className="relative h-full w-full overflow-hidden rounded-[1.75rem] bg-[#ECEDEE] shadow-[0_24px_60px_-24px_rgba(35,31,32,.35)] ring-1 ring-[rgba(35,31,32,.08)]">
+        {FRAMES.map((f, i) => {
+          // Frames stack in build order; each new one fades in over the last.
+          // On loop, the dusk frame fades out over frame 0 (the rest drop instantly underneath it).
+          const shown = i === 0 || i <= idx;
+          const animate = i === idx || (idx === 0 && i === LAST);
+          return (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={f.src}
+              src={f.src}
+              srcSet={`${small(f.src)} 800w, ${f.src} 1600w`}
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              alt=""
+              draggable={false}
+              decoding="async"
+              loading={i === 0 || i === LAST ? 'eager' : 'lazy'}
+              className="absolute inset-0 h-full w-full select-none object-cover"
+              style={{
+                objectPosition: '50% 58%',
+                opacity: shown ? 1 : 0,
+                transition: animate ? `opacity ${FADE_MS}ms ease-out` : 'none',
+              }}
+            />
+          );
+        })}
+
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/35 to-transparent" />
+        <div className="absolute bottom-3 start-3 end-3 flex items-end justify-between gap-3 sm:bottom-4 sm:start-4 sm:end-4">
+          <div key={idx} className="b3d-hv-label rounded-full bg-white/95 px-3 py-1.5 text-[13px] font-bold text-[#231F20] shadow-sm backdrop-blur sm:text-sm">
+            <span className="text-[#E61559]">שלב {cur.step}</span>
+            <span className="text-[#231F20]/45"> מתוך {BUILD_TOTALS.steps} · </span>
+            {cur.labelHe}
+          </div>
+          <div className="mb-2 hidden gap-1 min-[400px]:flex" dir="rtl">
+            {FRAMES.map((f, i) => (
+              <span
+                key={f.src}
+                className="h-1.5 w-4 rounded-full transition-colors duration-500"
+                style={{ background: i <= idx ? '#fff' : 'rgba(255,255,255,.35)' }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
       <style>{`
-        @keyframes b3d-hv { 0% { opacity: 0; transform: translateY(-46px); } 7% { opacity: 1; transform: translateY(3px); } 10% { transform: translateY(0); } 82% { opacity: 1; transform: none; } 94%, 100% { opacity: 0; transform: translateY(10px); } }
-        .b3d-hv { animation: b3d-hv 10.5s cubic-bezier(.3,.7,.3,1) infinite backwards; }
-        @media (prefers-reduced-motion: reduce) { .b3d-hv { animation: none; } }
+        @keyframes b3d-hv-label { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+        .b3d-hv-label { animation: b3d-hv-label .35s ease-out both; }
+        @media (prefers-reduced-motion: reduce) { .b3d-hv-label { animation: none; } }
       `}</style>
     </div>
   );

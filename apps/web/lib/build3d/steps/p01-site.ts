@@ -264,12 +264,15 @@ export function siteLayout(ctx: BuildContext): SiteLayout {
   taken.push({ at: truck, size: [3, 8] });
   const container = ctx.freeSpot([6.2, 2.6], add2(add2(gate, scale2(street.dir, 6)), scale2(street.inward, 3)), taken);
   taken.push({ at: container, size: [6.2, 2.6] });
-  const toilet = ctx.freeSpot([1.4, 1.4], add2(container, scale2(street.dir, 4.2)), taken);
+  // Power pole well clear of the truck lane (trucks back in there: the excavation dump truck, the
+  // pile mixer); the toilet goes to the nearest free spot on that side of the gate.
+  const pole = add2(add2(gate, scale2(street.dir, -5.4)), scale2(street.inward, 0.6));
+  taken.push({ at: pole, size: [1.2, 1.2] });
+  const toilet = ctx.freeSpot([1.4, 1.4], add2(add2(gate, scale2(street.dir, -7.6)), scale2(street.inward, 1.4)), taken);
   taken.push({ at: toilet, size: [1.4, 1.4] });
   const far = dist2(street.a, gate) > dist2(street.b, gate) ? street.a : street.b;
   const spoil = ctx.freeSpot([4.6, 4.6], add2(far, scale2(street.inward, 4)), taken, 0.2);
   const sign = add2(add2(gate, scale2(street.dir, 3.4)), scale2(street.inward, 0.7));
-  const pole = add2(add2(gate, scale2(street.dir, -3.2)), scale2(street.inward, 0.6));
   const tap = add2(pole, scale2(street.inward, 1.0));
   const out: SiteLayout = { container, toilet, sign, pole, tap, spoil, truck, truckRot: angleOfDir(street.inward) };
   layouts.set(ctx, out);

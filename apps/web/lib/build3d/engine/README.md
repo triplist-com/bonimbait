@@ -120,7 +120,12 @@ polar is degrees from straight down (≈ 50 is a nice 3/4). Default frames the s
 - `groundXray` — terrain translucent (piles, sewer).
 - `ghostTags: ['p4-wall-forms']` — parts with these tags turn translucent during the step (see the rebar
   inside its forms).
-- `lighting: 'dusk'` — warm low sun, deeper sky; materials `light` and `glassLit` glow (finale).
+- `lighting: 'dusk'` — golden/blue hour (finale): a low warm sun raking from the camera's front-left (it
+  follows the camera azimuth, turntable-style), cool sky fill, a deep-blue → amber sky backdrop, the landscape
+  darkens; `light` glows, `glassLit` turns dense warm glass. Glow (`engine/runtime/glow.ts`): every visible
+  `glassLit` pane gets an additive halo (door-height glazing also a light pool on the floor in front); a `light`
+  part glows only with `glow: { halo?, pool?, drop?, k? }` (halo size m, pool radius m on the ground `drop` m
+  below the lamp center; strips get a row of halos). Two instanced draws, no postprocessing.
 
 ## Finale totals
 
@@ -132,6 +137,13 @@ unit `'יח׳'` with `'בלוק'` in the name (blocks). Months come from the sum
 
 `steps/facade.ts` builds every exterior skin (render, stone, parapet copings, reveals) from the walls,
 columns and exposed slab edges — see its header. p10 uses it; other phases should not add exterior skins.
+
+## Capture hooks (dev only)
+
+`window.__b3d.stage.freeze = true` stops the step orbit / auto-rotate; `stage.orbitBy(s)` advances it.
+Tools in `data/tools/pw/`: `cine.mjs` (deep-link shots, camera override, `--clean` hides the UI),
+`cine-walk.mjs` (every step at the end of its animation, highlight on), `cine-summary.mjs` (finale bar
+timing), `cine-hero.mjs` (landing hero frames → `public/build3d/landing/`, `og.jpg`).
 
 ## Rendering notes
 

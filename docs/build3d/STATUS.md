@@ -64,6 +64,24 @@ Each agent appends to its own section (newest entry on top within the section). 
 - Step author B (envelope & systems): phases 7-10 done (20 steps: p7 x6, p8 x5, p9 x4, p10 x5). Files `steps/p07-masonry.ts`, `p08-roof.ts`, `p09-systems.ts`, `p10-plaster.ts`, shared `envelope-kit.ts` (block laying + lintel cut-outs, wall skins, stone courses, nearest-wall/Manhattan routing, roof cell grid with 3% fall to 4 drains). Registered in `steps/index.ts` after phaseFoundations/structure. Facades: stone full-height on the south/street side and entry porch, 90 cm stone plinth + white render elsewhere on the entrance floor, render on lower floor and parapets. Tags per STEPS.md (`mep-in-wall`, `mep-under-floor`, `duct`, `roof-membrane`, `scaffolding`, `plaster-interior`, ...). Known simplifications: pipes cross walls in floor/ceiling runs; terrace parapets (concrete in the model) are laid as blocks; at last check the roof slab (p6) was not yet registered so roof layers float.
 
 ## QA
+- **Cinematographer pass (money shots + last weak spots).** Issues #20, #22, #24–#32 in `docs/build3d/QA.md`.
+  - Finale (p13-done): golden/blue-hour rig in `viewer/Stage.tsx` (low warm sun raking from the camera's front-left,
+    following the orbit; cool sky fill; exposure +6 %), full-screen deep-blue → amber sky backdrop, landscape darkens at
+    dusk, floor shadow catcher hidden. New `engine/runtime/glow.ts`: additive halos at lit panes and garden lamps + light
+    pools (lanterns, uplights, in front of door-height glazing); `Part.glow` opt-in for `light` parts; lit glass denser.
+    Walls stay warm white, stone glows, windows/bollards/pergola LEDs clearly lit. Before/after: `data/build3d-shots/cine/before/`
+    and `cine/after/`.
+  - `viewer/Summary.tsx`: waits until the dusk orbit has played ~5 s, then a slim bar (הבית מוכן! · 16 חודשים · ₪2.25M ·
+    הצגת סיכום) that expands into the full card; ✕/Esc/backdrop collapse it. Verified at 1440, 390, 360 px (`cine-summary.mjs`).
+  - Steps: 45 blocks-lower from the garden side without x-ray; 63 exterior render 3/4 of the garden facade; 69 mamad door +
+    window from the west, roof lifted; 70 entry door over the fence into the west porch; 9 mixer backs in clear of the
+    toilet, power pole moved off the gate, clutter x-ray + mixer framed; interior plaster fresh grey-beige; magenta highlight
+    stronger on dark parts; systems steps (56, 58, 59) look down into the rooms. Highlight walk before/after:
+    `data/build3d-shots/cine/walk0-sheet*.png` → `walk1-sheet*.png`.
+  - Landing hero renders (one fixed street-side 3/4 camera, UI hidden, dpr 2 → sharp): `public/build3d/landing/f01…f09.webp`
+    (1600×1000, 46–115 KB), `frames.json` (steps 1, 5, 11, 43, 44, 46, 64, 85, 86), `public/build3d/og.jpg` (1200×630, 70 KB).
+    Re-render: `node data/tools/pw/cine-hero.mjs` (don't edit sources meanwhile: the dev server reloads the page).
+  - Dev hooks: `window.__b3d.stage.{freeze, orbitBy}`; tools `data/tools/pw/cine*.mjs` (README "Capture hooks").
 - **Integrator pass (final quality)** — issue list + statuses in `docs/build3d/QA.md`; shots `data/build3d-shots/qa/before/` vs `qa/after/`
   (all 86 steps settled at 1440×900 + mid frames; `data/tools/pw/qa-all.mjs`, contact sheets `montage.mjs`).
   - Facades: new `steps/facade.ts` (raster of exterior walls/columns/slab edges → outdoor flood → runs per owner) covers

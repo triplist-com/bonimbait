@@ -355,8 +355,10 @@ export function phaseFinishes(ctx: BuildContext): StepDef[] {
         boxesPart('p11-mamad-hardware', details, 'galvanized', ['mamad', 'hardware', 'level:entrance'], { type: 'fade', delay: 1.1, duration: 0.5 }),
         boxesPart('p11-mamad-glass', glass, 'glass', ['mamad', 'glass', 'level:entrance'], { type: 'fade', delay: 1.1, duration: 0.6 }, { edges: false }),
       ],
-      camera: { fit: 'parts', zoom: 1.9, azimuth: 30, polar: 62 },
-      view: ENTRANCE_VIEW,
+      // From above with the roof lifted: the blast door inside and the blast window in the
+      // outer wall both read; site clutter in the way fades.
+      camera: { fit: 'parts', zoom: 1.3, azimuth: 295, polar: 50 },
+      view: { ...ENTRANCE_VIEW, xray: true },
     });
   }
 
@@ -404,8 +406,9 @@ export function phaseFinishes(ctx: BuildContext): StepDef[] {
         boxesPart('p11-entry-handle', steel, 'galvanized', ['door', 'entry', 'level:entrance'], { type: 'fade', delay: 1.4, duration: 0.5 }),
         boxesPart('p11-entry-step', step, 'stone', ['door', 'entry', 'level:entrance'], { type: 'fade', duration: 0.5 }),
       ],
-      camera: { fit: 'parts', zoom: 2.2, azimuth: 280, polar: 72 },
-      view: ENTRANCE_VIEW,
+      // Into the west porch from above the site fence (fence panels still in the way fade).
+      camera: { fit: 'parts', zoom: 1.9, azimuth: 282, polar: 58 },
+      view: { xray: true },
     });
   }
 

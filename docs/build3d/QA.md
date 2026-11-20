@@ -5,6 +5,8 @@ Script: `data/tools/pw/qa-all.mjs <outdir> [from] [to] [--mid=5,9] [--only=3,7] 
 keyboard navigation, director clock fast-forwarded, camera snapped, all parts prebuilt first; `--direct`
 deep-links each `--only` step instead). Contact sheets: `data/tools/pw/montage.mjs <out> <cols> <w> --crop <pngs…>`.
 Shots: `data/build3d-shots/qa/before/` (initial walk) and `data/build3d-shots/qa/after/` (after fixes).
+Cinematographer pass: every step at the end of its animation (magenta on) before/after in
+`data/build3d-shots/cine/walk0*/` → `cine/walk1*/` (`data/tools/pw/cine-walk.mjs`); finale `cine/before/` vs `cine/after/`.
 
 Severity: **P1** = visible in a normal demo run, looks broken · **P2** = noticeable, looks unfinished · **P3** = polish.
 
@@ -29,9 +31,17 @@ Severity: **P1** = visible in a normal demo run, looks broken · **P2** = notice
 | 17 | 6 | Compaction framed tight. | P3 | FIXED (zoom 1.25). |
 | 18 | 56–76 | Interior steps: the faded roof build-up (screed, insulation, membrane, coat) stacked into a white haze with a board grid; slab steel showed through. | P1 | FIXED — roof layers and embedded steel vanish when faded; x-ray outlines at 5 % opacity. |
 | 19 | 72, 73 | Stairs / kitchen framed from inside or through the facade. | P1 | FIXED — stair-well camera from above; kitchen seen over its walls (polar 40) with the roof lifted. |
-| 20 | 9 | Pile mixer stands against the site toilet / power pole at the gate (site layout). | P3 | OPEN |
+| 20 | 9 | Pile mixer stands against the site toilet / power pole at the gate (site layout). | P3 | FIXED — the mixer backs in on the container side of the truck lane, chute toward the piles; the power pole moved 5.4 m off the gate (`siteLayout`); the pile pour x-rays clutter in front of the work and frames the mixer too. |
 | 21 | 77+ | West side yard: soft lumps from the 1 m extractor grid between the yard levels. | P3 | OPEN |
-| 22 | 61 | Interior plaster is white-on-white (low contrast while the skins rise). | P3 | OPEN |
+| 22 | 61 | Interior plaster is white-on-white (low contrast while the skins rise). | P3 | FIXED — fresh plaster is light grey-beige `#D3CABC`; p11-paint (which removes it) turns the walls warm white. |
 | 23 | all | No neighbor massing: the terrain grid only reaches ~5 m past the lot, too narrow for the neighbors' houses. | P3 | WONTFIX (would need a wider terrain grid). |
-| 24 | 86 | The finale summary card covers the dusk orbit after ~span + 1.8 s (UX's Summary timing). | P3 | OPEN → Needs (UX) |
+| 24 | 86 | The finale summary card covers the dusk orbit after ~span + 1.8 s (UX's Summary timing). | P3 | FIXED — `Summary.tsx` waits until the orbit has played ~5 s, then slides in a slim bar (הבית מוכן! · 16 חודשים · ₪2.25M · הצגת סיכום) that expands into the card on click; ✕/Esc/backdrop collapse it back. Mobile: above the sheet, cost hidden under 380 px. |
+| 25 | 86 | Finale read muddy and pink: salmon walls (orange sun + violet fill), dim, purple CSS sky. | P1 | FIXED — golden/blue-hour rig in `Stage.tsx`: low warm sun (13°) raking from the camera's front-left (follows the orbit like a turntable → long shadows, one lit and one cool facade every frame), cool blue sky fill, less environment; full-screen deep-blue → amber sky backdrop with a glow on the sun side; landscape darkens at dusk; the floor shadow catcher hides. Lit panes turn dense warm glass; `engine/runtime/glow.ts` adds additive halos at windows and garden lamps plus light pools under lanterns/uplights and in front of door-height glazing (2 instanced draws, no postprocessing). The finale's lamps skip the magenta highlight. Before/after: `data/build3d-shots/cine/before/`, `cine/after/`. |
+| 26 | 45 | p7-blocks-lower: x-ray through the slab + ground x-ray showed steel, conduits and piles instead of the blocks. | P1 | FIXED — seen from the garden side (az 200, polar 64), no x-ray: the blocks rise crisply under the entrance slab. |
+| 27 | 70 | p11-entry-door framed through the site fence (door faces the west porch). | P2 | FIXED — over the fence into the porch (az 282, polar 58), fence panels in the way fade. |
+| 28 | 63 | p10-plaster-exterior: steep view from the back, pole sticking up behind. | P2 | FIXED — 3/4 of the garden facade (az 208, polar 68). |
+| 29 | 69 | p11-mamad-door: neither the blast door nor the window read (camera on the far side, toilet/pole in front). | P2 | FIXED — from the west with the roof lifted (az 295, polar 50) + clutter x-ray: magenta window in the stone wall and the door inside. |
+| 30 | all | Magenta "new" tint barely visible on dark parts (steel, aluminum frames, bitumen). | P2 | FIXED — highlight gain scales with darkness (0.26 → up to 0.6). |
+| 32 | 56, 58, 59 | Systems steps: pipes / conduits / ducts tiny in a far, shallow x-ray view. | P3 | IMPROVED — steeper and closer (polar 46, zoom 0.9), looking down into the rooms with the roof lifted; AC and conduits read, the thin water pipes still read best with a zoom-in. |
+| 31 | 54, 76, 79 | Fully translucent frames in the first highlight walk. | — | NOT A BUG — the dev server reloaded the page mid-walk (source edited while capturing). |
 

@@ -11,6 +11,10 @@ export const GHOST_OPACITY = 0.13;
 /** Occluders faded by the automatic x-ray: lighter than the ghost preview so the house keeps its shape. */
 export const XRAY_OPACITY = 0.24;
 const EDGE_OPACITY = 0.42;
+/** Landscape materials that darken at dusk. */
+const DUSK_GROUND = new Set<MaterialKey>(['soil', 'soilCut', 'rock', 'asphalt', 'gravel', 'grass']);
+/** Lit window panes at dusk: dense warm glass (day: the palette's 0.45). */
+const DUSK_GLASS_OPACITY = 0.86;
 
 type Std = THREE.MeshStandardMaterial;
 
@@ -25,6 +29,7 @@ export class MaterialLibrary {
   private level = -1;
   private dusk = 0;
   private duskList: Std[] = [];
+  private groundList: Std[] = [];
 
   readonly accent = new THREE.Color(ACCENT);
   readonly ink = new THREE.Color(INK);
@@ -65,15 +70,29 @@ export class MaterialLibrary {
         polygonOffsetFactor: 1,
         polygonOffsetUnits: 1,
       });
+      m.name = `pal:${key}`;
       if (spec.emissive) {
         m.emissive.set(spec.emissive);
-        m.emissiveIntensity = this.dusk * 1.6;
+        m.userData.duskOpacity = opacity < 1 ? DUSK_GLASS_OPACITY : opacity;
+        m.userData.dayOpacity = opacity;
+        this.applyDuskTo(m);
         this.duskList.push(m);
       }
-      m.name = `pal:${key}`;
+      if (DUSK_GROUND.has(key)) {
+        m.userData.dayColor = m.color.clone();
+        this.groundList.push(m);
+        this.applyGroundDusk(m);
+      }
       this.base.set(id, m);
     }
     return m;
+  }
+
+  /** At dusk the landscape falls into cool shade, so the white house and the lamps pop. */
+  private applyGroundDusk(m: Std) {
+    const k = this.dusk;
+    const day = m.userData.dayColor as THREE.Color;
+    m.color.setRGB(day.r * (1 - 0.52 * k), day.g * (1 - 0.5 * k), day.b * (1 - 0.4 * k));
   }
 
   /** Translucent "ghost" variant of any material (future preview). */
@@ -109,7 +128,10 @@ export class MaterialLibrary {
     if (!h) {
       const c = m.clone();
       c.emissive.copy(this.accent);
-      c.emissiveIntensity = Math.max(0, this.level) * 0.5;
+      // Dark parts (steel, aluminum, bitumen) need more magenta to read as "new" at a glance.
+      const lum = 0.2126 * m.color.r + 0.7152 * m.color.g + 0.0722 * m.color.b;
+      c.userData.hlGain = 0.26 + 0.34 * Math.max(0, 1 - lum / 0.35);
+      c.emissiveIntensity = Math.max(0, this.level) * (c.userData.hlGain as number);
       this.highlights.set(m.uuid, c);
       this.highlightList.push(c);
       h = c;
@@ -121,7 +143,7 @@ export class MaterialLibrary {
   setHighlight(level: number) {
     if (Math.abs(level - this.level) < 0.002) return;
     this.level = level;
-    for (const m of this.highlightList) m.emissiveIntensity = level * 0.26;
+    for (const m of this.highlightList) m.emissiveIntensity = level * ((m.userData.hlGain as number | undefined) ?? 0.26);
     this.edgeHighlight.color.copy(this.ink).lerp(this.accent, Math.min(1, level * 1.3));
     this.edgeHighlight.opacity = EDGE_OPACITY + (0.95 - EDGE_OPACITY) * Math.min(1, level * 1.3);
     const u = this.instEdgeHighlight.uniforms;
@@ -129,11 +151,22 @@ export class MaterialLibrary {
     u.uOpacity.value = this.edgeHighlight.opacity;
   }
 
+  /** Lamps glow brighter than lit panes; lit panes turn denser (a warm lit room, not clear glass). */
+  private applyDuskTo(m: Std) {
+    const k = this.dusk;
+    const glass = m.name === 'pal:glassLit';
+    m.emissiveIntensity = k * (glass ? 1.25 : 2.2);
+    const o = (m.userData.dayOpacity as number) + ((m.userData.duskOpacity as number) - (m.userData.dayOpacity as number)) * k;
+    m.opacity = o;
+  }
+
   /** 0 = day, 1 = dusk: emissive palette materials ('light', 'glassLit') glow. */
   setDusk(level: number) {
-    if (Math.abs(level - this.dusk) < 0.002) return;
+    // Skip tiny steps while easing, but always land exactly on 0 / 1.
+    if (level === this.dusk || (Math.abs(level - this.dusk) < 0.002 && level > 0 && level < 1)) return;
     this.dusk = level;
-    for (const m of this.duskList) m.emissiveIntensity = level * 1.6;
+    for (const m of this.duskList) this.applyDuskTo(m);
+    for (const m of this.groundList) this.applyGroundDusk(m);
     for (const cache of [this.ghosts, this.xrays])
       cache.forEach((g, uuid) => {
         const src = this.duskList.find((m) => m.uuid === uuid);

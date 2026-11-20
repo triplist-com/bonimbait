@@ -290,7 +290,7 @@ export function phaseLandscape(ctx: BuildContext): StepDef[] {
         boxesPart('p12-path-slabs', slabsB, 'stone', ['paving', 'path', 'level:site'], { type: 'sequence', order: 'x', delay: 0.8, stagger: stagger(slabsB.length, 3, 0.04), duration: 0.3 }, { color: '#DCD2BF' }),
         boxesPart('p12-outdoor-steps', treads, 'stone', ['paving', 'steps', 'level:site'], { type: 'sequence', order: 'y', delay: 1.0, stagger: 0.06, duration: 0.3 }, { color: '#D6CAB1' }),
         boxesPart('p12-lantern-posts', posts, 'aluminum', ['lighting', 'lantern', 'level:site'], { type: 'rise', delay: 3, duration: 0.6 }),
-        boxesPart('p12-lantern-heads', heads, 'light', ['lighting', 'lantern', 'level:site'], { type: 'fade', delay: 3.4, duration: 0.5 }, { edges: false, castShadow: false }),
+        boxesPart('p12-lantern-heads', heads, 'light', ['lighting', 'lantern', 'level:site'], { type: 'fade', delay: 3.4, duration: 0.5 }, { edges: false, castShadow: false, glow: { halo: 1.3, pool: 2.1, drop: 0.47 } }),
       ],
       camera: { bounds, azimuth: 150, polar: 52 },
       view: { xray: false },

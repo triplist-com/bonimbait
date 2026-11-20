@@ -12,6 +12,7 @@ import { ease } from '../anim';
 import type { CameraHint, Vec2 } from '../types';
 import { visibleAt, type Timeline, type TimelinePart } from '../timeline';
 import { GHOST_OPACITY, MaterialLibrary, XRAY_OPACITY } from './materials';
+import { GlowLayer, type GlowHalo, type GlowPool } from './glow';
 import { loadPlanTexture } from './geometry';
 import { buildPart, disposePart, materialKeyAt, type PartRT } from './part';
 
@@ -78,6 +79,9 @@ export class Director {
   private planCancel?: () => void;
   private planReady = false;
   private buildCursor = 0;
+  /** Dusk halos / light pools (finale). */
+  readonly glow = new GlowLayer();
+  private duskLevel = 0;
   /** Intro (plan sheet → terrain). null when not running. */
   intro: { t: number } | null = null;
   /** Debug: pin the intro clock (headless screenshots). */
@@ -91,6 +95,7 @@ export class Director {
     this.lib = lib;
     this.rts = new Array(timeline.parts.length);
     this.root.name = 'build';
+    this.root.add(this.glow.group);
     const ctx = getContext(house);
     this.fp = ctx.footprint.house;
     const hb = bbox2(ctx.footprint.house);
@@ -206,7 +211,78 @@ export class Director {
         }
       }
     }
+    this.glow.step = -1;
+    if (this.duskLevel > 0.001) this.collectGlow();
     this.onChange?.();
+  }
+
+  /** 0 = day, 1 = dusk: lamps and lit glass glow, halos and light pools fade in. */
+  setDusk(k: number) {
+    this.duskLevel = k;
+    this.lib.setDusk(k);
+    if (k > 0.001 && this.glow.step !== this.step) this.collectGlow();
+    this.glow.setLevel(k);
+  }
+
+  /** Halos at every lamp / lit pane visible at the current step (settled poses). */
+  private collectGlow() {
+    const s = this.step;
+    const halos: GlowHalo[] = [];
+    const pools: GlowPool[] = [];
+    const warm = new THREE.Color('#FFB868');
+    const lamp = new THREE.Color('#FFC27A');
+    const m = new THREE.Matrix4();
+    const b = new THREE.Box3();
+    const size = new THREE.Vector3();
+    this.timeline.parts.forEach((tp, i) => {
+      const p = tp.part;
+      const win = p.material === 'glassLit';
+      if (!win && !(p.material === 'light' && p.glow)) return;
+      if (!visibleAt(tp, s)) return;
+      const rt = this.ensure(i);
+      rt.root.updateMatrixWorld(true);
+      const boxes: THREE.Box3[] = [];
+      if (rt.inst) {
+        const g = rt.inst.mesh.geometry;
+        if (!g.boundingBox) g.computeBoundingBox();
+        for (let k = 0; k < rt.inst.count; k++) {
+          m.fromArray(rt.inst.base, k * 16).premultiply(rt.root.matrixWorld);
+          boxes.push(b.copy(g.boundingBox as THREE.Box3).applyMatrix4(m).clone());
+        }
+      } else boxes.push(rt.box.clone());
+      const gl = p.glow ?? {};
+      const kk = gl.k ?? 1;
+      for (const bx of boxes) {
+        bx.getSize(size);
+        const c = bx.getCenter(new THREE.Vector3());
+        if (win) {
+          const w = Math.max(size.x, size.z);
+          // Tiny glass bits (door lites) get a small glow; panes a wide one.
+          if (w < 0.12 && size.y < 0.12) continue;
+          halos.push({ at: c, w: w * 1.25 + 1.1, h: size.y * 1.2 + 1.0, color: warm, k: 0.8 * kk });
+          // Door-height glazing spills a pool of light onto the terrace / balcony in front.
+          if (size.y > 1.7 && w > 0.7) pools.push({ at: new THREE.Vector3(c.x, bx.min.y + 0.025, c.z), radius: Math.max(1.3, w * 0.62), color: warm, k: 0.5 * kk });
+          continue;
+        }
+        const len = Math.max(size.x, size.z);
+        const hs = gl.halo ?? 0.8;
+        if (len > 1.2) {
+          // Strips: a row of halos along the long axis.
+          const n = Math.max(2, Math.round(len / 0.8));
+          const alongX = size.x >= size.z;
+          for (let j = 0; j < n; j++) {
+            const t = (j + 0.5) / n - 0.5;
+            const at = c.clone();
+            if (alongX) at.x += t * size.x;
+            else at.z += t * size.z;
+            halos.push({ at, w: hs, h: hs, color: lamp, k: 0.75 * kk });
+          }
+        } else halos.push({ at: c, w: hs, h: hs, color: lamp, k: kk });
+        if (gl.pool) pools.push({ at: new THREE.Vector3(c.x, c.y - (gl.drop ?? 0) + 0.03, c.z), radius: gl.pool, color: lamp, k: 0.85 * kk });
+      }
+    });
+    this.glow.setItems(halos, pools);
+    this.glow.step = s;
   }
 
   private setMaterialKey(rt: PartRT, key: PartRT['matKey']) {
@@ -811,6 +887,7 @@ export class Director {
 
   dispose() {
     this.planCancel?.();
+    this.glow.dispose();
     for (const rt of this.rts) if (rt) disposePart(rt);
     this.lib.dispose();
   }

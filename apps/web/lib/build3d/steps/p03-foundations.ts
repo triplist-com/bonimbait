@@ -141,7 +141,10 @@ export function phaseFoundations(ctx: BuildContext): StepDef[] {
 
   // ---------------------------------------------------------------- pour piles
   const pileM3 = piles.reduce((s, p) => s + Math.PI * p.r * p.r * (p.topY - p.tipY), 0) * 1.1;
-  const mixerAt = lay.truck;
+  // The mixer backs in through the gate, chute toward the piles, kept to the container side of
+  // the lane (the toilet stands on the other side; the power pole is moved clear in siteLayout).
+  const mixerAt = add2(lay.truck, scale2(ctx.lot.street.dir, 0.9));
+  const mixerY = ctx.heightAt(mixerAt[0], mixerAt[1], excavated);
   const pilePour: StepDef = {
     id: 'p3-pile-pour',
     phase: 3,
@@ -162,13 +165,24 @@ export function phaseFoundations(ctx: BuildContext): StepDef[] {
         tags: ['concrete', 'piles'],
         anim: { type: 'pour', delay: 1.0, stagger: Math.min(0.16, 3 / piles.length), duration: 1.0, ...order },
       },
-      model('mixer-pile', 'mixer-truck', [mixerAt[0], ctx.heightAt(mixerAt[0], mixerAt[1], excavated), mixerAt[1]], lay.truckRot, {
+      model('mixer-pile', 'mixer-truck', [mixerAt[0], mixerY, mixerAt[1]], lay.truckRot + Math.PI, {
         tags: ['machine', 'mixer'],
-        anim: { type: 'slide', from: [-ctx.lot.street.inward[0] * 10, 0, -ctx.lot.street.inward[1] * 10], duration: 1.4 },
+        anim: { type: 'slide', from: [-ctx.lot.street.inward[0] * 10, 0, -ctx.lot.street.inward[1] * 10], duration: 1.6, ease: 'out' },
       }),
     ],
-    camera: { bounds: houseBounds(ctx, yLow, yTop), polar: 56 },
-    view: { groundXray: true, xray: false },
+    // Frame the piles AND the mixer at the gate.
+    camera: (() => {
+      const b = houseBounds(ctx, yLow, yTop) as { min: Vec3; max: Vec3 };
+      return {
+        bounds: {
+          min: [Math.min(b.min[0], mixerAt[0] - 2), b.min[1], Math.min(b.min[2], mixerAt[1] - 2)] as Vec3,
+          max: [Math.max(b.max[0], mixerAt[0] + 2), b.max[1], Math.max(b.max[2], mixerAt[1] + 2)] as Vec3,
+        },
+        polar: 56,
+      };
+    })(),
+    // Site clutter in front of the mixer / piles (pole, toilet, fence) fades.
+    view: { groundXray: true, xray: true },
   };
 
   // ---------------------------------------------------------------- forms
