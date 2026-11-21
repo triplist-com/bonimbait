@@ -41,10 +41,60 @@ export const BUILD_TOTALS: BuildTotals = {
  */
 export const METHOD_TOTALS: Record<MethodId, BuildTotals> = {
   concrete: BUILD_TOTALS,
-  icf: { ...BUILD_TOTALS },
-  steel: { ...BUILD_TOTALS },
-  timber: { ...BUILD_TOTALS },
-  precast: { ...BUILD_TOTALS },
+  icf: {
+    steps: 82,
+    days: 326,
+    costILS: 2_301_100,
+    concreteM3: 216,
+    rebarT: 10.8,
+    blocks: 2211,
+    extra: [
+      { labelHe: 'תבניות ICF מקלקר', qty: 654, unitHe: 'יח׳' },
+      { labelHe: 'קלקר בקירות ובמעקות', qty: 39, unitHe: 'מ״ק' },
+      { labelHe: 'קירות ICF', qty: 234, unitHe: 'מ״ר' },
+    ],
+  },
+  steel: {
+    steps: 86,
+    days: 332,
+    costILS: 2_399_000,
+    concreteM3: 142,
+    rebarT: 8.33,
+    blocks: 0,
+    extra: [
+      { labelHe: 'פלדה קלה מגולוונת', qty: 5.0, unitHe: 'טון' },
+      { labelHe: 'לוחות צמנט (קירות וגג)', qty: 402, unitHe: 'מ״ר' },
+      { labelHe: 'לוחות גבס', qty: 660, unitHe: 'מ״ר' },
+      { labelHe: 'צמר סלעים', qty: 272, unitHe: 'מ״ר' },
+    ],
+  },
+  timber: {
+    steps: 86,
+    days: 331,
+    costILS: 2_401_000,
+    concreteM3: 142,
+    rebarT: 8.33,
+    blocks: 0,
+    extra: [
+      { labelHe: 'עץ מסגרת וקורות', qty: 19.5, unitHe: 'מ״ק' },
+      { labelHe: 'לוחות OSB (קירות וגג)', qty: 347, unitHe: 'מ״ר' },
+      { labelHe: 'לוחות גבס', qty: 660, unitHe: 'מ״ר' },
+      { labelHe: 'צמר מינרלי', qty: 242, unitHe: 'מ״ר' },
+    ],
+  },
+  precast: {
+    steps: 75,
+    days: 292,
+    costILS: 2_391_300,
+    concreteM3: 206,
+    rebarT: 10.7,
+    blocks: 2211,
+    extra: [
+      { labelHe: 'פאנלי קיר טרומיים', qty: 29, unitHe: 'יח׳' },
+      { labelHe: 'לוחות תקרה חלולים', qty: 227, unitHe: 'מ״ר' },
+      { labelHe: 'ימי מנוף', qty: 13, unitHe: 'ימים' },
+    ],
+  },
 };
 
 /** Recompute the totals from a built timeline (used by the test; the UI uses BUILD_TOTALS). */

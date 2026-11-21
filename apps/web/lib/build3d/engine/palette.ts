@@ -55,4 +55,11 @@ export const PALETTE: Record<MaterialKey, MaterialSpec> = {
   string: { color: '#FFFFFF', roughness: 1, metalness: 0, edges: false },
   light: { color: '#FFF8EC', roughness: 0.5, metalness: 0, edges: false, emissive: '#FFC978' },
   glassLit: { color: '#9CC7E6', roughness: 0.05, metalness: 0.1, opacity: 0.45, edges: false, emissive: '#FFB45E' },
+  // Framed methods (steel / timber).
+  lumber: { color: '#DDB57C', roughness: 0.8, metalness: 0, edges: true },
+  osb: { color: '#D4A35E', roughness: 0.85, metalness: 0, edges: true },
+  cementBoard: { color: '#BEBBB3', roughness: 0.95, metalness: 0, edges: true },
+  gypsum: { color: '#E4E1DA', roughness: 0.9, metalness: 0, edges: true },
+  houseWrap: { color: '#E8EEF2', roughness: 0.7, metalness: 0, edges: false },
+  mineralWool: { color: '#D8C26C', roughness: 1, metalness: 0, edges: false },
 };

@@ -1,9 +1,10 @@
 /**
- * Method "steel" — phase builders in build order (docs/build3d/METHODS.md § steel).
- * Owned by the steel author. Until the method is built this re-uses the concrete phases,
- * so `?method=steel` already opens (as the concrete build).
+ * Method "steel" — light-gauge steel framing (LSF) above the concrete podium
+ * (docs/build3d/METHODS.md § steel). Phases 0–5, 9, 11–13 are the concrete builders; 6, 7, 8
+ * and 10 come from the shared frame kit (steps/methods/frame/) with the steel spec.
  */
 import type { PhaseBuilder } from '../../types';
-import { CONCRETE_PHASES } from '../concrete';
+import { framePhases } from '../frame/phases';
+import { STEEL } from '../frame/spec';
 
-export const STEEL_PHASES: PhaseBuilder[] = [...CONCRETE_PHASES];
+export const STEEL_PHASES: PhaseBuilder[] = framePhases(STEEL);
