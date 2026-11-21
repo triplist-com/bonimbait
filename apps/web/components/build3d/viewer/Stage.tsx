@@ -7,7 +7,7 @@
  */
 import { CameraControls } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { useEffect, useMemo, useRef } from 'react';
+import { forwardRef, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { Director, type Focus } from '@/lib/build3d/engine/runtime/director';
@@ -37,7 +37,15 @@ export interface StageProps {
   mobile: boolean;
   lighting?: 'day' | 'dusk';
   onIntroDone?: () => void;
+  /** "New this step" emphasis: resting tint on the step's parts, finished parts muted, callout pin. Default on. */
+  emphasis?: boolean;
+  /** prefers-reduced-motion: instant camera cuts, no step orbit, no pulse / peel lift. */
+  reducedMotion?: boolean;
+  /** Callout pin on the step's new parts (number + short label). */
+  callout?: { n: number; label: string } | null;
 }
+
+type SceneProps = StageProps & { calloutEl: React.RefObject<HTMLDivElement> };
 
 const DEG = Math.PI / 180;
 const FOV = 32;
@@ -63,7 +71,9 @@ if (typeof window !== 'undefined') {
 }
 
 export default function Stage(props: StageProps) {
+  const calloutEl = useRef<HTMLDivElement>(null);
   return (
+    <>
     <Canvas
       className="!absolute inset-0"
       shadows={{ type: THREE.PCFSoftShadowMap }}
@@ -77,12 +87,64 @@ export default function Stage(props: StageProps) {
         gl.setClearColor(0x000000, 0);
       }}
     >
-      <Scene {...props} />
+      <Scene {...props} calloutEl={calloutEl} />
     </Canvas>
+    <StepCallout ref={calloutEl} callout={props.callout} reducedMotion={props.reducedMotion} />
+    </>
   );
 }
 
-function Scene({ house, timeline, step, ghost, xray, autoRotate, resetTick, intro, insets, mobile, lighting = 'day', onIntroDone }: StageProps) {
+/**
+ * Numbered pin over the step's new parts (positioned every rendered frame by the Scene, no
+ * React state per frame). Hidden while the camera moves and outside the unobstructed area.
+ */
+const StepCallout = forwardRef<HTMLDivElement, { callout?: StageProps['callout']; reducedMotion?: boolean }>(function StepCallout(
+  { callout, reducedMotion },
+  ref,
+) {
+  return (
+    <div
+      ref={ref}
+      aria-hidden
+      data-b3d-callout
+      className="pointer-events-none absolute left-0 top-0 z-[1] opacity-0 transition-opacity duration-300 will-change-transform"
+      style={{ transform: 'translate3d(-999px,-999px,0)' }}
+    >
+      {callout && (
+        <div key={callout.n} className="flex -translate-x-1/2 -translate-y-full flex-col items-center">
+          <div className="flex max-w-[220px] items-center gap-1.5 rounded-full bg-white/95 py-1 pe-3 ps-1 shadow-[0_6px_18px_-6px_rgba(35,31,32,0.45)] ring-1 ring-primary/25">
+            <span className="grid h-6 min-w-6 shrink-0 place-items-center rounded-full bg-primary px-1 text-[12px] font-black tabular-nums text-white">{callout.n}</span>
+            <span className="truncate text-[12.5px] font-bold leading-none text-ink">{callout.label}</span>
+          </div>
+          <span className="h-5 w-[2px] bg-primary/80" />
+          <span className="relative grid h-3 w-3 place-items-center">
+            {!reducedMotion && <span className="absolute inset-0 animate-ping-soft rounded-full bg-primary/50" />}
+            <span className="h-2.5 w-2.5 rounded-full border-2 border-white bg-primary shadow" />
+          </span>
+        </div>
+      )}
+    </div>
+  );
+});
+
+function Scene({
+  house,
+  timeline,
+  step,
+  ghost,
+  xray,
+  autoRotate,
+  resetTick,
+  intro,
+  insets,
+  mobile,
+  lighting = 'day',
+  onIntroDone,
+  emphasis = true,
+  reducedMotion = false,
+  callout,
+  calloutEl,
+}: SceneProps) {
   const { gl, scene, camera, invalidate, size } = useThree();
   const controls = useRef<CameraControls>(null);
   const director = useMemo(() => new Director(house, timeline), [house, timeline]);
@@ -270,13 +332,17 @@ function Scene({ house, timeline, step, ghost, xray, autoRotate, resetTick, intr
     const vfov = FOV * DEG * (h / size.height);
     const hfov = 2 * Math.atan(Math.tan((FOV * DEG) / 2) * (w / size.height));
     const fit = Math.min(vfov, hfov);
-    let dist = hint?.distance ?? (r / Math.sin(fit / 2)) * (site ? 0.92 : 0.98) * (hint?.zoom ?? 1);
+    // Portrait (phones): never zoom in past the fit, or wide hero shots crop the house.
+    const portrait = h > w * 1.05;
+    const zoom = portrait ? Math.max(1, hint?.zoom ?? 1) : hint?.zoom ?? 1;
+    let dist = hint?.distance ?? (r / Math.sin(fit / 2)) * (site && !portrait ? 0.92 : 0.98) * zoom;
     dist = Math.min(150, Math.max(7, dist));
     const az =
       hint?.azimuth !== undefined ? director.frontAzimuth + hint.azimuth * DEG : userAngles.current?.az ?? director.frontAzimuth + 35 * DEG;
     const polar = hint?.polar !== undefined && !userAngles.current ? hint.polar * DEG : userAngles.current?.polar ?? (hint?.polar ?? 55) * DEG;
     const sp = Math.sin(polar);
     const pos = new THREE.Vector3(sp * Math.sin(az), Math.cos(polar), sp * Math.cos(az)).multiplyScalar(dist).add(center);
+    instant = instant || reducedMotion;
     void c.setLookAt(pos.x, pos.y, pos.z, center.x, center.y, center.z, !instant);
     const wpp = (2 * dist * Math.tan((FOV * DEG) / 2)) / size.height;
     // camera-controls negates focal y: +y moves the camera down (target appears higher).
@@ -311,7 +377,9 @@ function Scene({ house, timeline, step, ghost, xray, autoRotate, resetTick, intr
       introState.current = 'none';
       frame(director.focus(step), first);
     }
-    stepOrbit.current = timeline.steps[step]?.camera?.orbit ? performance.now() + 1400 : 0;
+    stepOrbit.current = timeline.steps[step]?.camera?.orbit && !reducedMotion ? performance.now() + 1400 : 0;
+    anchor.current = director.calloutAnchor(step);
+    calloutT.current = performance.now();
     invalidate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, director]);
@@ -338,6 +406,58 @@ function Scene({ house, timeline, step, ghost, xray, autoRotate, resetTick, intr
     invalidate();
   }, [autoRotate, invalidate]);
 
+  useEffect(() => {
+    director.setFocus(emphasis);
+    invalidate();
+  }, [emphasis, director, invalidate]);
+  useEffect(() => {
+    director.reducedMotion = reducedMotion;
+  }, [reducedMotion, director]);
+
+  // --- callout pin ---------------------------------------------------------------
+  const anchor = useRef<THREE.Vector3 | null>(null);
+  /** When the current step started / the camera last moved (ms). */
+  const calloutT = useRef(0);
+  const lastCam = useMemo(() => new THREE.Matrix4(), []);
+  const _proj = useMemo(() => new THREE.Vector3(), []);
+  const calloutShown = useRef(false);
+  const calloutOn = !!callout && emphasis;
+  const placeCallout = () => {
+    const el = calloutEl.current;
+    if (!el) return;
+    const now = performance.now();
+    if (!lastCam.equals(camera.matrixWorld)) {
+      lastCam.copy(camera.matrixWorld);
+      calloutT.current = Math.max(calloutT.current, now - 400);
+    }
+    const a = anchor.current;
+    let show = calloutOn && !!a && introState.current === 'none' && dusk.current < 0.05 && !autoplayRotate.current && stepOrbit.current === 0;
+    // Wait for the camera to settle (and the step's parts to start appearing).
+    const wait = calloutT.current + 650 - now;
+    if (show && wait > 0) {
+      show = false;
+      invalidate();
+    }
+    if (show && a) {
+      const v = _proj.copy(a).project(camera);
+      const x = ((v.x + 1) / 2) * size.width;
+      const y = ((1 - v.y) / 2) * size.height;
+      // Keep it in the unobstructed area (the pill sits ~60 px above the point).
+      if (v.z > 1 || x < insets.left + 120 || x > size.width - insets.right - 120 || y < insets.top + 70 || y > size.height - insets.bottom - 12) show = false;
+      else {
+        const tr = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
+        if (el.dataset.tr !== tr) {
+          el.dataset.tr = tr;
+          el.style.transform = tr;
+        }
+      }
+    }
+    if (show !== calloutShown.current) {
+      calloutShown.current = show;
+      el.style.opacity = show ? '1' : '0';
+    }
+  };
+
   useFrame((_, dt) => {
     const c = controls.current;
     let busy = director.update(dt, camera);
@@ -363,6 +483,7 @@ function Scene({ house, timeline, step, ghost, xray, autoRotate, resetTick, intr
     }
     // Build the rest of the timeline in small idle slices.
     if (prebuilding.current && !busy) prebuilding.current = director.prebuild(4);
+    placeCallout();
     if (busy || autoplayRotate.current || stepOrbit.current > 0 || prebuilding.current) invalidate();
   });
 

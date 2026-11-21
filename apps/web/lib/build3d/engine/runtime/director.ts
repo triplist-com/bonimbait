@@ -19,6 +19,22 @@ import { buildPart, disposePart, materialKeyAt, type PartRT } from './part';
 const APPEAR = 0.35;
 const VANISH = 0.3;
 const HIGHLIGHT_HOLD = 1.5;
+/**
+ * "New this step" emphasis (toolbar "הדגשה"): the current step's parts keep a resting magenta
+ * tint (fraction of the full highlight) after their animation, with two soft breaths in between,
+ * and finished parts are muted toward warm gray. No postprocessing: shared material variants.
+ */
+const HIGHLIGHT_REST = 0.72;
+const PULSE_TIME = 2.6;
+const PULSE_PERIOD = 1.3;
+const MUTE = 0.62;
+/** The terrain mutes less (the site stays warm, the house parts go paper-gray). */
+const GROUND_MUTE = 0.55;
+/** Interior phases (systems, finishes): parts above the cut are lifted off (peeled), not ghosted. */
+const PEEL_PHASES = new Set([9, 11]);
+const PEEL_LIFT = 2.2;
+/** Steps closer together than this (s) are a fast scrub / key repeat: no half-built entries. */
+const QUICK_STEP = 0.3;
 const GROUND_XRAY = 0.3;
 /**
  * Parts cast into concrete (or pure clutter) that VANISH instead of turning translucent
@@ -70,6 +86,16 @@ export class Director {
   private time = 0;
   private span = 0;
   private hl = 0;
+  /** Emphasis on (toolbar): resting highlight + muted finished parts. */
+  private focusOn = true;
+  /** Current step: finished parts use their muted variants / the step has emphasized parts. */
+  private muteOn = false;
+  private hasNew = false;
+  private mute = 0;
+  /** Parts lifted off by the interior peel (eased back when it ends). */
+  private lifted = new Set<PartRT>();
+  /** prefers-reduced-motion: no pulse, no peel lift (fades only). */
+  reducedMotion = false;
   private ghostFuture = false;
   private xrayOn = true;
   private xrayTimer = 0;
@@ -175,7 +201,16 @@ export class Director {
     const prev = this.step;
     const oneForward = s === prev + 1;
     const forward = s > prev || (s === prev && !!opts.replay);
+    // Fast scrubbing / key repeat: the new parts fade in fully built instead of starting their
+    // entry animation (no half-built flicker while the steps fly by).
+    const quick = prev >= 0 && s !== prev && !opts.replay && this.clock < QUICK_STEP && !this.intro;
     this.step = s;
+    const st = this.timeline.steps[s];
+    this.hasNew = (this.timeline.added[s] ?? []).some((i) => {
+      const p = this.timeline.parts[i].part;
+      return p.highlight !== false && !p.tags?.includes('ground') && p.shape.kind !== 'plan';
+    });
+    this.muteOn = this.focusOn && st?.view?.lighting !== 'dusk';
     this.clock = 0;
     this.span = this.timeline.span[s] ?? 0;
     this.xrayForce = true;
@@ -187,7 +222,7 @@ export class Director {
       const nowVis = visibleAt(tp, s);
       if (tp.addedAt === s) {
         rt = this.ensure(i);
-        if (forward) this.begin(rt, 'enter');
+        if (forward && !quick) this.begin(rt, 'enter');
         else this.begin(rt, wasVis ? 'shown' : 'appear');
       } else if (tp.removedAt === s && wasVis && oneForward && rt) {
         this.begin(rt, 'leave');
@@ -347,6 +382,19 @@ export class Director {
     this.onChange?.();
   }
 
+  /** Toolbar "הדגשה": resting highlight of the current step's parts + muted finished parts. */
+  setFocus(on: boolean) {
+    if (on === this.focusOn) return;
+    this.focusOn = on;
+    this.muteOn = on && this.timeline.steps[this.step]?.view?.lighting !== 'dusk';
+    for (const rt of this.rts) {
+      if (!rt || rt.mode === 'hidden') continue;
+      rt.look.key = '';
+      this.dirty.add(rt);
+    }
+    this.onChange?.();
+  }
+
   setXray(on: boolean) {
     this.xrayOn = on;
     this.xrayForce = true;
@@ -389,14 +437,22 @@ export class Director {
     if (!introHold) this.clock += dt;
 
     // Highlight level for the current step.
-    const hl = this.clock < this.span ? 1 : 1 - smooth(this.span, this.span + HIGHLIGHT_HOLD, this.clock);
+    const hl = this.highlightLevel();
     if (Math.abs(hl - this.hl) > 1e-3 || (hl === 0 && this.hl !== 0)) {
       const wasOn = this.hl > 0.004;
       this.hl = hl;
       this.lib.setHighlight(hl);
       const on = hl > 0.004;
       if (wasOn !== on) this.timeline.added[this.step]?.forEach((i) => this.rts[i] && this.dirty.add(this.rts[i] as PartRT));
-      busy = busy || on;
+      busy = true;
+    }
+    // Finished parts ease into / out of their muted look.
+    const mt = this.muteOn && this.hasNew && !this.intro ? MUTE : 0;
+    if (this.mute !== mt) {
+      const d = mt - this.mute;
+      this.mute = Math.abs(d) < 0.004 ? mt : this.mute + d * Math.min(1, dt * 5);
+      this.lib.setMute(this.mute);
+      busy = true;
     }
 
     // X-ray at ~8 Hz, or immediately after a step change / camera move.
@@ -434,6 +490,16 @@ export class Director {
     return busy || this.dirty.size > 0;
   }
 
+  /** Emphasis of the current step's parts: full while they animate, two soft breaths, then a resting tint. */
+  private highlightLevel(): number {
+    if (!this.focusOn) return this.clock < this.span ? 1 : 1 - smooth(this.span, this.span + HIGHLIGHT_HOLD, this.clock);
+    if (this.clock < this.span) return 1;
+    const t = this.clock - this.span;
+    if (this.reducedMotion) return HIGHLIGHT_REST + (1 - HIGHLIGHT_REST) * (1 - smooth(0, 0.6, t));
+    const env = 1 - smooth(0, PULSE_TIME, t);
+    return HIGHLIGHT_REST + (1 - HIGHLIGHT_REST) * env * (0.5 + 0.5 * Math.cos((t * 2 * Math.PI) / PULSE_PERIOD));
+  }
+
   /** Returns true while the part still needs per-frame updates. */
   private tick(rt: PartRT, dt: number): boolean {
     // X-ray easing.
@@ -442,6 +508,14 @@ export class Director {
       const d = rt.xrayTarget - rt.xrayValue;
       rt.xrayValue = Math.abs(d) < 0.01 ? rt.xrayTarget : rt.xrayValue + d * Math.min(1, dt * 7);
       xrayMoving = rt.xrayValue !== rt.xrayTarget;
+    }
+    // Interior peel: lifted parts rise as they fade (and drop back when the peel ends).
+    if (this.lifted.has(rt) && (rt.mode === 'shown' || rt.mode === 'appear')) {
+      rt.pivot.position.y = this.reducedMotion ? 0 : PEEL_LIFT * (1 - rt.xrayValue);
+      if (rt.xrayValue === 1 && rt.xrayTarget === 1) {
+        rt.pivot.position.y = 0;
+        this.lifted.delete(rt);
+      }
     }
     let opacity = 1;
     let active = false;
@@ -513,9 +587,10 @@ export class Director {
       active = true;
     }
     const hl = isCurrent && this.hl > 0.004 && rt.part.highlight !== false && !rt.isGround && rt.mode !== 'leave';
+    const muted = !isCurrent && this.muteOn && !this.intro;
     let xr = rt.xrayValue;
     if (rt.mode === 'enter' || isCurrent) xr = 1;
-    this.applyLook(rt, opacity * xr, hl);
+    this.applyLook(rt, opacity * xr, hl, muted);
     return active || xrayMoving;
   }
 
@@ -655,7 +730,7 @@ export class Director {
   // Looks (materials)
   // -------------------------------------------------------------------------
 
-  private applyLook(rt: PartRT, opacity: number, hl: boolean) {
+  private applyLook(rt: PartRT, opacity: number, hl: boolean, muted = false) {
     const o = Math.max(0, Math.min(1, opacity * rt.baseOpacity));
     const visible = o > 0.003;
     rt.root.visible = visible;
@@ -665,7 +740,7 @@ export class Director {
       if (rt.mode !== 'enter' || rt.anim.motion !== 'fade') rt.plan.material.uniforms.uOpacity.value = o;
       return;
     }
-    const key = o >= 0.995 ? (hl ? 'H' : 'S') : Math.abs(o - GHOST_OPACITY) < 0.004 ? 'G' : Math.abs(o - XRAY_OPACITY) < 0.004 ? 'X' : 'D';
+    const key = o >= 0.995 ? (hl ? 'H' : muted ? 'M' : 'S') : Math.abs(o - GHOST_OPACITY) < 0.004 ? 'G' : Math.abs(o - XRAY_OPACITY) < 0.004 ? 'X' : 'D';
     if (key === rt.look.key && key !== 'D') return;
     rt.look.key = key;
     const lib = this.lib;
@@ -675,6 +750,7 @@ export class Director {
       let mat: THREE.Material;
       if (key === 'S') mat = base;
       else if (key === 'H') mat = lib.highlightOf(base);
+      else if (key === 'M') mat = lib.mutedOf(base, rt.isGround ? GROUND_MUTE : 1);
       else if (key === 'G') mat = lib.ghostOf(base);
       else if (key === 'X') mat = lib.xrayOf(base);
       else {
@@ -705,6 +781,7 @@ export class Director {
       const inst = kind === 'iedge';
       if (key === 'S') l.material = inst ? lib.instEdge : lib.edge;
       else if (key === 'H') l.material = inst ? lib.instEdgeHighlight : lib.edgeHighlight;
+      else if (key === 'M') l.material = inst ? lib.instEdgeMuted : lib.edgeMuted;
       else if (key === 'G') l.material = inst ? lib.instEdgeGhost : lib.edgeGhost;
       else if (key === 'X') l.material = inst ? lib.instEdgeXray : lib.edgeXray;
       else {
@@ -743,7 +820,9 @@ export class Director {
     const st = this.timeline.steps[this.step];
     if (!st) return;
     const occl = this.xrayEnabledForStep();
-    const above = this.xrayOn ? st.view?.ghostAbove : undefined;
+    // Interior phases peel what is above the work off (lifted, gone) instead of ghosting it.
+    const peel = this.xrayOn && occl && PEEL_PHASES.has(st.phase) && st.view?.xray !== false;
+    const above = this.xrayOn ? st.view?.ghostAbove ?? (peel ? this.peelCut() : undefined) : undefined;
     const groundX = !!st.view?.groundXray;
     const ghostTags = this.xrayOn ? st.view?.ghostTags : undefined;
     const samples = occl || above !== undefined ? this.xraySamples() : [];
@@ -766,6 +845,10 @@ export class Director {
         // Site clutter (toilet, pole, machines) and steel fade as soon as they hide any of the work.
         else if (occl && samples.length) fade = this.occludes(rt, cam, samples, hide || tags?.some((t) => t === 'site-temp' || t === 'machine') ? 1 : need);
         if (fade) target = hide ? 0 : XRAY_OPACITY;
+        if (fade && !hide && peel && above !== undefined && rt.box.min.y >= above - 0.02) {
+          target = 0;
+          this.lifted.add(rt);
+        }
       }
       if (rt.xrayTarget !== target) {
         rt.xrayTarget = target;
@@ -775,6 +858,41 @@ export class Director {
   }
 
   private _cam = new THREE.Vector3();
+
+  /** Default peel height for interior steps that set no ghostAbove: just above the new work. */
+  private peelCut(): number | undefined {
+    let top = -Infinity;
+    for (const i of this.timeline.added[this.step] ?? []) {
+      const rt = this.rts[i];
+      if (rt && !rt.isGround && rt.part.highlight !== false) top = Math.max(top, rt.box.max.y);
+    }
+    return isFinite(top) ? top + 0.15 : undefined;
+  }
+
+  /**
+   * Where the step's callout pin points: a point ON the new parts (the sample nearest the
+   * middle of their bounds). null when the step adds nothing to point at.
+   */
+  calloutAnchor(s = this.step): THREE.Vector3 | null {
+    if (s !== this.step) return null;
+    const box = new THREE.Box3();
+    for (const i of this.timeline.added[s] ?? []) {
+      const rt = this.rts[i];
+      if (rt && !rt.isGround && rt.part.highlight !== false && !rt.plan) box.union(rt.box);
+    }
+    if (box.isEmpty()) return null;
+    const c = box.getCenter(new THREE.Vector3());
+    let best: THREE.Vector3 | null = null;
+    let bd = Infinity;
+    for (const p of this.xraySamples()) {
+      const d = p.distanceToSquared(c);
+      if (d < bd) {
+        bd = d;
+        best = p;
+      }
+    }
+    return (best ?? c).clone();
+  }
 
   /** Points on the current step's parts that the x-ray keeps visible (cached per step). */
   private xraySamples(): THREE.Vector3[] {

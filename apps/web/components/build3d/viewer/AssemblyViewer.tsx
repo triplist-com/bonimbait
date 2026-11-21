@@ -11,17 +11,25 @@
  *                 the landing's 2D analysis animation). Only applies when opening at step 1.
  *   className   — sizing of the root (it fills its parent: give the parent a height).
  */
-import { ChevronLeft, ChevronRight, Focus, House, Layers, ListOrdered, Maximize2, Minimize2, Pause, Play, Rotate3d, ScanEye, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Focus, Highlighter, House, Layers, ListOrdered, Maximize2, Minimize2, Pause, Play, Rotate3d, ScanEye, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { house } from '@/lib/build3d/house';
 import { getTimeline } from '@/lib/build3d/engine/timeline';
 import { DEFAULT_METHOD, type MethodId } from '@/lib/build3d/methods';
 import Stage, { type Insets } from './Stage';
-import StepCard, { StepHeader } from './StepCard';
+import StepCard, { StepHeader, StepNumbers } from './StepCard';
+import PartsPanel from './PartsPanel';
+import StepProgress from './StepProgress';
+import ViewMenu, { type ViewToggle } from './ViewMenu';
+import { useReducedMotion } from './useReducedMotion';
 import StepList from './StepList';
 import Scrubber from './Scrubber';
 import BottomSheet from './BottomSheet';
 import Summary from './Summary';
+import MethodSwitcher from './MethodSwitcher';
+import { divergenceStep, equivalentStep } from './methodSwitch';
+import { setPhaseMethod } from '@/lib/build3d/engine/phases';
+import { writeMethodUrl } from '../landing/methodUi';
 import { FOCUS } from './format';
 
 export interface AssemblyViewerProps {
@@ -29,12 +37,14 @@ export interface AssemblyViewerProps {
   intro?: 'plan' | 'none';
   /** Construction method (docs/build3d/METHODS.md). Remount (key) to switch. */
   method?: MethodId;
+  /** Switch request (1-based step already mapped): the parent remounts with the new method. */
+  onMethodChange?: (method: MethodId, step: number) => void;
   className?: string;
 }
 
 const DAY_BG = 'linear-gradient(180deg, #E4EDF5 0%, #F1F2F0 42%, #F6F2EC 72%, #F2ECE3 100%)';
 const DUSK_BG = 'linear-gradient(180deg, #2E3A58 0%, #6E5A72 38%, #C98F78 70%, #E8C8A4 100%)';
-const PEEK = 198;
+const PEEK = 272;
 
 function readUrlStep(): number | undefined {
   if (typeof window === 'undefined') return undefined;
@@ -42,8 +52,9 @@ function readUrlStep(): number | undefined {
   return Number.isFinite(v) && v >= 1 ? v : undefined;
 }
 
-export default function AssemblyViewer({ initialStep, intro = 'none', method = DEFAULT_METHOD, className = '' }: AssemblyViewerProps) {
+export default function AssemblyViewer({ initialStep, intro = 'none', method = DEFAULT_METHOD, onMethodChange, className = '' }: AssemblyViewerProps) {
   const timeline = useMemo(() => getTimeline(house, method), [method]);
+  setPhaseMethod(method); // phase names in the card / scrubber / list follow the method
   const n = timeline.steps.length;
   const clamp = useCallback((i: number) => Math.max(0, Math.min(n - 1, i)), [n]);
   const [step, setStep] = useState(() => clamp((initialStep ?? readUrlStep() ?? 1) - 1));
@@ -52,9 +63,12 @@ export default function AssemblyViewer({ initialStep, intro = 'none', method = D
   const [ghost, setGhost] = useState(false);
   const [xray, setXray] = useState(true);
   const [autoRotate, setAutoRotate] = useState(false);
+  const [emphasis, setEmphasis] = useState(true);
+  const reducedMotion = useReducedMotion();
   const [listOpen, setListOpen] = useState(false);
   const [resetTick, setResetTick] = useState(0);
   const [summary, setSummary] = useState(false);
+  const [summaryTick, setSummaryTick] = useState(0);
   const [mobile, setMobile] = useState(false);
   const [cardW, setCardW] = useState(392);
   const [fullscreen, setFullscreen] = useState(false);
@@ -65,7 +79,8 @@ export default function AssemblyViewer({ initialStep, intro = 'none', method = D
 
   // Layout mode.
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 640px)');
+    // Bottom-sheet layout on phones, small tablets and portrait tablets (the side card would crop the house).
+    const mq = window.matchMedia('(max-width: 900px), (orientation: portrait) and (max-width: 1199px)');
     const update = () => {
       setMobile(mq.matches);
       setCardW(Math.round(Math.min(392, Math.max(320, window.innerWidth * 0.3))));
@@ -96,6 +111,25 @@ export default function AssemblyViewer({ initialStep, intro = 'none', method = D
     [clamp],
   );
 
+  /** Switch method: 'same' = the phase-equivalent step (header), 'diverge' = where the builds part (finale). */
+  const switchMethod = useCallback(
+    (m: MethodId, to: 'same' | 'diverge') => {
+      if (m === method) return;
+      const next = getTimeline(house, m);
+      const i = to === 'same' ? equivalentStep(timeline, step, next) : divergenceStep(timeline, next);
+      if (onMethodChange) onMethodChange(m, i + 1);
+      else {
+        writeMethodUrl(m, i + 1);
+        window.location.reload();
+      }
+    },
+    [method, timeline, step, onMethodChange],
+  );
+  const openSummary = useCallback(() => {
+    setSummary(true);
+    setSummaryTick((t) => t + 1);
+  }, []);
+
   // Keep ?step= in sync (1-based), without adding history entries.
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -120,6 +154,7 @@ export default function AssemblyViewer({ initialStep, intro = 'none', method = D
   // Finale summary after the last step's animation.
   useEffect(() => {
     setSummary(false);
+    setSummaryTick(0);
     if (step !== n - 1) return;
     const t = window.setTimeout(() => setSummary(true), (timeline.span[step] + 1.8) * 1000);
     return () => window.clearTimeout(t);
@@ -137,6 +172,8 @@ export default function AssemblyViewer({ initialStep, intro = 'none', method = D
         e.preventDefault();
         goRel(-1);
       } else if (e.key === ' ') {
+        // Space activates a focused button / link / disclosure; the slider keeps its own keys.
+        if (el?.closest('button,a,summary,[role=slider],[role=button]')) return;
         e.preventDefault();
         setPlaying((p) => !p);
       } else if (e.key === 'Home') go(0);
@@ -171,21 +208,29 @@ export default function AssemblyViewer({ initialStep, intro = 'none', method = D
     if (step !== 0) setIntroRunning(false);
   }, [step]);
 
+  const viewToggles: ViewToggle[] = [
+    { label: 'הדגשת החלקים החדשים', icon: <Highlighter size={18} />, active: emphasis, onClick: () => setEmphasis((v) => !v) },
+    { label: 'תצוגה מקדימה של השלבים הבאים', icon: <Layers size={18} />, active: ghost, onClick: () => setGhost((v) => !v) },
+    { label: 'שקיפות אוטומטית', icon: <ScanEye size={18} />, active: xray, onClick: () => setXray((v) => !v) },
+    { label: 'סיבוב אוטומטי', icon: <Rotate3d size={18} />, active: autoRotate, onClick: () => setAutoRotate((v) => !v) },
+  ];
+  const nextStep = step < n - 1 ? { title: timeline.steps[step + 1].titleHe, onGo: () => goRel(1) } : undefined;
+
   const toggles = (
     <>
       <ToolButton label="כל השלבים" active={listOpen} onClick={() => setListOpen((v) => !v)}>
         <ListOrdered size={18} />
       </ToolButton>
       <span className="mx-0.5 h-5 w-px bg-ink-200" />
-      <ToolButton label="תצוגה מקדימה של השלבים הבאים" active={ghost} onClick={() => setGhost((v) => !v)}>
-        <Layers size={18} />
-      </ToolButton>
-      <ToolButton label="שקיפות אוטומטית" active={xray} onClick={() => setXray((v) => !v)}>
-        <ScanEye size={18} />
-      </ToolButton>
-      <ToolButton label="סיבוב אוטומטי" active={autoRotate} onClick={() => setAutoRotate((v) => !v)}>
-        <Rotate3d size={18} />
-      </ToolButton>
+      {mobile ? (
+        <ViewMenu items={viewToggles} />
+      ) : (
+        viewToggles.map((t) => (
+          <ToolButton key={t.label} label={t.label} active={t.active} onClick={t.onClick}>
+            {t.icon}
+          </ToolButton>
+        ))
+      )}
       <ToolButton label="איפוס מבט" onClick={() => setResetTick((v) => v + 1)}>
         <Focus size={18} />
       </ToolButton>
@@ -217,13 +262,12 @@ export default function AssemblyViewer({ initialStep, intro = 'none', method = D
         {playing ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="-me-0.5" />}
       </button>
       <button
-        onClick={() => goRel(1)}
-        disabled={step === n - 1}
-        aria-label="השלב הבא"
-        title="השלב הבא (←)"
-        className={`flex items-center justify-center gap-1 rounded-full bg-primary font-bold text-white shadow-[0_8px_18px_-8px_rgba(230,21,89,0.9)] transition hover:bg-primary-700 disabled:opacity-40 ${FOCUS} ${big ? 'h-11 pe-3 ps-4 text-[15px]' : 'h-12 flex-1 pe-3 ps-4 text-[16px]'}`}
+        onClick={() => (step === n - 1 ? openSummary() : goRel(1))}
+        aria-label={step === n - 1 ? 'סיכום והשוואה בין שיטות' : 'השלב הבא'}
+        title={step === n - 1 ? 'סיכום והשוואה בין שיטות' : 'השלב הבא (←)'}
+        className={`flex items-center justify-center gap-1 whitespace-nowrap rounded-full bg-primary font-bold text-white shadow-[0_8px_18px_-8px_rgba(230,21,89,0.9)] transition hover:bg-primary-700 disabled:opacity-40 ${FOCUS} ${big ? 'h-11 pe-3 ps-4 text-[15px]' : 'h-12 flex-1 pe-3 ps-4 text-[16px]'}`}
       >
-        הבא
+        {step === n - 1 ? 'סיכום והשוואה' : 'הבא'}
         <ChevronLeft size={19} />
       </button>
     </div>
@@ -248,6 +292,9 @@ export default function AssemblyViewer({ initialStep, intro = 'none', method = D
         mobile={mobile}
         lighting={dusk ? 'dusk' : 'day'}
         onIntroDone={onIntroDone}
+        emphasis={emphasis}
+        reducedMotion={reducedMotion}
+        callout={ui && !dusk && step > 0 ? { n: step + 1, label: cur.titleHe } : null}
       />
       </div>
 
@@ -255,6 +302,8 @@ export default function AssemblyViewer({ initialStep, intro = 'none', method = D
       <header
         className={`pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 p-3 transition-all duration-700 sm:p-4 pt-[max(0.75rem,env(safe-area-inset-top))] ${ui ? 'opacity-100' : '-translate-y-3 opacity-0'}`}
       >
+        {/* Logo + construction-method switcher (wraps under the logo when the row is too narrow) */}
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
         <a
           href="/"
           aria-label="בונים בית, לאתר הראשי"
@@ -268,6 +317,8 @@ export default function AssemblyViewer({ initialStep, intro = 'none', method = D
             <span className="block text-[11.5px] font-medium text-ink-600">מתוכנית לבית</span>
           </span>
         </a>
+        <MethodSwitcher method={method} onSelect={(m) => switchMethod(m, 'same')} />
+        </div>
         <div className="pointer-events-auto flex items-center gap-0.5 rounded-2xl bg-white/[0.85] p-1 shadow-[0_6px_24px_-10px_rgba(35,31,32,0.3)] backdrop-blur-xl">
           {toggles}
         </div>
@@ -277,15 +328,14 @@ export default function AssemblyViewer({ initialStep, intro = 'none', method = D
         <>
           {/* Step card (start side) */}
           <aside
-            className={`absolute bottom-[100px] right-4 top-[76px] z-10 transition-all duration-700 ${ui ? 'opacity-100' : 'translate-x-6 opacity-0'}`}
+            className={`pointer-events-none absolute bottom-[100px] right-4 top-[76px] z-10 transition-all duration-700 ${ui ? 'opacity-100' : 'translate-x-6 opacity-0'}`}
             style={{ width: cardW }}
           >
-            <div tabIndex={0} aria-label="פרטי השלב" className="h-full overflow-y-auto overscroll-contain rounded-3xl border border-white/70 bg-white/90 p-5 pb-8 shadow-[0_18px_50px_-18px_rgba(35,31,32,0.35)] backdrop-blur-xl [scrollbar-width:thin]">
-              <div key={step} className="animate-slide-up">
-                <StepCard step={cur} index={step} total={n} cumCost={timeline.cumCostILS[step]} cumDays={timeline.cumDays[step]} />
+            <div tabIndex={0} aria-label="פרטי השלב" className="pointer-events-auto max-h-full overflow-y-auto overscroll-contain rounded-3xl border border-white/70 bg-white/90 p-5 shadow-[0_18px_50px_-18px_rgba(35,31,32,0.35)] backdrop-blur-xl [scrollbar-width:thin]">
+              <div key={step} className="animate-fade-in">
+                <StepCard step={cur} index={step} total={n} cumCost={timeline.cumCostILS[step]} cumDays={timeline.cumDays[step]} next={nextStep} />
               </div>
             </div>
-            <div aria-hidden className="pointer-events-none absolute inset-x-px bottom-px h-9 rounded-b-3xl bg-gradient-to-t from-white to-transparent" />
           </aside>
 
           {/* Steps list (end side) */}
@@ -301,6 +351,7 @@ export default function AssemblyViewer({ initialStep, intro = 'none', method = D
           <footer
             className={`absolute bottom-4 left-4 right-4 z-10 flex items-center gap-4 rounded-2xl border border-white/70 bg-white/[0.88] px-3 py-2.5 shadow-[0_18px_50px_-18px_rgba(35,31,32,0.35)] backdrop-blur-xl transition-all duration-700 ${ui ? 'opacity-100' : 'translate-y-4 opacity-0'}`}
           >
+            <StepProgress key={step} seconds={timeline.span[step]} className="absolute inset-x-6 -top-px" />
             {nav(true)}
             <div className="min-w-0 flex-1 px-1">
               <Scrubber timeline={timeline} step={step} onSeek={(i) => go(i)} />
@@ -321,15 +372,24 @@ export default function AssemblyViewer({ initialStep, intro = 'none', method = D
                 <div className="flex flex-col gap-1.5">
                   <div className="min-w-0">
                     <StepHeader step={cur} index={step} total={n} />
-                    <h2 className="mt-0.5 line-clamp-2 text-[18px] font-extrabold leading-tight">{cur.titleHe}</h2>
+                    <h2 className="mt-0.5 line-clamp-1 text-[18px] font-extrabold leading-tight group-data-[snap=1]/sheet:line-clamp-none group-data-[snap=2]/sheet:line-clamp-none" title={cur.titleHe}>
+                      {cur.titleHe}
+                    </h2>
                   </div>
-                  <Scrubber timeline={timeline} step={step} onSeek={(i) => go(i)} thin />
+                  <div key={step} className="animate-fade-in">
+                    <PartsPanel materials={cur.materials} layout="scroll" />
+                  </div>
+                  <StepNumbers step={cur} />
+                  <div className="relative">
+                    <Scrubber timeline={timeline} step={step} onSeek={(i) => go(i)} thin />
+                    <StepProgress key={step} seconds={timeline.span[step]} className="absolute inset-x-0 -bottom-0.5" />
+                  </div>
                   {nav(false)}
                 </div>
               }
             >
               <div key={step} className="animate-fade-in">
-                <StepCard step={cur} index={step} total={n} cumCost={timeline.cumCostILS[step]} cumDays={timeline.cumDays[step]} hideHeader />
+                <StepCard step={cur} index={step} total={n} cumCost={timeline.cumCostILS[step]} cumDays={timeline.cumDays[step]} variant="sheet" next={nextStep} />
               </div>
             </BottomSheet>
           </div>
@@ -363,6 +423,10 @@ export default function AssemblyViewer({ initialStep, intro = 'none', method = D
       {summary && (
         <Summary
           timeline={timeline}
+          method={method}
+          openSignal={summaryTick}
+          sheetPeek={mobile ? PEEK : undefined}
+          onSwitchMethod={(m) => switchMethod(m, 'diverge')}
           onClose={() => setSummary(false)}
           onRestart={() => {
             setSummary(false);
@@ -380,12 +444,18 @@ function ToolButton({ label, active, onClick, children }: { label: string; activ
       onClick={onClick}
       aria-label={label}
       aria-pressed={active}
-      title={label}
-      className={`grid h-10 w-10 place-items-center rounded-xl transition sm:h-9 sm:w-9 ${FOCUS} ${
+      // 44 px on touch screens, 36 px with a mouse; a text tooltip on hover / keyboard focus.
+      className={`group/tb relative grid h-11 w-11 place-items-center rounded-xl transition [@media(pointer:fine)]:h-9 [@media(pointer:fine)]:w-9 ${FOCUS} ${
         active ? 'bg-primary text-white shadow-[0_4px_12px_-4px_rgba(230,21,89,0.8)]' : 'text-ink-700 hover:bg-ink-100'
       }`}
     >
       {children}
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute end-0 top-full z-30 mt-2 hidden whitespace-nowrap rounded-lg bg-ink px-2 py-1 text-[12px] font-medium text-white shadow-lg [@media(hover:hover)]:group-hover/tb:block group-focus-visible/tb:block"
+      >
+        {label}
+      </span>
     </button>
   );
 }

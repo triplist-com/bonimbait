@@ -7,7 +7,7 @@ import HeroVisual from './HeroVisual';
 import { checkPlanFile } from './fileCheck';
 
 interface LandingProps {
-  /** Start the analysis with the supported sample sheet. */
+  /** Continue with the supported sample sheet (opens the construction-method picker). */
   onStart: () => void;
 }
 
@@ -35,13 +35,13 @@ export default function Landing({ onStart }: LandingProps) {
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[560px]" style={{ background: 'radial-gradient(ellipse at 20% 10%, #fff 0%, transparent 60%), radial-gradient(ellipse at 90% 0%, rgba(230,21,89,.08), transparent 55%)' }} />
 
       <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
-        <Link href="/" className="flex items-center gap-2 font-extrabold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+        <Link href="/" className="flex min-h-11 items-center gap-2 rounded-lg font-extrabold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white" aria-hidden>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m3 11 9-8 9 8" /><path d="M5 10v10h14V10" /></svg>
           </span>
           בונים בית
         </Link>
-        <Link href="/" className="text-sm font-semibold text-ink/65 transition hover:text-primary">
+        <Link href="/" className="-me-2 inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-semibold text-ink/65 transition hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
           לאתר בונים בית ›
         </Link>
       </header>
@@ -59,6 +59,9 @@ export default function Landing({ onStart }: LandingProps) {
           <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-ink/75 sm:mt-4 sm:text-lg">
             מעלים את תוכנית ההגשה ורואים כל שלב בבנייה בתלת-ממד: יסודות, ברזל, בטון, בלוקים, מערכות וגמרים.
             כמו חוברת הרכבה, רק לבית שלכם.
+          </p>
+          <p className="mt-2 max-w-xl text-[14px] font-semibold leading-relaxed text-ink-700 sm:text-[15px]">
+            ואפשר להשוות: אותו בית בבטון ובלוקים, ICF, פלדה קלה, עץ או טרומי.
           </p>
 
           <div className="mt-5 max-w-xl sm:mt-7">
@@ -84,7 +87,7 @@ export default function Landing({ onStart }: LandingProps) {
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button type="button" onClick={onStart} className="rounded-full bg-primary px-5 py-2 text-sm font-bold text-white transition hover:brightness-110 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30">
-                    כן, הראו לי
+                    לראות את מגרש 43
                   </button>
                   <button type="button" onClick={() => setNotice(null)} className="rounded-full border border-ink/15 px-5 py-2 text-sm font-semibold transition hover:bg-black/5">
                     לא עכשיו
@@ -115,7 +118,7 @@ export default function Landing({ onStart }: LandingProps) {
             ))}
           </ol>
           <p className="mt-6 text-xs text-ink/45">
-            הדגמה בלבד: הכמויות והעלויות מוערכות ואינן מחליפות תוכניות מהנדס. <Link href="/" className="underline underline-offset-2 hover:text-primary">חזרה לאתר הראשי</Link>
+            הדגמה בלבד: הכמויות והעלויות מוערכות ואינן מחליפות תוכניות מהנדס. <Link href="/" className="inline-flex min-h-11 items-center underline underline-offset-2 hover:text-primary">חזרה לאתר הראשי</Link>
           </p>
         </div>
       </section>

@@ -36,7 +36,7 @@ export default function Scrubber({
   const hoverPhase = hover !== null ? timeline.phases.find((p) => hover >= p.first && hover <= p.last) : undefined;
 
   return (
-    <div className={`relative w-full select-none ${thin ? '' : 'pb-3.5'}`} style={{ touchAction: 'none' }}>
+    <div className="relative w-full select-none" style={{ touchAction: 'none' }}>
       <div
         ref={ref}
         role="slider"
@@ -45,8 +45,26 @@ export default function Scrubber({
         aria-valuemax={n}
         aria-valuenow={step + 1}
         aria-valuetext={`שלב ${step + 1}: ${timeline.steps[step]?.titleHe ?? ''}`}
+        aria-orientation="horizontal"
+        aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown PageUp PageDown Home End"
         tabIndex={0}
-        className={`group relative w-full cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white ${thin ? 'h-8' : 'h-8'}`}
+        onKeyDown={(e) => {
+          // RTL: left / up = later steps. Page keys jump to the next / previous phase. Handled
+          // here (not by the viewer's global keys), so stop the event.
+          const ph = timeline.phases.findIndex((p) => step >= p.first && step <= p.last);
+          let to: number | null = null;
+          if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') to = step + 1;
+          else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') to = step - 1;
+          else if (e.key === 'PageUp') to = timeline.phases[Math.min(timeline.phases.length - 1, ph + 1)]?.first ?? step;
+          else if (e.key === 'PageDown') to = step > (timeline.phases[ph]?.first ?? 0) ? timeline.phases[ph].first : timeline.phases[Math.max(0, ph - 1)]?.first ?? 0;
+          else if (e.key === 'Home') to = 0;
+          else if (e.key === 'End') to = n - 1;
+          if (to === null) return;
+          e.preventDefault();
+          e.stopPropagation();
+          onSeek(Math.max(0, Math.min(n - 1, to)));
+        }}
+        className={`group relative w-full cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white ${thin ? 'h-9' : 'h-11'}`}
         onPointerDown={(e) => {
           (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
           setDrag(true);
@@ -97,14 +115,15 @@ export default function Scrubber({
       {!thin && curPhase && (
         <div
           aria-hidden
-          className="pointer-events-none absolute bottom-0 whitespace-nowrap text-[11.5px] font-bold leading-none"
+          className="pointer-events-none absolute -bottom-0.5 flex max-w-[60%] items-center gap-1 whitespace-nowrap text-[11.5px] font-bold leading-none text-ink-700"
           style={{
-            right: `clamp(0%, ${pct((curPhase.first + curPhase.last + 1) / 2)}%, 100%)`,
+            // Ink text + a phase-color dot (light phase colors fail contrast as text); kept inside the bar.
+            right: `clamp(70px, ${pct((curPhase.first + curPhase.last + 1) / 2)}%, calc(100% - 70px))`,
             transform: 'translateX(50%)',
-            color: PHASES[curPhase.phase].color,
           }}
         >
-          {phaseLabel(PHASES[curPhase.phase].nameHe)}
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: PHASES[curPhase.phase].color }} />
+          <span className="truncate">{phaseLabel(PHASES[curPhase.phase].nameHe)}</span>
         </div>
       )}
       {hoverStep && hover !== null && hoverPhase && (
