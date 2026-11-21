@@ -3,6 +3,11 @@
 Each agent appends to its own section (newest entry on top within the section). Keep entries short.
 
 ## Orchestrator
+- 2026-11-21 · Construction methods on `feature/3d-methods` (PR #31): concrete 86 · ICF 82 · light steel 86 ·
+  timber 86 · precast 75 steps, picker + switcher + comparison finale, assembly-manual viewer. Integration QA
+  (`QA2.md`): every step of every method at 1440, phone pass at 390, full flow per method at both sizes with
+  no console errors; 4 open P3s. `next build` clean (/3d first load 123 kB). Flow check:
+  `data/tools/pw/flow2.mjs <method> [--size=390x844]`. Method thumbnails: `data/tools/pw/method-thumbs.mjs`.
 - 2026-11-21 · Demo complete on `feature/plan-to-3d` (not pushed). Landing hero = 9 real renders
   (`public/build3d/landing/`, phone twins `-800.webp`), /3d OG card, golden-hour finale. Production
   build clean (/3d first load 112 kB; three.js stays in the lazy viewer chunk). E2E (landing →
