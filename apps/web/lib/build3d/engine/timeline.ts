@@ -5,6 +5,7 @@
  */
 import type { HouseModel } from '../house/types';
 import { buildSteps } from '../steps';
+import { DEFAULT_METHOD, type MethodId } from '../methods';
 import { normalizeExit, partSpan } from './anim';
 import type { Part, PhaseId, Step } from './types';
 
@@ -124,18 +125,20 @@ export function buildTimeline(steps: Step[]): Timeline {
   };
 }
 
-const cache = new WeakMap<HouseModel, Timeline>();
+const cache = new WeakMap<HouseModel, Map<MethodId, Timeline>>();
 
-/** The memoized timeline for a house (steps are generated once). */
-export function getTimeline(house: HouseModel): Timeline {
-  let t = cache.get(house);
+/** The memoized timeline for a house and construction method (steps are generated once each). */
+export function getTimeline(house: HouseModel, method: MethodId = DEFAULT_METHOD): Timeline {
+  let byMethod = cache.get(house);
+  if (!byMethod) cache.set(house, (byMethod = new Map()));
+  let t = byMethod.get(method);
   if (!t) {
     const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now();
-    const steps = buildSteps(house);
+    const steps = buildSteps(house, method);
     t = buildTimeline(steps);
     // Total: step generation + flattening.
     t.buildMs = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0;
-    cache.set(house, t);
+    byMethod.set(method, t);
   }
   return t;
 }

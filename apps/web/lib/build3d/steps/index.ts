@@ -1,41 +1,43 @@
 /**
- * Step registry: phase builders in build order (docs/build3d/STEPS.md).
+ * Step registry: per construction method, the phase builders in build order
+ * (docs/build3d/STEPS.md for concrete, docs/build3d/METHODS.md for the others).
  * Each builder is a pure function (ctx) => StepDef[]; text is merged from
- * lib/build3d/content by step id. To add a phase: write `pNN-name.ts` exporting
- * `phaseX(ctx)` and append it to PHASE_BUILDERS below.
+ * lib/build3d/content by step id. A method's list lives in steps/methods/<method>/index.ts.
  */
 import type { HouseModel } from '../house/types';
-import type { Step, StepDef } from '../engine/types';
+import type { Step } from '../engine/types';
+import { DEFAULT_METHOD, type MethodId } from '../methods';
 import { getContext, type BuildContext } from './context';
 import { withText } from './kit';
-import { phasePlan } from './p00-plan';
-import { phaseSite } from './p01-site';
-import { phaseEarthworks } from './p02-earthworks';
-import { phaseFoundations } from './p03-foundations';
-import { phaseLowerStructure } from './p04-lower-structure';
-import { phaseLowerCeiling } from './p05-lower-ceiling';
-import { phaseEntranceStructure } from './p06-entrance-structure';
-import { phaseMasonry } from './p07-masonry';
-import { phaseRoof } from './p08-roof';
-import { phaseSystems } from './p09-systems';
-import { phasePlaster } from './p10-plaster';
-import { phaseFinishes } from './p11-finishes';
-import { phaseLandscape } from './p12-landscape';
-import { phaseHandover } from './p13-handover';
+import type { PhaseBuilder } from './types';
+import { CONCRETE_PHASES } from './methods/concrete';
+import { ICF_PHASES } from './methods/icf';
+import { STEEL_PHASES } from './methods/steel';
+import { TIMBER_PHASES } from './methods/timber';
+import { PRECAST_PHASES } from './methods/precast';
 
-export type PhaseBuilder = (ctx: BuildContext) => StepDef[];
+export type { PhaseBuilder };
 
-export const PHASE_BUILDERS: PhaseBuilder[] = [phasePlan, phaseSite, phaseEarthworks, phaseFoundations, phaseLowerStructure, phaseLowerCeiling, phaseEntranceStructure, phaseMasonry, phaseRoof, phaseSystems, phasePlaster, phaseFinishes, phaseLandscape, phaseHandover];
+export const METHOD_PHASES: Record<MethodId, PhaseBuilder[]> = {
+  concrete: CONCRETE_PHASES,
+  icf: ICF_PHASES,
+  steel: STEEL_PHASES,
+  timber: TIMBER_PHASES,
+  precast: PRECAST_PHASES,
+};
 
-export function buildSteps(house: HouseModel): Step[] {
+/** The concrete method's builders (kept for older imports). */
+export const PHASE_BUILDERS: PhaseBuilder[] = CONCRETE_PHASES;
+
+export function buildSteps(house: HouseModel, method: MethodId = DEFAULT_METHOD): Step[] {
   const ctx = getContext(house);
   const out: Step[] = [];
-  for (const build of PHASE_BUILDERS) {
+  for (const build of METHOD_PHASES[method] ?? CONCRETE_PHASES) {
     try {
-      for (const def of build(ctx)) out.push(withText(def));
+      for (const def of build(ctx)) out.push(withText(def, method));
     } catch (err) {
       // One broken phase must not take the whole viewer down.
-      console.error('[build3d] phase builder failed', build.name, err);
+      console.error('[build3d] phase builder failed', method, build.name, err);
     }
   }
   return out;

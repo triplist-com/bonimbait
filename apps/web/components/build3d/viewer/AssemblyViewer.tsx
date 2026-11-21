@@ -15,6 +15,7 @@ import { ChevronLeft, ChevronRight, Focus, House, Layers, ListOrdered, Maximize2
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { house } from '@/lib/build3d/house';
 import { getTimeline } from '@/lib/build3d/engine/timeline';
+import { DEFAULT_METHOD, type MethodId } from '@/lib/build3d/methods';
 import Stage, { type Insets } from './Stage';
 import StepCard, { StepHeader } from './StepCard';
 import StepList from './StepList';
@@ -26,6 +27,8 @@ import { FOCUS } from './format';
 export interface AssemblyViewerProps {
   initialStep?: number;
   intro?: 'plan' | 'none';
+  /** Construction method (docs/build3d/METHODS.md). Remount (key) to switch. */
+  method?: MethodId;
   className?: string;
 }
 
@@ -39,8 +42,8 @@ function readUrlStep(): number | undefined {
   return Number.isFinite(v) && v >= 1 ? v : undefined;
 }
 
-export default function AssemblyViewer({ initialStep, intro = 'none', className = '' }: AssemblyViewerProps) {
-  const timeline = useMemo(() => getTimeline(house), []);
+export default function AssemblyViewer({ initialStep, intro = 'none', method = DEFAULT_METHOD, className = '' }: AssemblyViewerProps) {
+  const timeline = useMemo(() => getTimeline(house, method), [method]);
   const n = timeline.steps.length;
   const clamp = useCallback((i: number) => Math.max(0, Math.min(n - 1, i)), [n]);
   const [step, setStep] = useState(() => clamp((initialStep ?? readUrlStep() ?? 1) - 1));

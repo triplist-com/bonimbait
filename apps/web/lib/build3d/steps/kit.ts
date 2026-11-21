@@ -2,7 +2,8 @@
  * Small helpers for step authors: text merge with the Content agent's copy, prices,
  * bill-of-materials lines, rebar weights and part builders.
  */
-import { PRICES, STEP_CONTENT } from '../content';
+import { METHOD_CONTENT, PRICES, STEP_CONTENT } from '../content';
+import { DEFAULT_METHOD, type MethodId } from '../methods';
 import type { MaterialLine, Part, Step, StepDef, Vec2, Vec3 } from '../engine/types';
 
 export { PRICES };
@@ -21,8 +22,12 @@ export const EXTRA_RATES = {
 } as const;
 
 /** Merges text from lib/build3d/content (wins) over the author's fallback text. */
-export function withText(def: StepDef): Step {
-  const c = STEP_CONTENT[def.id];
+/**
+ * Merge a step's text by id. A method may re-word a shared step (e.g. ICF's interior plaster)
+ * via METHOD_CONTENT[method][id], which wins over the shared STEP_CONTENT[id].
+ */
+export function withText(def: StepDef, method: MethodId = DEFAULT_METHOD): Step {
+  const c = METHOD_CONTENT[method]?.[def.id] ?? STEP_CONTENT[def.id];
   return {
     ...def,
     titleHe: c?.titleHe ?? def.titleHe ?? def.id,

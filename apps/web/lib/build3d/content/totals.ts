@@ -12,6 +12,7 @@
  * steps drift more than a few percent, so update the constants there if the model changes.
  */
 import type { Timeline } from '../engine/timeline';
+import type { MethodId } from '../methods';
 
 export interface BuildTotals {
   steps: number;
@@ -20,6 +21,8 @@ export interface BuildTotals {
   concreteM3: number;
   rebarT: number;
   blocks: number;
+  /** Method signature quantities for the picker / summary (e.g. light steel 14 t, ICF blocks 2,100). */
+  extra?: Array<{ labelHe: string; qty: number; unitHe: string }>;
 }
 
 export const BUILD_TOTALS: BuildTotals = {
@@ -29,6 +32,19 @@ export const BUILD_TOTALS: BuildTotals = {
   concreteM3: 184,
   rebarT: 10.4,
   blocks: 5060,
+};
+
+/**
+ * Totals per construction method (docs/build3d/METHODS.md). Each method author replaces their
+ * placeholder (a copy of concrete) with the numbers `sumBuildTotals(getTimeline(house, method))`
+ * prints; tests/build3d/totals.test.ts checks every method against its built timeline.
+ */
+export const METHOD_TOTALS: Record<MethodId, BuildTotals> = {
+  concrete: BUILD_TOTALS,
+  icf: { ...BUILD_TOTALS },
+  steel: { ...BUILD_TOTALS },
+  timber: { ...BUILD_TOTALS },
+  precast: { ...BUILD_TOTALS },
 };
 
 /** Recompute the totals from a built timeline (used by the test; the UI uses BUILD_TOTALS). */
