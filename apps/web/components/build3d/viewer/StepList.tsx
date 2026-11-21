@@ -19,15 +19,16 @@ export default function StepList({ timeline, step, onSelect }: { timeline: Timel
         const done = step > ph.last;
         return (
           <section key={`${ph.phase}-${ph.first}`}>
-            <h3 className="mb-1 flex items-center gap-2 px-2 text-[12px] font-bold" style={{ color: active ? info.color : '#8a8385' }}>
+            <h3 className={`mb-1 flex items-start gap-2 px-2 text-[12px] font-bold leading-snug ${active ? 'text-ink' : 'text-ink-500'}`}>
               <span
-                className="grid h-5 w-5 place-items-center rounded-full text-[10.5px] font-black text-white"
+                className="grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10.5px] font-black text-white"
                 style={{ background: done || active ? info.color : '#cfc8c1' }}
               >
                 {ph.phase}
               </span>
-              {phaseLabel(info.nameHe)}
-              <span className="ms-auto font-medium text-ink-400" title="מספר שלבים">{ph.last === ph.first ? 'שלב אחד' : `${ph.last - ph.first + 1} שלבים`}</span>
+              {/* Method phase names can be long: wrap inside the header, the count keeps its place. */}
+              <span className="min-w-0 flex-1 pt-px">{phaseLabel(info.nameHe)}</span>
+              <span className="shrink-0 pt-px font-medium text-ink-500" title="מספר שלבים">{ph.last === ph.first ? 'שלב אחד' : `${ph.last - ph.first + 1} שלבים`}</span>
             </h3>
             <ol className="flex flex-col">
               {timeline.steps.slice(ph.first, ph.last + 1).map((st, k) => {

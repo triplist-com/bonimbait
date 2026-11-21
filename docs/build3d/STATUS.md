@@ -3,6 +3,11 @@
 Each agent appends to its own section (newest entry on top within the section). Keep entries short.
 
 ## Orchestrator
+- 2026-11-21 · Construction methods on `feature/3d-methods` (PR #31): concrete 86 · ICF 82 · light steel 86 ·
+  timber 86 · precast 75 steps, picker + switcher + comparison finale, assembly-manual viewer. Integration QA
+  (`QA2.md`): every step of every method at 1440, phone pass at 390, full flow per method at both sizes with
+  no console errors; 4 open P3s. `next build` clean (/3d first load 123 kB). Flow check:
+  `data/tools/pw/flow2.mjs <method> [--size=390x844]`. Method thumbnails: `data/tools/pw/method-thumbs.mjs`.
 - 2026-11-21 · Demo complete on `feature/plan-to-3d` (not pushed). Landing hero = 9 real renders
   (`public/build3d/landing/`, phone twins `-800.webp`), /3d OG card, golden-hour finale. Production
   build clean (/3d first load 112 kB; three.js stays in the lazy viewer chunk). E2E (landing →
@@ -126,3 +131,87 @@ Each agent appends to its own section (newest entry on top within the section). 
 - `/3d/` built: `app/3d/page.tsx`, `components/build3d/app/{Build3DApp,ViewerSlot}.tsx`, `components/build3d/landing/{Landing,HeroVisual,DropZone,Analysis,Counter,fileCheck,overlayData}.ts(x)`.
 - Landing interactive ~100-250 ms on localhost. File check client-side (size 489533 or >=3 of: Title (Model), AutoCAD, MediaBox 1899x1701). Analysis ~8.6 s (10 stages, skip button, reduced-motion ~55 %), ends with CSS 3D tilt + crossfade; viewer chunk prefetched at start.
 - TODO when files land: replace `landing/overlayData.ts` mock with `@/lib/build3d/house/overlay.json`; make `app/ViewerSlot.tsx` re-export `../viewer/AssemblyViewer`. Screenshots in `data/build3d-shots/` (script `landing.mjs`).
+
+## Precast author
+
+Method `precast` is built: 75 steps (12 new `p4p/p5p/p6p/p7p/p10p` steps + shared ones), timeline build ~100 ms.
+- Code: `steps/methods/precast/{kit,structure,envelope,index}.ts` (panel plan with cast-in openings on each wall's own centerline and thickness, hollow-core plank layout, crane stand + hook poses, push-pull props), `models/crane.ts` (mobile crane, posed per step like the pump truck; registered in `models/index.ts`), `content/steps-precast.ts`, `METHOD_TOTALS.precast`.
+- The crane stands on the street shifted along the kerb so it never overlaps the shared pump spots; it is re-posed (new model part, instant swap) in each lifting step toward the work area. Max reach to a panel centre ~29 m (text says 120 t crane).
+- ממ״ד: precast module (walls + lid, ~32 t), worded as an approved-model option needing פיקוד העורף confirmation, not the default.
+- Weak: panels are one per wall run (29 total, joints only where a run exceeds ~3.9 m), so grout/sealant are modest; hollow-core planks are fragmented by the region cut lines (91 + 94 boxes); the hook does not follow each individual panel; cost is +13% vs concrete (research says +3-5%) because the module, parapets and crane days are priced as in the numbers sheet.
+
+## UX-Methods
+- 2026-11-21 · **Method picker, switcher, method-aware analysis and finale.**
+  - Flow: landing ("נסו עם תוכנית לדוגמה" or an accepted file) → `landing/MethodPicker.tsx` ("באיזו שיטה תרצו לבנות?",
+    five cards, concrete preselected + focused, one tap starts; arrows/Home/End/Esc; `?pick=1` opens it) → `Analysis`
+    with `method` (quantities = concrete + `extra`, else rebar/blocks; step count; "מתכנן את שלבי הבנייה …") → viewer.
+    `?method=` is written on pick; Build3DApp / ViewerClient keep `method`, `initialStep`, `intro` in state.
+  - Numbers everywhere (picker, switcher, bar, card, comparison): METHOD_TOTALS at render time — months = days/22 to the
+    nearest half ("כ-15 חודשים"), cost delta vs concrete ("כ-4% יותר" / "אותו מחיר" within ±1%), money "2.25 מיליון ₪".
+    METHODS_INFO only for names/tagline/badge/scores/phase names. Helpers: `landing/methodUi.tsx`.
+  - Viewer: `viewer/MethodSwitcher.tsx` in the header beside the logo (wraps under it when the row is too narrow), menu
+    with menuitemradio items. Switch → `viewer/methodSwitch.ts`: same step id → first step of the same phase → last step of
+    the nearest earlier phase; URL `?method=&step=` via replaceState; remount with `intro='none'`.
+    Finale "צפו בבנייה ב…" uses `divergenceStep` (start of the phase where the two step lists first differ).
+  - Phase names per method: `engine/phases.ts` — `PHASES[i].nameHe` is a getter for the active method
+    (`setPhaseMethod(method)` in AssemblyViewer's render), plus `phaseNameHe(id, method)`. StepCard/Scrubber/StepList
+    pick it up unchanged. StepList header: ink text (was phase color, low contrast), long names wrap beside the count.
+  - `Summary.tsx`: method totals + signature tiles, comparison of all five (months, cost + delta, scores, this-house
+    steps/concrete/signature qty, "צפו בבנייה ב…"), "שתפו" (copies `/3d/?method=&step=`, toast), "חזרה לבחירת שיטה"
+    (picker overlay inside the viewer), keys inside the dialog no longer step the viewer. At the last step "הבא" →
+    "סיכום והשוואה" (opens the card). Bar: "כ-15 חודשים · 2.3 מיליון ₪" (same months as the card; no "M"); in the
+    sheet layout it sits above the sheet (`sheetPeek={mobile ? PEEK : undefined}` from AssemblyViewer).
+  - **For UX-Manual (your files, not edited):** StepCard phase pill — add `whitespace-nowrap max-w-full truncate` (+ `title`)
+    so long method names ("קומה תחתונה: הרכבת פאנלים") don't break the header; Scrubber phase label — ink text with a
+    color dot (11.5 px colored text fails contrast for light phases) and clamp so long names don't overflow the bar.
+  - Thumbnails: cards load `/build3d/methods/<id>-800.webp` and fall back to a token-tinted pattern + icon (404s in the
+    console until the renders exist). Tests: `tests/build3d/method-switch.test.ts`. Shots: `data/build3d-shots/ux-methods/`
+    (`data/tools/pw/ux-methods.mjs --size=WxH --only=picker,analysis,switch,finale`).
+
+## ICF author
+
+Method `icf` is built: 82 steps (9 new: `p4i-icf-{courses,rebar,bracing,pour}`, `p6i-icf-{courses,rebar,bracing,pour}`, `p7i-icf-parapets`; 13 shared steps re-worded in `content/steps-icf.ts`). Totals: 326 work days, 2,301,100 ILS (+0.8 % vs concrete), 216 m³ concrete, 10.8 t rebar, 2,211 blocks (partitions only); extras 654 ICF forms, 39 m³ EPS, 234 m² ICF wall.
+- Code: `steps/methods/icf/icf-kit.ts` (geometry), `steps/methods/icf/structure.ts` (phases 4-7), `steps/methods/icf/index.ts` (CONCRETE_PHASES with phases 4-7 swapped), `content/steps-icf.ts`, `METHOD_TOTALS.icf`. No new material/model: EPS = `insulation` recolored (`EPS_COLOR`), webs = `drain` recolored.
+- Geometry: per storey the ICF footprint is the exact union of the exterior/retaining wall rects + the columns standing in those wall lines (full-width-opening beams L-N2/E-SN stay slab beams), so every EPS face is on a house wall face and the shared skins land as in concrete. EPS = 5 cm inward band on every boundary face, 1.2 x 0.4 m blocks in running bond, corner ownership alternating per course (interlocking corners), openings cut out, timber bucks + a diagonal brace in each (tag `formwork`, fade out at `p6-strip-all`, then the shared blind frames). Core = footprint minus the bands: webs every 20 cm per course (tag `spacers` so x-ray hides them), rebar on the core centerlines (V @40 cm, retaining @20 cm Ø14, starters into the slab above; H per course; lintel bars over openings), concrete in 1.1 m lifts sweeping from the hose. Rebar and pour steps ghost the EPS + webs (`ghostTags`) so the steel and the rising concrete read. Alignment braces on the inner faces only (upright, blue kicker to a foot plate, bracket + strut, two walk boards, guard posts + rails, workers on the boards during the pour); the lower set comes off at `p4-waterproofing`, the entrance set at `p6-roof-deck` (both also tagged `formwork`).
+- Shared phase 4-6 steps come from the concrete builders run ONCE on an "ICF view" of the house (`icfModel(ctx).ictx`): every ICF wall is added as a wall-shaped column (token height) so decks/props treat it as a support, and the lower slab outline is trimmed to the ICF inner faces. Walls are untouched, so waterproofing, backfill and the cast-in-place ממ״ד are exactly concrete's. `p4-columns-*` / `p6-columns*` dropped; the one free-standing column (C-E12) gets its cage in `p6i-icf-rebar`, a plywood box in `p6i-icf-bracing`, and is cast in `p6i-icf-pour`. `p5-props` also clears the slab-pour machines/tiles (no column step in between).
+- Deviations from METHODS.md: braces leave earlier than `p6-strip-all` (realistic, keeps p4 slab / p5-p6 shoring uncluttered). Durations: research table used except the lower floor (model has ~115 m² of ICF there, research assumed 225 m²): courses 4, rebar 2, bracing 2, pour 1 days. Re-worded shared steps shorten where ICF is faster (electrical 9→7, plumbing 6→5, interior plaster/boards 18→14, strip 4→3) and the EPS render is 11→12. Total 326 days ≈ 14.8 months; `METHODS_INFO.icf.months` says 13 (researcher to reconcile). Cost is geometry × research rates (+0.8 %), research's headline is +3 %.
+- Weak: timeline build ~155-170 ms in the dev browser (concrete ~120; node cold +13 ms after the single-run ICF view); the model's walls stay 20 cm (5+10+5), the text describes a real 15 cm-core block; webs are plain plates; the ICF pour hose aims at the wall nearest the gate only (lifts still sweep around the house).
+- Verify: `/3d/viewer/?method=icf&step=15..46`; shots `data/build3d-shots/icf/` (`all/` = full walk, `sheet-all.png`).
+
+## UX-Manual
+- 2026-11-21 · **Viewer reads as an assembly manual** (AUDIT top-10 #1-8, #10; P2 #1-4; P3 #7, #9-11, #13, #15).
+  - "New this step" (`engine/runtime/director.ts`, `materials.ts`): the step's parts keep a resting magenta tint +
+    full-magenta outlines after their animation (two soft breaths, then steady; saturated parts get less tint so they
+    keep their color), finished parts are muted toward warm paper gray (shared color-lerp variants, terrain via one
+    shader variant at 55 %), no postprocessing. Toolbar "הדגשת החלקים החדשים" (off = the old brief magenta only).
+    `director.setFocus(on)`, `director.reducedMotion`. Capture tools that want the old look: `setFocus(false)`.
+  - Interior peel: phases 9 and 11 (x-ray on, work inside the house) lift + fade what is above the cut instead of
+    ghosting it (cut = `view.ghostAbove`, else just above the new work). Fast key repeat / scrubbing (< 0.3 s per step):
+    new parts fade in fully built (no half-built flicker). `director.calloutAnchor()` = a point on the new parts.
+  - Stage: numbered callout pin (step number + title) on the new parts, hidden while the camera moves, outside the
+    unobstructed rect, at dusk and with emphasis off; portrait never zooms past the fit (finale fits 390 px); reduced
+    motion = camera cuts, no step orbit, no pulse / peel lift.
+  - Card: `PartsPanel.tsx` tiles (icon per material kind by keyword over `nameHe`, 41 kinds + generic, token tones;
+    `tests/build3d/parts-panel.test.ts` keeps generic < 10 % per method), number/title/description/parts/duration+cost,
+    the rest in "פרטים נוספים" (stays open across steps), "שלב הבא · …" row with a ← hint; no fade overlay.
+    Phone peek (272 px + safe area): title, parts scroller, "3 ימי עבודה · 22,000 ₪", scrubber, nav; expanded sheet =
+    description + all details. Sheet layout up to 900 px and portrait tablets (< 1200), sheet max 640 px wide.
+  - Polish: per-step progress line (CSS), card fade, Space ignores focused buttons/links/summary, scrubber keys
+    (arrows, PageUp/Down = phase, Home/End) + aria-orientation, 44 px toolbar on touch with text tooltips, view toggles
+    grouped in a "תצוגה" menu on phones (`ViewMenu.tsx`), phase pill truncates, scrubber phase label ink + dot,
+    landing header/footer links 44 px.
+  - Not done: hold the camera until the previous animation ends; per-room paint colors (step authors); explode view.
+  - Shots `data/build3d-shots/ux-manual/` (`after-d/` finishing steps 1440, `m*/` phone, `t*/` tablet); tools
+    `data/tools/pw/uxm-keys.mjs` (keyboard/a11y checks), `uxm-measure.mjs`, `uxm-montage.mjs` (`--ar=844/390`).
+
+## Frame author
+
+Methods `steel` (LSF) and `timber` are built from one framing kit: 86 steps each (12 own steps + 10 shared steps re-worded per method). Totals: steel 332 work days, 2,399,000 ILS, 142 m³ concrete, 8.33 t rebar, 0 blocks, extras 5.0 t light steel, 402 m² cement board, 660 m² gypsum, 272 m² rock wool; timber 331 days, 2,401,000 ILS, same concrete/rebar, extras 19.5 m³ timber, 347 m² OSB, 660 m² gypsum, 242 m² mineral wool.
+- Code: `steps/methods/frame/spec.ts` (STEEL / TIMBER specs: sizes, colors, rates, Hebrew BOM names), `frame/walls.ts` (sections, framing per wall, panels + raise groups, instanced C-studs / U-tracks, braces, hold-downs, boards), `frame/roof.ts` (ממ״ד ceiling slab, joists + rims + girder + blocking + hangers, deck + edge closures, ceiling boards), `frame/phases.ts` (phases 6, 7, 8, 10 composed with `pick`), `methods/{steel,timber}/index.ts` = `framePhases(spec)`. Content: `content/steps-{steel,timber}.ts`. New materials (palette + MaterialKey): `lumber`, `osb`, `cementBoard`, `gypsum`, `houseWrap`, `mineralWool`. No new models.
+- Steps (s/t): p6 shared slab + ממ״ד → `p6x-mamad-roof` (new, not in METHODS.md: the ממ״ד needs its own 25 cm concrete ceiling once the roof is light) → `p6s-tracks` / `p6t-sole-plates` → `p6x-walls` → `p6x-roof-joists` → `p6x-roof-deck` → `p6-strip-all` (shared, own bill) · p7 `p7x-lower-infill`, `p7x-partitions`, `p7x-parapets`, `p7-blind-frames` · p8 `p8x-taper` (tapered EPS from the screed cells) + shared insulation/membrane/coat/equipment · p10 scaffolding → `p10x-sheathing` → `p10x-insulation` → `p10x-drywall` → shared stone/render/down.
+- Geometry: everything inside each house wall's thickness: exterior face → cement board 12 mm | wrap 2 mm | (timber OSB 11 mm) | studs | 10 mm (the interior skin's embedded part). Gypsum boards use the exact p10-plaster-interior skin geometry (split into 1.2 m sheets) and tag `plaster-interior`; concrete walls (ממ״ד, podium) get the same plaster skin as concrete. So p11-paint and the facade skins land exactly as in concrete; `p13-done` matches (shots `frame/s4/86` vs `frame/c4/86`). Entrance columns become stud-pack posts (pseudo walls) so the facade's column skins sit on framing; their interior faces get gypsum tagged `drywall-post` (stays after paint). Roof: 22.8 cm joists on the 3.05 top plates + 22 mm deck → deck top = concrete roof top 3.30, so phase 8 is unchanged; gypsum ceiling boards under the joists (tag `ceiling-boards`, stay).
+- Framing: studs @ 60 cm (parapets 40), king + jack studs and a header at every opening (beam over the E-SN vitrine: HEA / glulam), cripples above headers and below rough sills, plates cut at doors, timber double top plate + noggins, steel U-tracks + bridging channels + X-straps on solid exterior panels, hold-downs at wall ends and big openings, anchor bolts ~1 m. Panels ≤ 3.0 m (steel) / 2.44 m (timber) never break inside an opening; panels grouped by angle around the house and dropped group by group (6 groups entrance, 3 lower, 5 partitions, 3 parapets), braces (`formwork`, removed by `p6-strip-all`) fade in after each group.
+- Composition fixes: `p6-mamad-rebar` (picked) also removes `p6-gs-machine`, `pour-tiles`, `p6-gs-edge-forms` (concrete clears them in its column steps). Insulation/drywall steps ghost `cement-board`, `house-wrap`, `osb` (+ `wall-insulation` for drywall) so the batts / boards read from outside.
+- Deviations: costs are research rates × this model's quantities → both +5 % vs concrete (research headline: steel −2 %, timber +3 %; the concrete model has no wall insulation or ceiling finish, the frame methods do). Days 332/331 ≈ 15 months vs METHODS_INFO 11 (shared phases 3–5 and 11–13 dominate; researcher/UX to reconcile).
+- Weak: p9 pipes are the shared surface-mounted geometry (2 cm proud of the face), so they sit just in front of the studs rather than inside the cavity; the drywall step reads best mid-animation (new ceiling boards cannot be ghosted); timber joists highlight very red; X-straps only on opening-free panels (few); no crane/forklift model; braces are rods (steel blue push-pull props, timber round poles).
+- Verify: `/3d/viewer/?method=steel&step=39..64`, `?method=timber`; shots `data/build3d-shots/frame/`: `sheet-steel.png` / `sheet-timber.png` (steps 33–64 walk, `walk-*/`), `phone/m.png` (390×844), `s4/86` vs `c4/86` (finale vs concrete).

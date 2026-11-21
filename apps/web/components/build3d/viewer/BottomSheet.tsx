@@ -26,15 +26,18 @@ export default function BottomSheet({
     return [peek, Math.round(vh * 0.55), Math.round(vh * 0.88)] as const;
   }, [peek]);
 
+  /** Peek keeps its full content height above the home indicator (safe area). */
+  const cssHeight = useCallback((i: 0 | 1 | 2) => (i === 0 ? `calc(${peek}px + env(safe-area-inset-bottom, 0px))` : `${heights()[i]}px`), [peek, heights]);
+
   useEffect(() => {
     const el = ref.current;
-    if (el) el.style.height = `${heights()[snap]}px`;
+    if (el) el.style.height = cssHeight(snap);
     onSnapChange?.(snap);
-  }, [snap, heights, onSnapChange]);
+  }, [snap, cssHeight, onSnapChange]);
 
   const onDown = (e: React.PointerEvent) => {
     const el = ref.current;
-    if (!el || (e.target as HTMLElement).closest('button,a,[role=slider]')) return;
+    if (!el || (e.target as HTMLElement).closest('button:not([data-handle]),a,summary,[role=slider],ul')) return;
     drag.current = { y: e.clientY, h: el.getBoundingClientRect().height, moved: false };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     el.style.transition = 'none';
@@ -58,7 +61,7 @@ export default function BottomSheet({
     const hs = heights();
     if (!d.moved) {
       setSnap((s) => (s === 0 ? 1 : 0));
-      el.style.height = `${hs[snap === 0 ? 1 : 0]}px`;
+      el.style.height = cssHeight(snap === 0 ? 1 : 0);
       return;
     }
     let best: 0 | 1 | 2 = 0;
@@ -66,18 +69,30 @@ export default function BottomSheet({
       if (Math.abs(v - h) < Math.abs(hs[best] - h)) best = i as 0 | 1 | 2;
     });
     setSnap(best);
-    el.style.height = `${hs[best]}px`;
+    el.style.height = cssHeight(best);
   };
 
   return (
     <div
       ref={ref}
-      className="pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex flex-col rounded-t-[22px] border-t border-white/70 bg-white/[0.97] shadow-[0_-12px_40px_-12px_rgba(35,31,32,0.28)] backdrop-blur-xl transition-[height] duration-300 ease-out"
-      style={{ height: peek, paddingBottom: 'env(safe-area-inset-bottom)' }}
+      className="group/sheet pointer-events-auto absolute inset-x-0 bottom-0 z-20 mx-auto flex max-w-[640px] flex-col rounded-t-[22px] border-t border-white/70 bg-white/[0.97] shadow-[0_-12px_40px_-12px_rgba(35,31,32,0.28)] backdrop-blur-xl transition-[height] duration-300 ease-out"
+      style={{ height: `calc(${peek}px + env(safe-area-inset-bottom, 0px))`, paddingBottom: 'env(safe-area-inset-bottom)' }}
       data-snap={snap}
     >
       <div className="shrink-0 cursor-grab touch-none px-4 pt-1" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
-        <div className="mx-auto mb-1 flex h-5 w-16 items-center justify-center" role="button" aria-label={snap === 0 ? 'הרחבת הכרטיס' : 'כיווץ הכרטיס'}><span className="h-1.5 w-10 rounded-full bg-ink-300" /></div>
+        {/* Drag handle; also a real button for keyboards (pointer taps toggle via onUp). */}
+        <button
+          type="button"
+          data-handle
+          aria-expanded={snap !== 0}
+          aria-label={snap === 0 ? 'הרחבת הכרטיס' : 'כיווץ הכרטיס'}
+          onClick={(e) => {
+            if (e.detail === 0) setSnap((s) => (s === 0 ? 1 : 0));
+          }}
+          className="mx-auto -mt-1 flex h-7 w-20 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          <span className="h-1.5 w-10 rounded-full bg-ink-300" />
+        </button>
         {header}
       </div>
       <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6 pt-3 ${snap === 0 ? 'invisible' : ''}`}>{children}</div>
