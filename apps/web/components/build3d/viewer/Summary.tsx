@@ -68,13 +68,13 @@ function SummaryBar({ onOpen, onClose }: { onOpen: () => void; onClose: () => vo
       data-b3d-summary
       className="pointer-events-none absolute inset-x-3 bottom-[calc(208px+env(safe-area-inset-bottom))] z-30 flex animate-slide-up justify-center sm:bottom-[100px] sm:end-4 sm:start-[calc(clamp(320px,30vw,392px)+32px)]"
     >
-      <div className="pointer-events-auto flex max-w-full items-center gap-0.5 rounded-2xl border border-white/15 bg-[#231F20]/[0.88] p-1.5 text-white shadow-[0_18px_44px_-14px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+      <div className="pointer-events-auto flex max-w-full items-center gap-0.5 rounded-2xl border border-white/15 bg-ink/[0.88] p-1.5 text-white shadow-[0_18px_44px_-14px_rgba(0,0,0,0.6)] backdrop-blur-xl">
         <button
           onClick={onOpen}
           aria-label="הבית מוכן! הצגת סיכום הבנייה"
           className={`flex min-w-0 items-center gap-1.5 rounded-xl py-1 pe-1 ps-2 text-start transition hover:bg-white/[0.06] sm:gap-2.5 sm:ps-2 ${FOCUS} focus-visible:ring-offset-[#231F20]`}
         >
-          <span className="hidden h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#E61559] min-[400px]:grid">
+          <span className="hidden h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary min-[400px]:grid">
             <House size={17} strokeWidth={2.4} />
           </span>
           <span className="flex min-w-0 items-center gap-1 whitespace-nowrap text-[13.5px] min-[400px]:gap-1.5 sm:gap-2 sm:text-[15px]">
@@ -86,7 +86,7 @@ function SummaryBar({ onOpen, onClose }: { onOpen: () => void; onClose: () => vo
               ₪{millions}M
             </bdi>
           </span>
-          <span className="ms-0.5 inline-flex shrink-0 items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[13px] font-bold text-[#231F20] sm:ms-1 sm:px-3 sm:text-[14px]">
+          <span className="ms-0.5 inline-flex shrink-0 items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[13px] font-bold text-ink sm:ms-1 sm:px-3 sm:text-[14px]">
             הצגת סיכום
             <ChevronUp size={15} strokeWidth={2.6} />
           </span>
@@ -130,7 +130,7 @@ function SummaryCard({ steps, onRestart, onCollapse }: { steps: number; onRestar
   ];
   return (
     <div
-      className="pointer-events-auto absolute inset-0 z-30 grid place-items-center overflow-y-auto bg-[#231F20]/35 p-4 backdrop-blur-[3px] animate-fade-in"
+      className="pointer-events-auto absolute inset-0 z-30 grid place-items-center overflow-y-auto bg-ink/35 p-4 backdrop-blur-[3px] animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) onCollapse();
       }}
@@ -152,7 +152,7 @@ function SummaryCard({ steps, onRestart, onCollapse }: { steps: number; onRestar
           <button onClick={onCollapse} aria-label="סגירה" className={`absolute end-3 top-3 rounded-full p-2 text-white/80 hover:bg-white/15 hover:text-white ${FOCUS}`}>
             <X size={18} />
           </button>
-          <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-[#E61559] shadow-lg">
+          <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-primary shadow-lg">
             <House size={26} strokeWidth={2.3} />
           </span>
           <div className="mt-4 text-[13px] font-bold tracking-wide text-white/85">מסירת מפתח</div>
@@ -164,27 +164,27 @@ function SummaryCard({ steps, onRestart, onCollapse }: { steps: number; onRestar
         <div className="px-6 pb-6 pt-5 sm:px-8">
           <dl className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
             {stats.map((s) => (
-              <div key={s.label} className="rounded-2xl border border-[#efe9e3] bg-[#faf8f5] px-3 py-2.5">
-                <dt className="flex items-center gap-1.5 text-[12px] font-semibold text-[#6d6668]">
-                  <span className="text-[#E61559]">{s.icon}</span>
+              <div key={s.label} className="rounded-2xl border border-ink-100 bg-paper px-3 py-2.5">
+                <dt className="flex items-center gap-1.5 text-[12px] font-semibold text-ink-600">
+                  <span className="text-primary">{s.icon}</span>
                   {s.label}
                 </dt>
-                <dd className="mt-1 text-[19px] font-extrabold leading-tight tabular-nums text-[#231F20]">{s.node}</dd>
+                <dd className="mt-1 text-[19px] font-extrabold leading-tight tabular-nums text-ink">{s.node}</dd>
               </div>
             ))}
           </dl>
-          <p className="mt-3 text-[11.5px] leading-relaxed text-[#6d6668]">{SUMMARY.noteHe}</p>
+          <p className="mt-3 text-[11.5px] leading-relaxed text-ink-600">{SUMMARY.noteHe}</p>
           <div className="mt-5 flex flex-col gap-2 sm:flex-row">
             <button
               onClick={onRestart}
-              className={`inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[#E61559] px-4 py-3.5 text-[15px] font-bold text-white shadow-[0_10px_24px_-10px_rgba(230,21,89,0.8)] transition hover:bg-[#cf0f4e] ${FOCUS}`}
+              className={`inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3.5 text-[15px] font-bold text-white shadow-[0_10px_24px_-10px_rgba(230,21,89,0.8)] transition hover:bg-primary-700 ${FOCUS}`}
             >
               <RotateCcw size={17} />
               צפו שוב מההתחלה
             </button>
             <a
               href="/"
-              className={`inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-[#231F20]/20 px-4 py-3.5 text-[15px] font-bold text-[#231F20] transition hover:bg-[#f6f2ee] ${FOCUS}`}
+              className={`inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-ink/20 px-4 py-3.5 text-[15px] font-bold text-ink transition hover:bg-ink-50 ${FOCUS}`}
             >
               <House size={17} />
               לאתר בונים בית

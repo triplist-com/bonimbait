@@ -27,7 +27,7 @@ export default function StepList({ timeline, step, onSelect }: { timeline: Timel
                 {ph.phase}
               </span>
               {phaseLabel(info.nameHe)}
-              <span className="ms-auto font-medium text-[#a19a94]" title="מספר שלבים">{ph.last === ph.first ? 'שלב אחד' : `${ph.last - ph.first + 1} שלבים`}</span>
+              <span className="ms-auto font-medium text-ink-400" title="מספר שלבים">{ph.last === ph.first ? 'שלב אחד' : `${ph.last - ph.first + 1} שלבים`}</span>
             </h3>
             <ol className="flex flex-col">
               {timeline.steps.slice(ph.first, ph.last + 1).map((st, k) => {
@@ -39,13 +39,13 @@ export default function StepList({ timeline, step, onSelect }: { timeline: Timel
                       ref={isCur ? cur : undefined}
                       onClick={() => onSelect(i)}
                       aria-current={isCur ? 'step' : undefined}
-                      className={`group relative flex w-full items-center gap-2.5 rounded-lg py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E61559] sm:py-1.5 pe-2 ps-3 text-start text-[13.5px] leading-snug transition ${
-                        isCur ? 'bg-white font-bold text-[#231F20] shadow-[0_2px_10px_-4px_rgba(35,31,32,0.25)]' : 'text-[#4d4749] hover:bg-white/60'
+                      className={`group relative flex w-full items-center gap-2.5 rounded-lg py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:py-1.5 pe-2 ps-3 text-start text-[13.5px] leading-snug transition ${
+                        isCur ? 'bg-white font-bold text-ink shadow-[0_2px_10px_-4px_rgba(35,31,32,0.25)]' : 'text-ink-700 hover:bg-white/60'
                       }`}
                     >
-                      {isCur && <span className="absolute inset-y-1.5 start-0 w-[3px] rounded-full bg-[#E61559]" />}
-                      <span className={`w-5 shrink-0 text-[11.5px] tabular-nums ${i < step ? 'text-[#b3aca6]' : 'text-[#8a8385]'}`}>{i + 1}</span>
-                      <span className={i < step ? 'text-[#7d7678]' : ''}>{st.titleHe}</span>
+                      {isCur && <span className="absolute inset-y-1.5 start-0 w-[3px] rounded-full bg-primary" />}
+                      <span className={`w-5 shrink-0 text-[11.5px] tabular-nums ${i < step ? 'text-ink-300' : 'text-ink-500'}`}>{i + 1}</span>
+                      <span className={i < step ? 'text-ink-500' : ''}>{st.titleHe}</span>
                     </button>
                   </li>
                 );

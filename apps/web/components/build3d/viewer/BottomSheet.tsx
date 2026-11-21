@@ -77,7 +77,7 @@ export default function BottomSheet({
       data-snap={snap}
     >
       <div className="shrink-0 cursor-grab touch-none px-4 pt-1" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
-        <div className="mx-auto mb-1 flex h-5 w-16 items-center justify-center" role="button" aria-label={snap === 0 ? 'הרחבת הכרטיס' : 'כיווץ הכרטיס'}><span className="h-1.5 w-10 rounded-full bg-[#cfc7bf]" /></div>
+        <div className="mx-auto mb-1 flex h-5 w-16 items-center justify-center" role="button" aria-label={snap === 0 ? 'הרחבת הכרטיס' : 'כיווץ הכרטיס'}><span className="h-1.5 w-10 rounded-full bg-ink-300" /></div>
         {header}
       </div>
       <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6 pt-3 ${snap === 0 ? 'invisible' : ''}`}>{children}</div>

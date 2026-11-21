@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 const AssemblyViewer = dynamic(() => import('@/components/build3d/viewer/AssemblyViewer'), {
   ssr: false,
   loading: () => (
-    <div className="grid h-full w-full place-items-center bg-[#F4F1EC] font-heebo text-[15px] text-[#8a8385]" dir="rtl">
+    <div className="grid h-full w-full place-items-center bg-ink-100 font-heebo text-[15px] text-ink-500" dir="rtl">
       טוענים את המודל…
     </div>
   ),

@@ -4,12 +4,13 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { BUILD_TOTALS } from '@/lib/build3d/content/totals';
 import type { ViewportId } from '@/lib/build3d/house/types';
 import { overlay } from './overlayData';
+import { ink, primary, success } from '@/lib/design/tokens';
 import Counter from './Counter';
 
-const MAGENTA = '#E61559';
-const INK = '#231F20';
-const BLUE = '#1F4FD8';
-const TEAL = '#0F9D8A';
+const MAGENTA = primary[600];
+const INK = ink[900];
+const BLUE = '#1F4FD8'; // matches the concrete-wall blue printed on the sheet
+const TEAL = success[600]; // dimension lines; chips use success-700 for white-text contrast
 
 type BBox = [number, number, number, number];
 
@@ -203,7 +204,7 @@ export default function Analysis({ onReveal, onDone }: AnalysisProps) {
     <div
       ref={rootRef}
       dir="rtl"
-      className="absolute inset-0 z-20 overflow-hidden bg-[#ECE8E0] text-[#231F20]"
+      className="absolute inset-0 z-20 overflow-hidden bg-ink-200 text-ink"
       style={{
         opacity: handoff ? 0 : 1,
         transition: handoff ? `opacity ${reduced || skipped ? 400 : 650}ms ease ${reduced || skipped ? 0 : 480}ms` : undefined,
@@ -424,7 +425,7 @@ export default function Analysis({ onReveal, onDone }: AnalysisProps) {
             {entranceRooms.map((r, i) => (
               <Chip key={`r${i}`} at={toScreen(r.x, r.y)} transition={camTransition} show={stage >= S.rooms && stage < S.qty} delay={200 + i * 110} tone="white">
                 <b className="font-bold">{r.nameHe}</b>
-                <span className="ms-1.5 text-[#E61559]">{r.area.toLocaleString('he-IL', { maximumFractionDigits: 1 })} מ״ר</span>
+                <span className="ms-1.5 text-primary">{r.area.toLocaleString('he-IL', { maximumFractionDigits: 1 })} מ״ר</span>
               </Chip>
             ))}
             {o.dims.map((d, i) => (
@@ -445,7 +446,7 @@ export default function Analysis({ onReveal, onDone }: AnalysisProps) {
           transition: 'opacity 450ms ease, transform 450ms ease',
         }}
       >
-        <div className="mb-2 text-xs font-semibold tracking-wide text-[#231F20]/55">כמויות משוערות מהתוכנית</div>
+        <div className="mb-2 text-xs font-semibold tracking-wide text-ink/55">כמויות משוערות מהתוכנית</div>
         <div className="grid grid-cols-3 gap-3 text-center">
           <Metric label="בטון" unit="מ״ק"><Counter value={q.concrete} active={stage >= S.qty} instant={instant} durationMs={800} /></Metric>
           <Metric label="ברזל" unit="טון"><Counter value={q.rebar} decimals={1} active={stage >= S.qty} instant={instant} durationMs={800} /></Metric>
@@ -454,15 +455,15 @@ export default function Analysis({ onReveal, onDone }: AnalysisProps) {
       </div>
 
       {/* Top bar */}
-      <div className="absolute inset-x-0 top-0 z-30 flex h-14 items-center justify-between bg-gradient-to-b from-[#ECE8E0] to-transparent px-4 sm:px-6">
+      <div className="absolute inset-x-0 top-0 z-30 flex h-14 items-center justify-between bg-gradient-to-b from-ink-200 to-transparent px-4 sm:px-6">
         <div className="flex items-center gap-2 text-sm font-bold">
-          <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#E61559]" style={{ animation: 'b3d-blink 1s ease-in-out infinite' }} />
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-primary" style={{ animation: 'b3d-blink 1s ease-in-out infinite' }} />
           קורא את התוכנית
         </div>
         <button
           type="button"
           onClick={skip}
-          className="rounded-full border border-[#231F20]/15 bg-white/80 px-4 py-1.5 text-sm font-semibold text-[#231F20] backdrop-blur transition hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E61559]"
+          className="rounded-full border border-ink/15 bg-white/80 px-4 py-1.5 text-sm font-semibold text-ink backdrop-blur transition hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           דלגו ›
         </button>
@@ -472,9 +473,9 @@ export default function Analysis({ onReveal, onDone }: AnalysisProps) {
       <div className="absolute inset-x-3 bottom-3 z-30 mx-auto max-w-2xl rounded-2xl border border-white/70 bg-white/90 p-4 shadow-[0_10px_40px_rgba(35,31,32,.18)] backdrop-blur-md sm:bottom-6 sm:p-5">
         <div className="mb-3 flex gap-1" role="presentation">
           {RAIL_STAGES.map((s, i) => (
-            <span key={s.id} className="h-1 flex-1 overflow-hidden rounded-full bg-[#231F20]/10">
+            <span key={s.id} className="h-1 flex-1 overflow-hidden rounded-full bg-ink/10">
               <span
-                className="block h-full rounded-full bg-[#E61559]"
+                className="block h-full rounded-full bg-primary"
                 style={{ width: stage > i ? '100%' : stage === i ? '55%' : '0%', transition: 'width 600ms ease' }}
               />
             </span>
@@ -539,10 +540,10 @@ function Chip({
   children: React.ReactNode;
 }) {
   const tones = {
-    magenta: 'bg-[#E61559] text-white',
-    ink: 'bg-[#231F20] text-white',
-    white: 'bg-white text-[#231F20] ring-1 ring-black/10',
-    teal: 'bg-[#0F9D8A] text-white',
+    magenta: 'bg-primary text-white',
+    ink: 'bg-ink text-white',
+    white: 'bg-white text-ink ring-1 ring-black/10',
+    teal: 'bg-success-700 text-white',
   } as const;
   return (
     <div className="absolute left-0 top-0" style={{ transform: at, transition }}>
@@ -563,17 +564,17 @@ function Chip({
 function Metric({ label, unit, children }: { label: string; unit: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-2xl font-extrabold text-[#E61559] sm:text-3xl">{children}</div>
-      <div className="text-xs font-semibold text-[#231F20]/70">{label} · {unit}</div>
+      <div className="text-2xl font-extrabold text-primary sm:text-3xl">{children}</div>
+      <div className="text-xs font-semibold text-ink/70">{label} · {unit}</div>
     </div>
   );
 }
 
 function Stat({ label, on, children }: { label: string; on: boolean; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl bg-[#F7F5F1] px-2 py-1.5" style={{ opacity: on ? 1 : 0.4, transition: 'opacity 300ms' }}>
+    <div className="rounded-xl bg-ink-50 px-2 py-1.5" style={{ opacity: on ? 1 : 0.4, transition: 'opacity 300ms' }}>
       <dd className="m-0 text-lg font-extrabold leading-tight sm:text-xl">{children}</dd>
-      <dt className="text-[11px] font-medium text-[#231F20]/60">{label}</dt>
+      <dt className="text-[11px] font-medium text-ink/60">{label}</dt>
     </div>
   );
 }

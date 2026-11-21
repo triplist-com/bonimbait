@@ -46,7 +46,7 @@ export default function Scrubber({
         aria-valuenow={step + 1}
         aria-valuetext={`שלב ${step + 1}: ${timeline.steps[step]?.titleHe ?? ''}`}
         tabIndex={0}
-        className={`group relative w-full cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E61559] focus-visible:ring-offset-2 focus-visible:ring-offset-white ${thin ? 'h-8' : 'h-8'}`}
+        className={`group relative w-full cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white ${thin ? 'h-8' : 'h-8'}`}
         onPointerDown={(e) => {
           (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
           setDrag(true);
@@ -90,7 +90,7 @@ export default function Scrubber({
           ))}
         {/* Thumb */}
         <div
-          className="pointer-events-none absolute top-1/2 grid h-5 w-5 -translate-y-1/2 translate-x-1/2 place-items-center rounded-full border-2 border-white bg-[#E61559] shadow-[0_2px_10px_rgba(230,21,89,0.55)] transition-[right] duration-300"
+          className="pointer-events-none absolute top-1/2 grid h-5 w-5 -translate-y-1/2 translate-x-1/2 place-items-center rounded-full border-2 border-white bg-primary shadow-[0_2px_10px_rgba(230,21,89,0.55)] transition-[right] duration-300"
           style={{ right: `${pct(step + 0.5)}%` }}
         />
       </div>
@@ -109,7 +109,7 @@ export default function Scrubber({
       )}
       {hoverStep && hover !== null && hoverPhase && (
         <div
-          className="pointer-events-none absolute bottom-full z-10 mb-2 flex max-w-[260px] translate-x-1/2 flex-col items-start gap-0.5 rounded-lg bg-[#231F20] px-2.5 py-1.5 text-[12px] font-medium text-white shadow-lg"
+          className="pointer-events-none absolute bottom-full z-10 mb-2 flex max-w-[260px] translate-x-1/2 flex-col items-start gap-0.5 rounded-lg bg-ink px-2.5 py-1.5 text-[12px] font-medium text-white shadow-lg"
           style={{ right: `clamp(60px, ${pct(hover + 0.5)}%, calc(100% - 60px))` }}
         >
           <span className="flex items-center gap-1.5 text-[11px] font-bold" style={{ color: '#fff' }}>

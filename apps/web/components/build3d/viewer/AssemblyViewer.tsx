@@ -173,7 +173,7 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
       <ToolButton label="כל השלבים" active={listOpen} onClick={() => setListOpen((v) => !v)}>
         <ListOrdered size={18} />
       </ToolButton>
-      <span className="mx-0.5 h-5 w-px bg-[#e4ddd6]" />
+      <span className="mx-0.5 h-5 w-px bg-ink-200" />
       <ToolButton label="תצוגה מקדימה של השלבים הבאים" active={ghost} onClick={() => setGhost((v) => !v)}>
         <Layers size={18} />
       </ToolButton>
@@ -201,7 +201,7 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
         disabled={step === 0}
         aria-label="השלב הקודם"
         title="השלב הקודם (→)"
-        className={`grid shrink-0 place-items-center rounded-full border border-[#e7e0d9] bg-white text-[#231F20] transition hover:bg-[#f7f3ef] disabled:opacity-35 ${FOCUS} ${big ? 'h-11 w-11' : 'h-12 w-12'}`}
+        className={`grid shrink-0 place-items-center rounded-full border border-ink-200 bg-white text-ink transition hover:bg-ink-50 disabled:opacity-35 ${FOCUS} ${big ? 'h-11 w-11' : 'h-12 w-12'}`}
       >
         <ChevronRight size={20} />
       </button>
@@ -209,7 +209,7 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
         onClick={() => setPlaying((p) => !p)}
         aria-label={playing ? 'עצירה' : 'הפעלה אוטומטית'}
         title={playing ? 'עצירה (רווח)' : 'הפעלה אוטומטית (רווח)'}
-        className={`grid shrink-0 place-items-center rounded-full bg-[#231F20] text-white transition hover:bg-black ${FOCUS} ${big ? 'h-11 w-11' : 'h-12 w-12'}`}
+        className={`grid shrink-0 place-items-center rounded-full bg-ink text-white transition hover:bg-black ${FOCUS} ${big ? 'h-11 w-11' : 'h-12 w-12'}`}
       >
         {playing ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="-me-0.5" />}
       </button>
@@ -218,7 +218,7 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
         disabled={step === n - 1}
         aria-label="השלב הבא"
         title="השלב הבא (←)"
-        className={`flex items-center justify-center gap-1 rounded-full bg-[#E61559] font-bold text-white shadow-[0_8px_18px_-8px_rgba(230,21,89,0.9)] transition hover:bg-[#cf0f4e] disabled:opacity-40 ${FOCUS} ${big ? 'h-11 pe-3 ps-4 text-[15px]' : 'h-12 flex-1 pe-3 ps-4 text-[16px]'}`}
+        className={`flex items-center justify-center gap-1 rounded-full bg-primary font-bold text-white shadow-[0_8px_18px_-8px_rgba(230,21,89,0.9)] transition hover:bg-primary-700 disabled:opacity-40 ${FOCUS} ${big ? 'h-11 pe-3 ps-4 text-[15px]' : 'h-12 flex-1 pe-3 ps-4 text-[16px]'}`}
       >
         הבא
         <ChevronLeft size={19} />
@@ -227,7 +227,7 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
   );
 
   return (
-    <div ref={rootRef} dir="rtl" lang="he" className={`relative h-full w-full overflow-hidden font-heebo text-[#231F20] ${className}`}>
+    <div ref={rootRef} dir="rtl" lang="he" className={`relative h-full w-full overflow-hidden font-heebo text-ink ${className}`}>
       <div className="absolute inset-0" style={{ background: DAY_BG }} />
       <div className="absolute inset-0 transition-opacity duration-[1600ms]" style={{ background: DUSK_BG, opacity: dusk ? 1 : 0 }} />
 
@@ -257,12 +257,12 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
           aria-label="בונים בית, לאתר הראשי"
           className="pointer-events-auto flex items-center gap-2.5 rounded-2xl bg-white/[0.85] py-1.5 pe-1.5 ps-1.5 min-[430px]:pe-3.5 shadow-[0_6px_24px_-10px_rgba(35,31,32,0.3)] backdrop-blur-xl"
         >
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#E61559] text-white">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-white">
             <House size={19} strokeWidth={2.4} />
           </span>
           <span className="hidden whitespace-nowrap leading-tight min-[430px]:block">
             <span className="block text-[15px] font-black tracking-[-0.01em]">בונים בית</span>
-            <span className="block text-[11.5px] font-medium text-[#6d6668]">מתוכנית לבית</span>
+            <span className="block text-[11.5px] font-medium text-ink-600">מתוכנית לבית</span>
           </span>
         </a>
         <div className="pointer-events-auto flex items-center gap-0.5 rounded-2xl bg-white/[0.85] p-1 shadow-[0_6px_24px_-10px_rgba(35,31,32,0.3)] backdrop-blur-xl">
@@ -288,7 +288,7 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
           {/* Steps list (end side) */}
           {listOpen && (
             <aside className={`absolute bottom-[100px] left-4 top-[76px] z-10 w-[290px] transition-all duration-700 ${ui ? 'opacity-100' : '-translate-x-6 opacity-0'}`}>
-              <div className="h-full overflow-y-auto overscroll-contain rounded-3xl border border-white/70 bg-[#F7F4F0]/85 p-3 shadow-[0_18px_50px_-18px_rgba(35,31,32,0.3)] backdrop-blur-xl [scrollbar-width:thin]">
+              <div className="h-full overflow-y-auto overscroll-contain rounded-3xl border border-white/70 bg-ink-50/85 p-3 shadow-[0_18px_50px_-18px_rgba(35,31,32,0.3)] backdrop-blur-xl [scrollbar-width:thin]">
                 <StepList timeline={timeline} step={step} onSelect={(i) => go(i)} />
               </div>
             </aside>
@@ -302,8 +302,8 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
             <div className="min-w-0 flex-1 px-1">
               <Scrubber timeline={timeline} step={step} onSeek={(i) => go(i)} />
             </div>
-            <div className="shrink-0 ps-1 text-[13px] font-semibold tabular-nums text-[#5b5557]">
-              <span dir="ltr">{step + 1} <span className="text-[#b3aca6]">/</span> {n}</span>
+            <div className="shrink-0 ps-1 text-[13px] font-semibold tabular-nums text-ink-600">
+              <span dir="ltr">{step + 1} <span className="text-ink-300">/</span> {n}</span>
             </div>
           </footer>
         </>
@@ -332,9 +332,9 @@ export default function AssemblyViewer({ initialStep, intro = 'none', className 
           </div>
           {listOpen && (
             <div className="absolute inset-0 z-30 flex animate-fade-in" onClick={() => setListOpen(false)}>
-              <div className="absolute inset-0 bg-[#231F20]/30" />
+              <div className="absolute inset-0 bg-ink/30" />
               <aside
-                className="relative ms-0 h-full w-[86%] max-w-[360px] animate-sheet-in-right overflow-y-auto bg-[#F7F4F0] p-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] shadow-2xl"
+                className="relative ms-0 h-full w-[86%] max-w-[360px] animate-sheet-in-right overflow-y-auto bg-ink-50 p-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="mb-2 flex items-center justify-between px-2">
@@ -379,7 +379,7 @@ function ToolButton({ label, active, onClick, children }: { label: string; activ
       aria-pressed={active}
       title={label}
       className={`grid h-10 w-10 place-items-center rounded-xl transition sm:h-9 sm:w-9 ${FOCUS} ${
-        active ? 'bg-[#E61559] text-white shadow-[0_4px_12px_-4px_rgba(230,21,89,0.8)]' : 'text-[#4d4749] hover:bg-[#f3eee9]'
+        active ? 'bg-primary text-white shadow-[0_4px_12px_-4px_rgba(230,21,89,0.8)]' : 'text-ink-700 hover:bg-ink-100'
       }`}
     >
       {children}

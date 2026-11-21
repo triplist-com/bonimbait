@@ -17,5 +17,5 @@ export const metadata: Metadata = {
 };
 
 export default function Build3DLayout({ children }: { children: React.ReactNode }) {
-  return <div className="fixed inset-0 z-[60] overflow-hidden bg-[#F7F5F1]">{children}</div>;
+  return <div className="fixed inset-0 z-[60] overflow-hidden bg-ink-50">{children}</div>;
 }

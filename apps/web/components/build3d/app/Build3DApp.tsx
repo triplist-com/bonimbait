@@ -11,7 +11,7 @@ const loadViewer = () => import('./ViewerSlot');
 const AssemblyViewer = dynamic(loadViewer, {
   ssr: false,
   loading: () => (
-    <div className="flex h-full w-full items-center justify-center bg-[#F7F5F1] text-[#231F20]/60">המודל נטען…</div>
+    <div className="flex h-full w-full items-center justify-center bg-ink-50 text-ink/60">המודל נטען…</div>
   ),
 });
 

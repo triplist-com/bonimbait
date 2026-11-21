@@ -64,7 +64,7 @@ export default function HeroVisual({ className }: { className?: string }) {
 
   return (
     <div className={className} aria-hidden>
-      <div className="relative h-full w-full overflow-hidden rounded-[1.75rem] bg-[#ECEDEE] shadow-[0_24px_60px_-24px_rgba(35,31,32,.35)] ring-1 ring-[rgba(35,31,32,.08)]">
+      <div className="relative h-full w-full overflow-hidden rounded-[1.75rem] bg-ink-100 shadow-[0_24px_60px_-24px_rgba(35,31,32,.35)] ring-1 ring-[rgba(35,31,32,.08)]">
         {FRAMES.map((f, i) => {
           // Frames stack in build order; each new one fades in over the last.
           // On loop, the dusk frame fades out over frame 0 (the rest drop instantly underneath it).
@@ -93,9 +93,9 @@ export default function HeroVisual({ className }: { className?: string }) {
 
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/35 to-transparent" />
         <div className="absolute bottom-3 start-3 end-3 flex items-end justify-between gap-3 sm:bottom-4 sm:start-4 sm:end-4">
-          <div key={idx} className="b3d-hv-label rounded-full bg-white/95 px-3 py-1.5 text-[13px] font-bold text-[#231F20] shadow-sm backdrop-blur sm:text-sm">
-            <span className="text-[#E61559]">שלב {cur.step}</span>
-            <span className="text-[#231F20]/45"> מתוך {BUILD_TOTALS.steps} · </span>
+          <div key={idx} className="b3d-hv-label rounded-full bg-white/95 px-3 py-1.5 text-[13px] font-bold text-ink shadow-sm backdrop-blur sm:text-sm">
+            <span className="text-primary">שלב {cur.step}</span>
+            <span className="text-ink/45"> מתוך {BUILD_TOTALS.steps} · </span>
             {cur.labelHe}
           </div>
           <div className="mb-2 hidden gap-1 min-[400px]:flex" dir="rtl">

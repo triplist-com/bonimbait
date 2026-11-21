@@ -21,4 +21,4 @@ export function fmtMonths(days: number): string {
 export const phaseLabel = (name: string) => name.replace(' — ', ': ');
 
 /** Shared focus ring for icon buttons. */
-export const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E61559] focus-visible:ring-offset-2 focus-visible:ring-offset-white';
+export const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white';

@@ -18,11 +18,11 @@ export interface StepCardProps {
 export function StepHeader({ step, index, total }: Pick<StepCardProps, 'step' | 'index' | 'total'>) {
   const ph = phaseInfo(step.phase);
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] font-medium text-[#5b5557]">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] font-medium text-ink-600">
       <span className="tabular-nums">
-        שלב <span className="text-[#231F20] font-extrabold">{index + 1}</span> מתוך {total}
+        שלב <span className="text-ink font-extrabold">{index + 1}</span> מתוך {total}
       </span>
-      <span aria-hidden className="text-[#c9c3bd]">·</span>
+      <span aria-hidden className="text-ink-300">·</span>
       <span
         className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-semibold"
         style={{ background: `${ph.color}1f`, color: ph.color }}
@@ -46,26 +46,26 @@ export default function StepCard({ step, index, total, cumCost, cumDays, hideHea
         </div>
         <div className="min-w-0 pt-0.5">
           <StepHeader step={step} index={index} total={total} />
-          <h2 className="mt-1 text-balance break-words text-[22px] font-extrabold leading-tight tracking-[-0.01em] text-[#231F20]">{step.titleHe}</h2>
+          <h2 className="mt-1 text-balance break-words text-[22px] font-extrabold leading-tight tracking-[-0.01em] text-ink">{step.titleHe}</h2>
         </div>
       </div>
 
-      {step.descHe && <p className="text-pretty text-[15px] leading-[1.7] text-[#3d3739]">{step.descHe}</p>}
+      {step.descHe && <p className="text-pretty text-[15px] leading-[1.7] text-ink-700">{step.descHe}</p>}
 
       {step.materials.length > 0 && (
         <section>
-          <h3 className="mb-2 text-[12px] font-bold text-[#8a8385]">חומרים וכמויות</h3>
+          <h3 className="mb-2 text-[12px] font-bold text-ink-500">חומרים וכמויות</h3>
           <ul className="flex flex-wrap gap-1.5">
             {step.materials.map((m) => (
               <li
                 key={m.nameHe}
-                className="flex items-center gap-1.5 rounded-xl border border-[#ece6df] bg-white px-2.5 py-1.5 text-[13px] leading-tight shadow-[0_1px_0_rgba(35,31,32,0.04)]"
+                className="flex items-center gap-1.5 rounded-xl border border-ink-200 bg-white px-2.5 py-1.5 text-[13px] leading-tight shadow-[0_1px_0_rgba(35,31,32,0.04)]"
               >
-                <span className="rounded-md bg-[#231F20] px-1.5 py-0.5 text-[12px] font-bold tabular-nums text-white">
+                <span className="rounded-md bg-ink px-1.5 py-0.5 text-[12px] font-bold tabular-nums text-white">
                   {fmtNum(m.qty)}
                   <span className="ms-1 font-medium opacity-80">{m.unitHe}</span>
                 </span>
-                <span className="text-[#3d3739]">{m.nameHe}</span>
+                <span className="text-ink-700">{m.nameHe}</span>
               </li>
             ))}
           </ul>
@@ -83,7 +83,7 @@ export default function StepCard({ step, index, total, cumCost, cumDays, hideHea
         {step.crewHe && <Fact className="col-span-2" icon={<HardHat size={15} />} label="צוות" value={step.crewHe} />}
       </dl>
 
-      <div className="flex items-center justify-between rounded-xl bg-[#231F20] px-3.5 py-2.5 text-[13px] text-white">
+      <div className="flex items-center justify-between rounded-xl bg-ink px-3.5 py-2.5 text-[13px] text-white">
         <span className="opacity-75">מצטבר עד כאן</span>
         <span className="font-bold tabular-nums">
           {fmtILS(cumCost)} <span className="font-normal opacity-60">·</span> {fmtInt(cumDays)} ימים
@@ -91,8 +91,8 @@ export default function StepCard({ step, index, total, cumCost, cumDays, hideHea
       </div>
 
       {step.tipHe && (
-        <aside className="rounded-xl border border-[#F6C9D7] bg-[#FDF1F5] px-3.5 py-3 text-[14px] leading-relaxed text-[#4a2532]">
-          <div className="mb-1 flex items-center gap-1.5 text-[12px] font-bold text-[#C80F4C]">
+        <aside className="rounded-xl border border-primary-200 bg-primary-50 px-3.5 py-3 text-[14px] leading-relaxed text-ink-800">
+          <div className="mb-1 flex items-center gap-1.5 text-[12px] font-bold text-primary-700">
             <Lightbulb size={14} /> טיפ מהשטח
           </div>
           {step.tipHe}
@@ -100,8 +100,8 @@ export default function StepCard({ step, index, total, cumCost, cumDays, hideHea
       )}
 
       {step.checkpointHe && (
-        <div className="flex items-start gap-2 rounded-xl border border-[#d9eadf] bg-[#f2f8f4] px-3.5 py-2.5 text-[13px] leading-relaxed text-[#24492f]">
-          <ShieldCheck size={16} className="mt-0.5 shrink-0 text-[#2f8a4c]" />
+        <div className="flex items-start gap-2 rounded-xl border border-success-100 bg-success-50 px-3.5 py-2.5 text-[13px] leading-relaxed text-success-800">
+          <ShieldCheck size={16} className="mt-0.5 shrink-0 text-success-600" />
           <span>
             <b className="font-bold">נקודת בדיקה: </b>
             {step.checkpointHe}
@@ -116,10 +116,10 @@ export default function StepCard({ step, index, total, cumCost, cumDays, hideHea
             href={v.href}
             target="_blank"
             rel="noreferrer"
-            className={`group flex items-center gap-2 rounded-xl px-2 py-1.5 text-[14px] text-[#231F20] transition hover:bg-[#fbf3f6] ${FOCUS}`}
+            className={`group flex items-center gap-2 rounded-xl px-2 py-1.5 text-[14px] text-ink transition hover:bg-primary-50 ${FOCUS}`}
           >
-            <PlayCircle size={18} className="shrink-0 text-[#E61559]" />
-            <span className="line-clamp-2 min-w-0 leading-snug group-hover:text-[#C80F4C]">{v.titleHe}</span>
+            <PlayCircle size={18} className="shrink-0 text-primary" />
+            <span className="line-clamp-2 min-w-0 leading-snug group-hover:text-primary-700">{v.titleHe}</span>
           </a>
         ))}
         {step.searchQuery && (
@@ -127,7 +127,7 @@ export default function StepCard({ step, index, total, cumCost, cumDays, hideHea
             href={`/search/?q=${encodeURIComponent(step.searchQuery)}`}
             target="_blank"
             rel="noreferrer"
-            className={`mt-1 inline-flex items-center justify-center gap-2 rounded-xl border border-[#E61559]/25 bg-white px-3 py-2 text-[14px] font-semibold text-[#C80F4C] transition hover:border-[#E61559]/60 hover:bg-[#fff7fa] ${FOCUS}`}
+            className={`mt-1 inline-flex items-center justify-center gap-2 rounded-xl border border-primary/25 bg-white px-3 py-2 text-[14px] font-semibold text-primary-700 transition hover:border-primary/60 hover:bg-primary-50 ${FOCUS}`}
           >
             <Search size={16} />
             לסרטונים בנושא
@@ -152,13 +152,13 @@ function Fact({
   className?: string;
 }) {
   return (
-    <div className={`rounded-xl border border-[#ece6df] bg-white/70 px-3 py-2 ${className}`}>
-      <dt className="flex items-center gap-1.5 text-[11.5px] font-semibold text-[#8a8385]">
+    <div className={`rounded-xl border border-ink-200 bg-white/70 px-3 py-2 ${className}`}>
+      <dt className="flex items-center gap-1.5 text-[11.5px] font-semibold text-ink-500">
         {icon}
         {label}
-        {note && <span className="rounded bg-[#f1ece6] px-1 py-px text-[10.5px] font-medium text-[#6d6668]">{note}</span>}
+        {note && <span className="rounded bg-ink-100 px-1 py-px text-[10.5px] font-medium text-ink-600">{note}</span>}
       </dt>
-      <dd className="mt-0.5 font-bold text-[#231F20]">{value}</dd>
+      <dd className="mt-0.5 font-bold text-ink">{value}</dd>
     </div>
   );
 }
