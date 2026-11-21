@@ -3,7 +3,6 @@ import StructuredData from '@/components/StructuredData';
 import { Section } from '@/components/ui/Section';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import Hero from '@/components/home/Hero';
-import ProofBar from '@/components/home/ProofBar';
 import ValueStrip from '@/components/home/ValueStrip';
 import HowItWorks from '@/components/home/HowItWorks';
 import JourneyNavigator from '@/components/home/JourneyNavigator';
@@ -79,7 +78,6 @@ export default async function Home() {
 
       {/* 1. The owner's line, the question box and the channel's newest video */}
       <Hero stats={stats} video={heroVideo} />
-      <ProofBar />
 
       {/* 2. The 7 build stages */}
       <Section tone="sand" id="journey" labelledBy="journey-title">
