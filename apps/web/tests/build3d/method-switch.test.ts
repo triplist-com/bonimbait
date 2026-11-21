@@ -33,6 +33,12 @@ describe('equivalentStep', () => {
     expect(equivalentStep(concrete, 2, icf)).toBe(2); // p4-retaining → p4i-courses
     expect(equivalentStep(concrete, 5, icf)).toBe(5); // p7-blocks → p7i-parapets
   });
+  it('maps a method step to its sibling in a parallel method', () => {
+    const steel = tl([['p0', 0], ['p6-slab', 6], ['p6s-tracks', 6], ['p6s-walls', 6], ['p6-strip-all', 6], ['p13-done', 13]]);
+    const timber = tl([['p0', 0], ['p6-slab', 6], ['p6t-sole-plates', 6], ['p6t-walls', 6], ['p6-strip-all', 6], ['p13-done', 13]]);
+    expect(equivalentStep(steel, 3, timber)).toBe(3); // p6s-walls → p6t-walls
+    expect(equivalentStep(steel, 2, timber)).toBe(1); // p6s-tracks has no sibling → first step of phase 6
+  });
   it('else the last step of the nearest earlier phase', () => {
     expect(equivalentStep(concrete, 5, noSeven)).toBe(4); // phase 7 missing → p6-z
   });

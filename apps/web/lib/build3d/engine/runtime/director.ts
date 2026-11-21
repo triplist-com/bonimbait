@@ -57,6 +57,13 @@ const XRAY_HIDE = new Set([
   'roof-coat',
   'roof-drain',
 ]);
+/**
+ * Light-frame wall cores (steel / timber: studs, OSB, wrap, cement board, wool). Once the walls are
+ * closed (finishes and later) they vanish instead of ghosting, like the steel in a concrete wall:
+ * five stacked translucent layers read as an almost opaque wall that hides the rooms.
+ */
+const XRAY_HIDE_CLOSED = new Set(['frame', 'osb', 'house-wrap', 'cement-board', 'wall-insulation']);
+const CLOSED_FROM_PHASE = 11;
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -836,7 +843,9 @@ export class Director {
       else if (rt.part.xray !== false) {
         let fade = false;
         const tags = rt.part.tags;
-        const hide = rt.part.material === 'rebar' || !!tags?.some((t) => XRAY_HIDE.has(t));
+        const hide =
+          rt.part.material === 'rebar' ||
+          !!tags?.some((t) => XRAY_HIDE.has(t) || (st.phase >= CLOSED_FROM_PHASE && XRAY_HIDE_CLOSED.has(t)));
         // ghostAbove: only what is above Y AND actually in front of the work fades, so the far
         // walls keep the house readable instead of dissolving it. Embedded steel / roof layers
         // above Y always go (their slab is faded or they are clutter).

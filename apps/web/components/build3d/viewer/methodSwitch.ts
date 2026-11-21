@@ -9,6 +9,7 @@ type T = Pick<Timeline, 'steps' | 'phases'>;
 /**
  * The phase-equivalent step in `to` for step `i` of `from`:
  *  1. the same step id, when the new method has it (shared steps: site, foundations, systems, finishes…);
+ *     or its sibling in a parallel method (steel `p6s-walls` ↔ timber `p6t-walls`);
  *  2. else the first step of the same phase;
  *  3. else the last step of the nearest earlier phase (closest progress before where the user was);
  *  4. else the first step.
@@ -18,11 +19,22 @@ export function equivalentStep(from: T, i: number, to: T): number {
   if (!cur || !to.steps.length) return 0;
   const same = to.steps.findIndex((s) => s.id === cur.id);
   if (same >= 0) return same;
+  const key = siblingKey(cur.id);
+  if (key) {
+    const sib = to.steps.findIndex((s) => siblingKey(s.id) === key);
+    if (sib >= 0) return sib;
+  }
   const ph = to.phases.find((p) => p.phase === cur.phase);
   if (ph) return ph.first;
   let best = -1;
   for (const p of to.phases) if (p.phase < cur.phase) best = Math.max(best, p.last);
   return best >= 0 ? best : 0;
+}
+
+/** `p6s-walls` / `p6t-walls` → `6:walls`; shared ids (`p6-strip-all`) have no method letter → null. */
+function siblingKey(id: string): string | null {
+  const m = /^p(\d+)[a-z]-(.+)$/.exec(id);
+  return m ? `${m[1]}:${m[2]}` : null;
 }
 
 /**

@@ -115,7 +115,7 @@ export function phasePrecastLower(ctx: BuildContext): StepDef[] {
   const cols = columnItems(ctx, 'lower');
   const m2 = totalM2(lowerPanels);
   const m3 = totalM3(lowerPanels) + cols.m3;
-  const panelCam = { bounds: panelBounds(lowerPanels, ctx.y.lowerBeamTop, topLower + 0.3, [], 0.5), azimuth: 200, polar: 58, zoom: 0.72 };
+  const panelCam = { bounds: panelBounds(lowerPanels, ctx.y.lowerBeamTop, topLower + 0.3, [], 0.5), azimuth: 200, polar: 58, zoom: 0.92 };
   const out: StepDef[] = [];
 
   // ---------------------------------------------------------------- crane arrives
@@ -139,7 +139,7 @@ export function phasePrecastLower(ctx: BuildContext): StepDef[] {
         exit: 'none',
       }),
     ],
-    camera: { bounds: houseB, azimuth: 55, polar: 52, zoom: 0.8 },
+    camera: { bounds: houseB, azimuth: 55, polar: 52, zoom: 1.2 },
     view: { xray: false },
   });
 
@@ -196,7 +196,7 @@ export function phasePrecastLower(ctx: BuildContext): StepDef[] {
       { id: 'p4p-grout:joints', shape: { kind: 'boxes', items: groutItems }, material: 'concrete', tags: ['grout', 'level:lower'], anim: { type: 'rise', duration: 0.8, stagger: fit(3.0, groutItems.length, 0.2), order: 'near', origin: lowerCenter } },
       { id: 'p4p-grout:bed', shape: { kind: 'boxes', items: bedItems }, material: 'concrete', tags: ['grout', 'level:lower'], anim: { type: 'rise', delay: 1.0, duration: 0.6, stagger: fit(2.4, bedItems.length, 0.12), order: 'near', origin: lowerCenter } },
     ],
-    camera: { ...panelCam, polar: 52, zoom: 0.62 },
+    camera: { ...panelCam, polar: 52, zoom: 0.8 },
     view: { xray: false },
   });
 
@@ -258,7 +258,7 @@ export function phasePrecastCeiling(ctx: BuildContext): StepDef[] {
         anim: { type: 'fade', delay: 5.2, duration: 0.6 },
       },
     ],
-    camera: { bounds: camB, azimuth: 35, polar: 52, zoom: 0.8 },
+    camera: { bounds: camB, azimuth: 35, polar: 52, zoom: 1.0 },
     view: { xray: false },
   });
 
@@ -285,7 +285,7 @@ export function phasePrecastCeiling(ctx: BuildContext): StepDef[] {
       ...sp.parts,
       pumpPart('p5p-topping:pump', pump, { tags: ['machine', 'pump', 'p5p-pump'], anim: { type: 'slide', from: st.slideIn, duration: 1.3 } }),
     ],
-    camera: { bounds: camB, azimuth: 30, polar: 52, zoom: 0.8 },
+    camera: { bounds: camB, azimuth: 30, polar: 52, zoom: 1.0 },
     view: { xray: false },
   });
   return out;
@@ -312,7 +312,7 @@ export function phasePrecastEntrance(ctx: BuildContext): StepDef[] {
   // ---------------------------------------------------------------- entrance-floor panels
   const pp = panelParts('p6p-panels', panels, st.pivot, ['level:entrance'], 1.0, 4.4);
   const props = propsFor(ctx, panels, () => e0 - 0.08, topE - 0.6, 1.6);
-  const panelCam = { bounds: panelBounds(panels, e0, topE + 0.3, [], 0.5), azimuth: 25, polar: 55, zoom: 0.72 };
+  const panelCam = { bounds: panelBounds(panels, e0, topE + 0.3, [], 0.5), azimuth: 25, polar: 55, zoom: 0.92 };
   out.push({
     id: 'p6p-panels',
     phase: 6,
@@ -411,7 +411,7 @@ export function phasePrecastEntrance(ctx: BuildContext): StepDef[] {
       ),
       { id: 'p6p-mamad:frames', shape: { kind: 'boxes', items: frames }, material: 'steel', tags: ['mamad-frame', 'level:entrance'], anim: dropAnim },
     ],
-    camera: { bounds: boundsOf(lid.flatMap((s) => s.outline), e0, lidTop + 1.5, 1.2), azimuth: 150, polar: 48, zoom: 0.8 },
+    camera: { bounds: boundsOf(lid.flatMap((s) => s.outline), e0, lidTop + 1.5, 1.2), azimuth: 150, polar: 48, zoom: 1.0 },
     view: { xray: false },
   });
 
@@ -459,7 +459,7 @@ export function phasePrecastEntrance(ctx: BuildContext): StepDef[] {
         anim: { type: 'fade', delay: 5.2, duration: 0.6 },
       },
     ],
-    camera: { bounds: boundsOf(roofOutline, lidBot - 0.5, lidTop + 0.5, 0.4), azimuth: 35, polar: 50, zoom: 0.72 },
+    camera: { bounds: boundsOf(roofOutline, lidBot - 0.5, lidTop + 0.5, 0.4), azimuth: 35, polar: 50, zoom: 0.95 },
     view: { xray: false },
   });
 
@@ -484,7 +484,7 @@ export function phasePrecastEntrance(ctx: BuildContext): StepDef[] {
       ...rsp.parts,
       pumpPart('p6p-topping:pump', rPump, { tags: ['machine', 'pump', 'p6p-pump'], anim: { type: 'slide', from: st.slideIn, duration: 1.3 } }),
     ],
-    camera: { bounds: boundsOf(roofOutline, lidBot - 0.5, lidTop + 0.5, 0.4), azimuth: 35, polar: 50, zoom: 0.72 },
+    camera: { bounds: boundsOf(roofOutline, lidBot - 0.5, lidTop + 0.5, 0.4), azimuth: 35, polar: 50, zoom: 0.95 },
     view: { xray: false },
   });
 

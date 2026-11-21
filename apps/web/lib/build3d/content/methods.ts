@@ -140,7 +140,7 @@ export const METHODS_INFO: Record<MethodId, MethodInfo> = {
     descHe: 'פאנלים של קירות ולוחות תקרה חלולים שמיוצרים במפעל ומובאים לאתר. מנוף נייד מרכיב אותם תוך ימים על הקורות והיסודות, ויוצקים רק את החיבורים ושכבת בטון דקה בתקרה. גם הממ״ד מגיע כמודול מוכן.',
     months: 13.5,
     costVsConcrete: 0.062,
-    scores: { thermal: 3, speed: 4, availability: 4 },
+    scores: { thermal: 3, speed: 5, availability: 4 },
     prosHe: [
       'הרכבת השלד תוך ימים ספורים',
       'איכות בטון קבועה מהמפעל',

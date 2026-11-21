@@ -352,8 +352,10 @@ function phase6(ctx: BuildContext, spec: FrameSpec): StepDef[] {
   else {
     const ja = { type: 'drop' as const, from: [0, 0.8, 0] as Vec3, delay: 1.2, duration: 0.35, stagger: fit(1.5, js.flanges.length, 0.04), order: 'z' as const, ease: 'out' as const };
     jParts.push(
-      { id: `${jid}:flanges`, shape: { kind: 'boxes', items: js.flanges }, material: 'lumber', tags: jTags, anim: ja },
-      { id: `${jid}:webs`, shape: { kind: 'boxes', items: js.webs }, material: 'osb', tags: jTags, anim: { ...ja, stagger: fit(1.5, js.webs.length, 0.04) } },
+      // No outlines on the thin I-joist members (as the steel C-joists): at rest the magenta
+      // outlines of ~70 joists turned the whole roof frame red instead of wood.
+      { id: `${jid}:flanges`, shape: { kind: 'boxes', items: js.flanges }, material: 'lumber', tags: jTags, anim: ja, edges: false },
+      { id: `${jid}:webs`, shape: { kind: 'boxes', items: js.webs }, material: 'osb', tags: jTags, anim: { ...ja, stagger: fit(1.5, js.webs.length, 0.04) }, edges: false },
     );
   }
   jParts.push(
