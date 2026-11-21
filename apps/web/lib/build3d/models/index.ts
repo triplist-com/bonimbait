@@ -6,13 +6,14 @@ import {
   armchair, bathtub, bedDouble, bedSingle, coffeeTable, desk, diningSet, kitchenCounter, kitchenIsland,
   lampPendant, loungeChair, outdoorTable, planter, shower, sink, sofa, toilet, tv, wardrobe, washer,
 } from './furniture';
+import { crane } from './crane';
 import { car, drillRig, dumpTruck, excavator, mixerTruck, pumpTruck, roller } from './equipment';
 import {
   acUnit, blockPallet, permitSign, powerPole, prop, rebarBundle, scaffoldBay, siteContainer, siteToilet,
   solarHeater, surveyor, wheelbarrow, worker,
 } from './site';
 
-export type ModelName = 'car' | 'tree' | 'tree-olive' | 'palm' | 'bush' | 'rock' | 'sofa' | 'armchair' | 'coffee-table' | 'bed-double' | 'bed-single' | 'dining-set' | 'kitchen-island' | 'kitchen-counter' | 'toilet' | 'sink' | 'shower' | 'bathtub' | 'wardrobe' | 'tv' | 'desk' | 'outdoor-table' | 'lounge-chair' | 'washer' | 'excavator' | 'dump-truck' | 'roller' | 'mixer-truck' | 'pump-truck' | 'drill-rig' | 'site-container' | 'site-toilet' | 'worker' | 'surveyor' | 'permit-sign' | 'power-pole' | 'scaffold-bay' | 'solar-heater' | 'ac-unit' | 'prop' | 'wheelbarrow' | 'block-pallet' | 'rebar-bundle' | 'lamp-pendant' | 'planter';
+export type ModelName = 'car' | 'tree' | 'tree-olive' | 'palm' | 'bush' | 'rock' | 'sofa' | 'armchair' | 'coffee-table' | 'bed-double' | 'bed-single' | 'dining-set' | 'kitchen-island' | 'kitchen-counter' | 'toilet' | 'sink' | 'shower' | 'bathtub' | 'wardrobe' | 'tv' | 'desk' | 'outdoor-table' | 'lounge-chair' | 'washer' | 'excavator' | 'dump-truck' | 'roller' | 'mixer-truck' | 'pump-truck' | 'crane' | 'drill-rig' | 'site-container' | 'site-toilet' | 'worker' | 'surveyor' | 'permit-sign' | 'power-pole' | 'scaffold-bay' | 'solar-heater' | 'ac-unit' | 'prop' | 'wheelbarrow' | 'block-pallet' | 'rebar-bundle' | 'lamp-pendant' | 'planter';
 
 type Builder = (o: Opts) => Group;
 const BUILDERS: Record<ModelName, Builder> = {
@@ -20,7 +21,7 @@ const BUILDERS: Record<ModelName, Builder> = {
   'bed-double': bedDouble, 'bed-single': bedSingle, 'dining-set': diningSet, 'kitchen-island': kitchenIsland,
   'kitchen-counter': kitchenCounter, toilet, sink, shower, bathtub, wardrobe, tv, desk,
   'outdoor-table': outdoorTable, 'lounge-chair': loungeChair, washer, excavator, 'dump-truck': dumpTruck,
-  roller, 'mixer-truck': mixerTruck, 'pump-truck': pumpTruck, 'drill-rig': drillRig,
+  roller, 'mixer-truck': mixerTruck, 'pump-truck': pumpTruck, crane, 'drill-rig': drillRig,
   'site-container': siteContainer, 'site-toilet': siteToilet, worker, surveyor, 'permit-sign': permitSign,
   'power-pole': powerPole, 'scaffold-bay': scaffoldBay, 'solar-heater': solarHeater, 'ac-unit': acUnit,
   prop, wheelbarrow, 'block-pallet': blockPallet, 'rebar-bundle': rebarBundle, 'lamp-pendant': lampPendant, planter,
@@ -29,7 +30,7 @@ const BUILDERS: Record<ModelName, Builder> = {
 export const MODEL_NAMES = Object.keys(BUILDERS) as readonly ModelName[];
 
 /** Animated models keep per-instance state (closures over parts), so they are never cloned from a cache. */
-const ANIMATED = new Set<ModelName>(['excavator', 'drill-rig', 'pump-truck', 'mixer-truck', 'roller', 'worker', 'surveyor']);
+const ANIMATED = new Set<ModelName>(['excavator', 'drill-rig', 'pump-truck', 'crane', 'mixer-truck', 'roller', 'worker', 'surveyor']);
 
 interface Template { obj: Object3D; size: [number, number, number] }
 const templates = new Map<string, Template>();

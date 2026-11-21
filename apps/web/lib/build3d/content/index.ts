@@ -1,6 +1,11 @@
 import { STEPS_A } from './steps-a';
 import { STEPS_B } from './steps-b';
-import type { StepContent } from './types';
+import { STEPS_ICF } from './steps-icf';
+import { STEPS_STEEL } from './steps-steel';
+import { STEPS_TIMBER } from './steps-timber';
+import { STEPS_PRECAST } from './steps-precast';
+import type { MethodId } from '../methods';
+import type { StepContent, StepContentMap } from './types';
 
 export type { StepContent } from './types';
 export { PRICES } from './prices';
@@ -23,6 +28,15 @@ export const PHASES: Array<{ id: number; nameHe: string; summaryHe: string; typi
 ];
 
 export const STEP_CONTENT: Record<string, StepContent> = { ...STEPS_A, ...STEPS_B };
+
+/** Per-method step text: the method's own steps + re-wordings of shared steps (win over STEP_CONTENT). */
+export const METHOD_CONTENT: Record<MethodId, StepContentMap> = {
+  concrete: {},
+  icf: STEPS_ICF,
+  steel: STEPS_STEEL,
+  timber: STEPS_TIMBER,
+  precast: STEPS_PRECAST,
+};
 
 export const SUMMARY: { totalMonthsTypical: number; noteHe: string } = {
   totalMonthsTypical: 16,

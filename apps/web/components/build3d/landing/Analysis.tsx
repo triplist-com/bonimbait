@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { BUILD_TOTALS } from '@/lib/build3d/content/totals';
+import { METHOD_TOTALS } from '@/lib/build3d/content/totals';
+import { DEFAULT_METHOD, type MethodId } from '@/lib/build3d/methods';
+import { METHOD_IN_HE } from './methodUi';
 import type { ViewportId } from '@/lib/build3d/house/types';
 import { overlay } from './overlayData';
 import { ink, primary, success } from '@/lib/design/tokens';
@@ -36,8 +38,15 @@ const STAGES: StageDef[] = [
 const S = Object.fromEntries(STAGES.map((s, i) => [s.id, i])) as Record<string, number>;
 const RAIL_STAGES = STAGES.slice(0, -1);
 
-const q = { concrete: Math.round(BUILD_TOTALS.concreteM3), rebar: BUILD_TOTALS.rebarT, blocks: BUILD_TOTALS.blocks };
-const PLANNED_STEPS = BUILD_TOTALS.steps;
+/** The quantities card for a method: concrete + its signature materials (`extra`), else rebar + blocks. */
+function methodMetrics(method: MethodId): Array<{ label: string; unit: string; value: number; decimals: number }> {
+  const t = METHOD_TOTALS[method];
+  const out = [{ label: 'בטון', unit: 'מ״ק', value: Math.round(t.concreteM3), decimals: 0 }];
+  for (const e of t.extra ?? []) out.push({ label: e.labelHe, unit: e.unitHe, value: e.qty, decimals: Number.isInteger(e.qty) ? 0 : 1 });
+  if (t.rebarT > 0) out.push({ label: 'ברזל', unit: 'טון', value: t.rebarT, decimals: 1 });
+  if (t.blocks > 0) out.push({ label: 'בלוקים', unit: 'יח׳', value: t.blocks, decimals: 0 });
+  return out.slice(0, 3);
+}
 
 function union(boxes: BBox[]): BBox {
   return [
@@ -56,10 +65,20 @@ export interface AnalysisProps {
   onReveal: () => void;
   /** Called when the animation is fully done. */
   onDone: () => void;
+  /** Construction method chosen in the picker: counters, step count and one narration line follow it. */
+  method?: MethodId;
 }
 
-export default function Analysis({ onReveal, onDone }: AnalysisProps) {
+export default function Analysis({ onReveal, onDone, method = DEFAULT_METHOD }: AnalysisProps) {
   const o = overlay;
+  const metrics = useMemo(() => methodMetrics(method), [method]);
+  const plannedSteps = METHOD_TOTALS[method].steps;
+  const lineOf = (i: number) => {
+    const id = STAGES[i].id;
+    if (id === 'qty') return `מחשב כמויות: ${metrics.map((m) => m.label).join(', ')}`;
+    if (id === 'plan') return `מתכנן את שלבי הבנייה ${METHOD_IN_HE[method]}`;
+    return STAGES[i].line;
+  };
   const [stage, setStage] = useState(0);
   const [skipped, setSkipped] = useState(false);
   const [reduced, setReduced] = useState(false);
@@ -448,9 +467,9 @@ export default function Analysis({ onReveal, onDone }: AnalysisProps) {
       >
         <div className="mb-2 text-xs font-semibold tracking-wide text-ink/55">כמויות משוערות מהתוכנית</div>
         <div className="grid grid-cols-3 gap-3 text-center">
-          <Metric label="בטון" unit="מ״ק"><Counter value={q.concrete} active={stage >= S.qty} instant={instant} durationMs={800} /></Metric>
-          <Metric label="ברזל" unit="טון"><Counter value={q.rebar} decimals={1} active={stage >= S.qty} instant={instant} durationMs={800} /></Metric>
-          <Metric label="בלוקים" unit="יח׳"><Counter value={q.blocks} active={stage >= S.qty} instant={instant} durationMs={800} /></Metric>
+          {metrics.map((m) => (
+            <Metric key={m.label} label={m.label} unit={m.unit}><Counter value={m.value} decimals={m.decimals} active={stage >= S.qty} instant={instant} durationMs={800} /></Metric>
+          ))}
         </div>
       </div>
 
@@ -482,7 +501,7 @@ export default function Analysis({ onReveal, onDone }: AnalysisProps) {
           ))}
         </div>
         <p aria-live="polite" className="min-h-[1.75rem] text-lg font-bold leading-snug sm:text-xl" key={stage} style={{ animation: 'b3d-line 380ms ease both' }}>
-          {STAGES[stage].line}
+          {lineOf(stage)}
         </p>
         <dl className="mt-3 grid grid-cols-4 gap-2 text-center">
           <Stat label="קירות" on={stage >= S.walls}>
@@ -496,7 +515,7 @@ export default function Analysis({ onReveal, onDone }: AnalysisProps) {
           </Stat>
           <Stat label={stage >= S.plan ? 'שלבים' : 'מ״ר בנוי'} on={stage >= S.rooms}>
             {stage >= S.plan ? (
-              <Counter value={PLANNED_STEPS} active instant={instant} durationMs={500} />
+              <Counter value={plannedSteps} active instant={instant} durationMs={500} />
             ) : (
               <Counter value={o.stats.builtAreaM2} active={stage >= S.rooms} instant={instant} durationMs={800} />
             )}

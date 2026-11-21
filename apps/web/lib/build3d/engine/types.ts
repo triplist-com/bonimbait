@@ -57,7 +57,14 @@ export type MaterialKey =
   /** Lamp surface: white by day, glows warm at dusk. */
   | 'light'
   /** Window glass that glows warm at dusk (interior lights on). */
-  | 'glassLit';
+  | 'glassLit'
+  /** Framed methods (steel / timber): sawn lumber, OSB, cement board, gypsum board, house wrap, mineral wool. */
+  | 'lumber'
+  | 'osb'
+  | 'cementBoard'
+  | 'gypsum'
+  | 'houseWrap'
+  | 'mineralWool';
 
 /** Named procedural models (owned by lib/build3d/models; origin bottom-center, front +X, meters). */
 export type { ModelName } from '../models';
